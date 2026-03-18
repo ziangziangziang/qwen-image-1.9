@@ -18,6 +18,7 @@ from qwen_image_19.stage_1_analysis import (
     inspect_cache_models,
     load_cache_alias_map,
     load_model_inventory,
+    normalize_layer_descriptor,
     resolve_cache_snapshot,
 )
 
@@ -205,9 +206,13 @@ class Stage1Tests(unittest.TestCase):
     def fake_generate_stage1_figures(self, matrix: dict[str, object], artifact_paths: dict[str, Path]) -> dict[str, str]:
         write_fake_png(artifact_paths["component_overview_png"])
         write_fake_png(artifact_paths["pairwise_comparison_png"])
+        write_fake_png(artifact_paths["layer_sharing_heatmap_png"])
+        write_fake_png(artifact_paths["layer_sharing_bars_png"])
         return {
             "component_overview": artifact_paths["component_overview_png"].name,
             "pairwise_comparison": artifact_paths["pairwise_comparison_png"].name,
+            "layer_sharing_heatmap": artifact_paths["layer_sharing_heatmap_png"].name,
+            "layer_sharing_bars": artifact_paths["layer_sharing_bars_png"].name,
         }
 
     def test_resolves_hf_cache_snapshot(self) -> None:
@@ -225,8 +230,13 @@ class Stage1Tests(unittest.TestCase):
         self.assertEqual(matrix["summary"]["delta_merge"], 1)
         self.assertEqual(matrix["summary"]["adapter_only"], 2)
         self.assertEqual(matrix["summary"]["incompatible"], 1)
-        self.assertIn("Pairwise comparison stats", result["report_preview"])
+        self.assertEqual(len(matrix["layer_pairwise"]), 6)
+        self.assertEqual(matrix["model_summaries"]["qwen-image-base"]["vae"]["input_channels"], 3)
+        self.assertEqual(matrix["model_summaries"]["qwen-image-layered"]["vae"]["input_channels"], 4)
+        self.assertIn("Tensor pairwise comparison stats", result["report_preview"])
+        self.assertIn("Layer sharing across all pairs", result["report_preview"])
         self.assertIn("summary.md", result["artifact_paths"]["summary_markdown"])
+        self.assertIn("pairs", result["layer_analysis"])
 
     def test_compare_state_dicts_uses_real_manifests(self) -> None:
         self.create_full_mock_cache()
@@ -488,13 +498,18 @@ class Stage1Tests(unittest.TestCase):
             result = analyze(hf_home=self.hf_home, artifact_dir=artifact_root)
         self.assertTrue((artifact_root / "summary.md").exists())
         self.assertTrue((artifact_root / "compatibility-matrix.json").exists())
+        self.assertTrue((artifact_root / "layer-analysis.json").exists())
         self.assertTrue((artifact_root / "figures" / "component-overview.png").exists())
         self.assertTrue((artifact_root / "figures" / "pairwise-comparison.png").exists())
+        self.assertTrue((artifact_root / "figures" / "layer-sharing-heatmap.png").exists())
+        self.assertTrue((artifact_root / "figures" / "layer-sharing-bars.png").exists())
         self.assertTrue((artifact_root.parent / "stage-1-compatibility-matrix.json").exists())
         self.assertTrue((artifact_root.parent / "stage-1-dna-report.md").exists())
         summary_text = (artifact_root / "summary.md").read_text(encoding="utf-8")
         self.assertIn("figures/component-overview.png", summary_text)
         self.assertIn("figures/pairwise-comparison.png", summary_text)
+        self.assertIn("figures/layer-sharing-heatmap.png", summary_text)
+        self.assertIn("figures/layer-sharing-bars.png", summary_text)
         self.assertIn("terminal_summary", result)
 
     def test_stage1_cli_default_stdout_is_compact_summary(self) -> None:
@@ -506,7 +521,8 @@ class Stage1Tests(unittest.TestCase):
         output = stdout.getvalue()
         self.assertEqual(exit_code, 0)
         self.assertIn("Stage 1 DNA analysis", output)
-        self.assertIn("classifications:", output)
+        self.assertIn("strategies:", output)
+        self.assertIn("best layer-sharing pair:", output)
         self.assertNotIn('"matrix"', output)
 
     def test_stage1_cli_json_flag_restores_full_payload(self) -> None:
@@ -529,6 +545,56 @@ class Stage1Tests(unittest.TestCase):
         self.assertEqual(exit_code, 0)
         self.assertIn('"matrix"', output)
         self.assertIn('"artifact_paths"', output)
+
+    def test_normalize_layer_descriptor_supports_expected_patterns(self) -> None:
+        self.assertEqual(
+            normalize_layer_descriptor(
+                "transformer.transformer_blocks.12.attn.q_proj.weight",
+                {"component": ".", "shape": [2, 2], "payload_nbytes": 16, "dtype": "F32"},
+            ),
+            {
+                "subsystem": "mmdit_backbone",
+                "family": "transformer_blocks",
+                "layer_id": "mmdit_backbone:transformer_blocks:12",
+                "parameter_suffix": "attn.q_proj.weight",
+                "component_scope": "transformer",
+            },
+        )
+        self.assertEqual(
+            normalize_layer_descriptor(
+                "text_encoder.layers.3.mlp.fc1.weight",
+                {"component": ".", "shape": [2, 2], "payload_nbytes": 16, "dtype": "F32"},
+            )["layer_id"],
+            "text_encoder:layers:3",
+        )
+        self.assertEqual(
+            normalize_layer_descriptor(
+                "vae.encoder.down_blocks.2.conv1.weight",
+                {"component": ".", "shape": [2, 2], "payload_nbytes": 16, "dtype": "F32"},
+            )["layer_id"],
+            "vae:encoder.down_blocks:2",
+        )
+        self.assertEqual(
+            normalize_layer_descriptor(
+                "text_encoder.layers.0.weight",
+                {"component": "text_encoder", "shape": [2, 2], "payload_nbytes": 16, "dtype": "F32"},
+            )["layer_id"],
+            "text_encoder:layers:0",
+        )
+
+    def test_layer_pairwise_emits_all_pairs_and_subsystems(self) -> None:
+        self.create_full_mock_cache()
+        result = analyze(dry_run=True, hf_home=self.hf_home)
+        layer_pairwise = result["matrix"]["layer_pairwise"]
+        self.assertEqual(len(layer_pairwise), 6)
+        self.assertIn("qwen-image-base_vs_qwen-image-2512", layer_pairwise)
+        self.assertIn("qwen-image-2512_vs_qwen-image-layered", layer_pairwise)
+        self.assertIn("overall", layer_pairwise["qwen-image-base_vs_qwen-image-2512"])
+        self.assertIn("by_subsystem", layer_pairwise["qwen-image-base_vs_qwen-image-2512"])
+        self.assertIn(
+            "mmdit_backbone",
+            layer_pairwise["qwen-image-base_vs_qwen-image-2512"]["by_subsystem"],
+        )
 
 
 if __name__ == "__main__":
