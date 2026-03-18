@@ -79,7 +79,7 @@ flowchart LR
 
 Primary CLI:
 ```bash
-q19 stage1 analyze --hf-home "$HF_HOME"
+q19 stage1 analyze
 q19 stage2 fuse --dry-run
 q19 stage3 eval --dry-run
 q19 stage4 quantize --dry-run
@@ -91,7 +91,7 @@ Common flags:
 - `--artifact-dir`
 - `--cache-dir`
 - `--dry-run`
-- `--hf-home` for Stage 1 cache inspection
+- `--hf-home` for Stage 1 cache inspection override
 - `--cache-map-config` for custom HF cache alias mapping
 
 ## Repo Map

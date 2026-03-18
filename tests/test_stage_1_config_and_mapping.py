@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import struct
 import tempfile
@@ -64,6 +65,32 @@ def write_cache_model(
             json.dumps({"weight_map": weight_map}, indent=2),
             encoding="utf-8",
         )
+    return snapshot
+
+
+def write_diffusers_style_cache_model(
+    hub_root: Path,
+    cache_dir_name: str,
+    commit: str,
+    components: dict[str, dict[str, dict[str, object]]],
+    root_config: dict[str, object],
+    component_configs: dict[str, dict[str, object]] | None = None,
+) -> Path:
+    model_root = hub_root / cache_dir_name
+    snapshot = model_root / "snapshots" / commit
+    snapshot.mkdir(parents=True, exist_ok=True)
+    (model_root / "refs").mkdir(parents=True, exist_ok=True)
+    (model_root / "refs" / "main").write_text(commit, encoding="utf-8")
+    (snapshot / "model_index.json").write_text(json.dumps(root_config), encoding="utf-8")
+    component_configs = component_configs or {}
+
+    for component, tensor_map in components.items():
+        component_dir = snapshot / component
+        component_dir.mkdir(parents=True, exist_ok=True)
+        write_fake_safetensors(component_dir / "model.safetensors", tensor_map)
+        config_payload = component_configs.get(component, {"component": component})
+        (component_dir / "config.json").write_text(json.dumps(config_payload), encoding="utf-8")
+
     return snapshot
 
 
@@ -228,6 +255,80 @@ class Stage1Tests(unittest.TestCase):
         )
         manifests = inspect_cache_models(self.hf_home, self.metadata, self.cache_map)
         self.assertEqual(manifests["qwen-image-2512"]["shard_count"], 1)
+
+    def test_diffusers_component_layout_is_supported(self) -> None:
+        write_cache_model(
+            self.hub_root,
+            self.cache_map["qwen-image-2512"],
+            "commit-2512",
+            {"model.safetensors": {"transformer.block1.weight": {"shape": [2, 2]}}},
+            {"rope_mode": "2D"},
+        )
+        write_cache_model(
+            self.hub_root,
+            self.cache_map["qwen-image-edit-2511"],
+            "commit-edit",
+            {"model.safetensors": {"transformer.block1.weight": {"shape": [2, 2]}}},
+            {"rope_mode": "2D"},
+        )
+        write_diffusers_style_cache_model(
+            self.hub_root,
+            self.cache_map["qwen-image-base"],
+            "commit-base",
+            {
+                "transformer": {"transformer.block1.weight": {"shape": [2, 2]}},
+                "text_encoder": {"layers.0.weight": {"shape": [2, 2]}},
+                "vae": {
+                    "encoder.conv_in.weight": {"shape": [8, 3, 3, 3]},
+                    "decoder.conv_out.weight": {"shape": [3, 8, 3, 3]},
+                },
+            },
+            {"architectures": ["DiffusionPipeline"]},
+            {
+                "transformer": {"rope_mode": "2D"},
+                "text_encoder": {"model_type": "qwen2_5_vl"},
+                "vae": {"in_channels": 3, "out_channels": 3},
+            },
+        )
+        write_diffusers_style_cache_model(
+            self.hub_root,
+            self.cache_map["qwen-image-layered"],
+            "commit-layered",
+            {
+                "transformer": {"transformer.block1.weight": {"shape": [2, 2]}},
+                "text_encoder": {"layers.0.weight": {"shape": [2, 3]}},
+                "vae": {
+                    "encoder.conv_in.weight": {"shape": [8, 4, 3, 3]},
+                    "decoder.conv_out.weight": {"shape": [4, 8, 3, 3]},
+                },
+                "rope": {"layer3d.freqs": {"shape": [16]}},
+            },
+            {"architectures": ["DiffusionPipeline"]},
+            {
+                "transformer": {"rope_mode": "Layer3D"},
+                "text_encoder": {"model_type": "qwen2_5_vl"},
+                "vae": {"in_channels": 4, "out_channels": 4},
+                "rope": {"name": "layer3d"},
+            },
+        )
+        manifests = inspect_cache_models(self.hf_home, self.metadata, self.cache_map)
+        self.assertEqual(manifests["qwen-image-base"]["layout"], "componentized")
+        self.assertIn("vae", manifests["qwen-image-base"]["components"])
+        self.assertGreater(manifests["qwen-image-base"]["component_tensor_counts"]["vae"], 0)
+
+    def test_analyze_uses_hf_home_env_by_default(self) -> None:
+        self.create_full_mock_cache()
+        original_hf_home = os.environ.get("HF_HOME")
+        os.environ["HF_HOME"] = str(self.hf_home)
+        try:
+            result = analyze(dry_run=True)
+        finally:
+            if original_hf_home is None:
+                os.environ.pop("HF_HOME", None)
+            else:
+                os.environ["HF_HOME"] = original_hf_home
+        self.assertEqual(result["hf_home"], str(self.hf_home))
+        self.assertIn("Model snapshot inventory", result["report_preview"])
 
 
 if __name__ == "__main__":

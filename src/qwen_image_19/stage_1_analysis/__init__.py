@@ -111,6 +111,21 @@ def load_small_json_files(snapshot: Path) -> dict[str, Any]:
     return config_payloads
 
 
+def load_component_json_files(snapshot: Path) -> dict[str, Any]:
+    config_payloads: dict[str, Any] = {}
+    for file_path in sorted(snapshot.rglob("*.json")):
+        if file_path.name == "model.safetensors.index.json":
+            continue
+        if file_path.stat().st_size > 2_000_000:
+            continue
+        relative = str(file_path.relative_to(snapshot))
+        try:
+            config_payloads[relative] = json.loads(file_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+    return config_payloads
+
+
 def bytes_for_dtype(dtype: str) -> int | None:
     mapping = {
         "F64": 8,
@@ -179,6 +194,7 @@ def parse_safetensors_file(file_path: Path) -> dict[str, Any]:
 
     return {
         "file": file_path.name,
+        "path": str(file_path),
         "size_bytes": file_size,
         "tensor_count": len(tensors),
         "tensors": tensors,
@@ -209,6 +225,20 @@ def discover_checkpoint_shards(snapshot: Path) -> tuple[list[Path], dict[str, st
     return shards, None
 
 
+def discover_component_roots(snapshot: Path) -> list[Path]:
+    component_roots: set[Path] = set()
+    if (snapshot / "model.safetensors.index.json").exists() or any(snapshot.glob("*.safetensors")):
+        component_roots.add(snapshot)
+
+    for path in snapshot.rglob("*"):
+        if not path.is_dir():
+            continue
+        if (path / "model.safetensors.index.json").exists() or any(path.glob("*.safetensors")):
+            component_roots.add(path)
+
+    return sorted(component_roots)
+
+
 def summarize_dtypes(tensors: dict[str, dict[str, Any]]) -> dict[str, int]:
     counter: Counter[str] = Counter()
     for tensor in tensors.values():
@@ -220,9 +250,10 @@ def infer_vae_channels(tensors: dict[str, dict[str, Any]]) -> dict[str, Any]:
     encoder_inputs: list[int] = []
     decoder_outputs: list[int] = []
     for key, tensor in tensors.items():
-        if key.endswith("encoder.conv_in.weight") and len(tensor["shape"]) >= 2:
+        component = tensor.get("component", "")
+        if (key.endswith("encoder.conv_in.weight") or "vae" in component) and len(tensor["shape"]) >= 2:
             encoder_inputs.append(int(tensor["shape"][1]))
-        if key.endswith("decoder.conv_out.weight") and tensor["shape"]:
+        if (key.endswith("decoder.conv_out.weight") or "vae" in component) and tensor["shape"]:
             decoder_outputs.append(int(tensor["shape"][0]))
     values = sorted(set(encoder_inputs + decoder_outputs))
     if 4 in values:
@@ -256,9 +287,10 @@ def flatten_strings(payload: Any) -> Iterable[str]:
 def infer_rope_mode(config_payloads: dict[str, Any], tensors: dict[str, dict[str, Any]]) -> dict[str, Any]:
     corpus = [value.lower() for payload in config_payloads.values() for value in flatten_strings(payload)]
     tensor_keys = [key.lower() for key in tensors]
-    if any("layer3d" in item for item in corpus + tensor_keys):
+    component_names = [str(tensor.get("component", "")).lower() for tensor in tensors.values()]
+    if any("layer3d" in item for item in corpus + tensor_keys + component_names):
         return {"label": "Layer3D", "source": "config-or-key"}
-    if any("rope" in item or "rotary" in item for item in corpus + tensor_keys):
+    if any("rope" in item or "rotary" in item for item in corpus + tensor_keys + component_names):
         return {"label": "2D-or-rotary", "source": "config-or-key"}
     return {"label": "unknown", "source": "none"}
 
@@ -281,6 +313,17 @@ def subsystem_for_key(key: str) -> str:
     if "rope" in key.lower() or "rotary" in key.lower():
         return "rope"
     return "mmdit_backbone"
+
+
+def subsystem_for_tensor(key: str, tensor: dict[str, Any]) -> str:
+    component = str(tensor.get("component", "")).lower()
+    if "vae" in component:
+        return "vae"
+    if "text_encoder" in component:
+        return "text_encoder"
+    if "transformer" in component:
+        return "mmdit_backbone"
+    return subsystem_for_key(key)
 
 
 def compare_tensor_sets(
@@ -311,6 +354,10 @@ def compare_tensor_sets(
         "shared_ratio": round(shared_ratio, 4),
         "top_mismatching_prefixes": top_prefixes(left_only + right_only + shape_mismatches),
         "sample_shape_mismatches": shape_mismatches[:10],
+        "component_breakdown": {
+            "left": dict(Counter(str(left_tensors[key].get("component", ".")) for key in left_keys)),
+            "right": dict(Counter(str(right_tensors[key].get("component", ".")) for key in right_keys)),
+        },
     }
 
 
@@ -338,14 +385,47 @@ def inspect_model_snapshot(
 ) -> dict[str, Any]:
     snapshot_info = resolve_cache_snapshot(hf_home, cache_dir_name)
     snapshot = snapshot_info["snapshot"]
-    shards, weight_map = discover_checkpoint_shards(snapshot)
-    parsed_shards = [parse_safetensors_file(path) for path in shards]
+    component_roots = discover_component_roots(snapshot)
+    if not component_roots:
+        raise Stage1AnalysisError(f"No safetensors files found anywhere under snapshot: {snapshot}")
     tensors: dict[str, dict[str, Any]] = {}
-    for shard in parsed_shards:
-        tensors.update(shard["tensors"])
-    config_payloads = load_small_json_files(snapshot)
+    shard_records: list[dict[str, Any]] = []
+    component_tensor_counts: dict[str, int] = {}
+    component_names: list[str] = []
+    weight_map_present = False
+
+    for component_root in component_roots:
+        component_rel = str(component_root.relative_to(snapshot))
+        component_name = "." if component_rel == "." else component_rel
+        component_names.append(component_name)
+        shards, weight_map = discover_checkpoint_shards(component_root)
+        weight_map_present = weight_map_present or weight_map is not None
+        parsed_shards = [parse_safetensors_file(path) for path in shards]
+        local_tensor_count = 0
+        for shard in parsed_shards:
+            shard_component = component_name
+            shard_records.append(
+                {
+                    "file": shard["file"],
+                    "path": str(Path(shard["path"]).relative_to(snapshot)),
+                    "component": shard_component,
+                    "size_bytes": shard["size_bytes"],
+                    "tensor_count": shard["tensor_count"],
+                }
+            )
+            for tensor_name, tensor in shard["tensors"].items():
+                tensors[tensor_name] = {
+                    **tensor,
+                    "component": shard_component,
+                    "relative_path": str(Path(shard["path"]).relative_to(snapshot)),
+                }
+                local_tensor_count += 1
+        component_tensor_counts[component_name] = local_tensor_count
+
+    config_payloads = load_component_json_files(snapshot)
     vae = infer_vae_channels(tensors)
     rope = infer_rope_mode(config_payloads, tensors)
+    layout = "componentized" if any(name != "." for name in component_names) else "flat"
     return {
         "alias": alias,
         "model_id": metadata["model_id"],
@@ -353,23 +433,19 @@ def inspect_model_snapshot(
         "cache_dir_name": cache_dir_name,
         "commit": snapshot_info["commit"],
         "snapshot_path": str(snapshot),
-        "shard_count": len(parsed_shards),
+        "layout": layout,
+        "components": sorted(component_names),
+        "component_tensor_counts": component_tensor_counts,
+        "shard_count": len(shard_records),
         "tensor_count": len(tensors),
         "dtypes": summarize_dtypes(tensors),
         "total_tensor_bytes": sum(tensor["payload_nbytes"] for tensor in tensors.values()),
         "configs": config_payloads,
-        "weight_map_present": weight_map is not None,
+        "weight_map_present": weight_map_present,
         "vae": vae,
         "rope": rope,
         "tensors": tensors,
-        "shards": [
-            {
-                "file": shard["file"],
-                "size_bytes": shard["size_bytes"],
-                "tensor_count": shard["tensor_count"],
-            }
-            for shard in parsed_shards
-        ],
+        "shards": shard_records,
     }
 
 
@@ -395,6 +471,9 @@ def summarize_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
         "cache_dir_name": manifest["cache_dir_name"],
         "commit": manifest["commit"],
         "snapshot_path": manifest["snapshot_path"],
+        "layout": manifest["layout"],
+        "components": manifest["components"],
+        "component_tensor_counts": manifest["component_tensor_counts"],
         "shard_count": manifest["shard_count"],
         "tensor_count": manifest["tensor_count"],
         "dtypes": manifest["dtypes"],
@@ -416,7 +495,7 @@ def analyze_vae_compatibility(manifests: dict[str, dict[str, Any]]) -> dict[str,
     stats = compare_tensor_sets(
         base["tensors"],
         layered["tensors"],
-        predicate=lambda key: subsystem_for_key(key) == "vae",
+        predicate=lambda key: subsystem_for_tensor(key, base["tensors"].get(key, layered["tensors"].get(key, {}))) == "vae",
     )
     incompatible = base["vae"]["label"] != layered["vae"]["label"]
     return {
@@ -434,7 +513,7 @@ def probe_rope_compatibility(manifests: dict[str, dict[str, Any]]) -> dict[str, 
     stats = compare_tensor_sets(
         foundation["tensors"],
         layered["tensors"],
-        predicate=lambda key: subsystem_for_key(key) in {"text_encoder", "rope"},
+        predicate=lambda key: subsystem_for_tensor(key, foundation["tensors"].get(key, layered["tensors"].get(key, {}))) in {"text_encoder", "rope"},
     )
     preferred = "adapter-only" if foundation["rope"]["label"] != layered["rope"]["label"] else None
     return {
@@ -463,12 +542,20 @@ def build_compatibility_matrix(manifests: dict[str, dict[str, Any]]) -> dict[str
     mmdit_stats = compare_tensor_sets(
         manifests["qwen-image-2512"]["tensors"],
         manifests["qwen-image-edit-2511"]["tensors"],
-        predicate=lambda key: subsystem_for_key(key) == "mmdit_backbone",
+        predicate=lambda key: subsystem_for_tensor(
+            key,
+            manifests["qwen-image-2512"]["tensors"].get(key, manifests["qwen-image-edit-2511"]["tensors"].get(key, {})),
+        )
+        == "mmdit_backbone",
     )
     text_stats = compare_tensor_sets(
         manifests["qwen-image-base"]["tensors"],
         manifests["qwen-image-layered"]["tensors"],
-        predicate=lambda key: subsystem_for_key(key) == "text_encoder",
+        predicate=lambda key: subsystem_for_tensor(
+            key,
+            manifests["qwen-image-base"]["tensors"].get(key, manifests["qwen-image-layered"]["tensors"].get(key, {})),
+        )
+        == "text_encoder",
     )
     vae_result = analyze_vae_compatibility(manifests)
     rope_result = probe_rope_compatibility(manifests)
@@ -535,11 +622,16 @@ def render_similarity_visualization(matrix: dict[str, Any]) -> dict[str, str]:
 
 def render_dna_report(matrix: dict[str, Any], remote_context: dict[str, Any], hf_home: Path, cache_alias_map: dict[str, str]) -> str:
     manifest_rows = "\n".join(
-        f"| `{alias}` | `{summary['commit']}` | `{summary['shard_count']}` | `{summary['tensor_count']}` | `{summary['vae']['label']}` | `{summary['rope']['label']}` |"
+        f"| `{alias}` | `{summary['layout']}` | `{', '.join(summary['components'])}` | `{summary['commit']}` | `{summary['shard_count']}` | `{summary['tensor_count']}` | `{summary['vae']['label']}` | `{summary['rope']['label']}` |"
         for alias, summary in matrix["model_summaries"].items()
     )
+    component_rows = "\n".join(
+        f"| `{alias}` | `{component}` | `{count}` |"
+        for alias, summary in matrix["model_summaries"].items()
+        for component, count in summary["component_tensor_counts"].items()
+    )
     comparison_rows = "\n".join(
-        f"| `{name}` | `{stats['shared_key_count']}` | `{stats['missing_key_count']}` | `{stats['shape_mismatch_count']}` | `{', '.join(item['prefix'] for item in stats['top_mismatching_prefixes'][:3]) or 'none'}` |"
+        f"| `{name}` | `{stats['shared_key_count']}` | `{stats['missing_key_count']}` | `{stats['shape_mismatch_count']}` | `{', '.join(item['prefix'] for item in stats['top_mismatching_prefixes'][:3]) or 'none'}` | `{', '.join(f'{k}:{v}' for k, v in stats['component_breakdown']['left'].items()) or 'none'}` | `{', '.join(f'{k}:{v}' for k, v in stats['component_breakdown']['right'].items()) or 'none'}` |"
         for name, stats in matrix["pairwise_comparisons"].items()
     )
     subsystem_rows = "\n".join(
@@ -563,13 +655,18 @@ This report is built from the Hugging Face cache snapshots, not from repo metada
 {cache_map_lines}
 
 ## Model snapshot inventory
-| Alias | Commit | Shards | Tensor count | VAE | RoPE hint |
-| --- | --- | --- | --- | --- | --- |
+| Alias | Layout | Components | Commit | Shards | Tensor count | VAE | RoPE hint |
+| --- | --- | --- | --- | --- | --- | --- | --- |
 {manifest_rows}
 
+## Component tensor counts
+| Alias | Component | Tensor count |
+| --- | --- | --- |
+{component_rows}
+
 ## Pairwise comparison stats
-| Pair | Shared keys | Missing keys | Shape mismatches | Top mismatch prefixes |
-| --- | --- | --- | --- | --- |
+| Pair | Shared keys | Missing keys | Shape mismatches | Top mismatch prefixes | Left components | Right components |
+| --- | --- | --- | --- | --- | --- | --- |
 {comparison_rows}
 
 ## Subsystem classifications
