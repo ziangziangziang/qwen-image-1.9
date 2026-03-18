@@ -1,0 +1,14 @@
+{
+  "models": {
+    "qwen-image-base": "hf://Qwen/Qwen-Image",
+    "qwen-image-2512": "hf://Qwen/Qwen-Image-2512",
+    "qwen-image-edit-2511": "hf://Qwen/Qwen-Image-Edit-2511",
+    "qwen-image-layered": "hf://Qwen/Qwen-Image-Layered"
+  },
+  "remote": {
+    "workdir": "/mnt/experiments/qwen-image-1.9",
+    "cache_dir": "/mnt/cache/qwen-image",
+    "artifact_dir": "/mnt/artifacts/qwen-image-1.9"
+  }
+}
+

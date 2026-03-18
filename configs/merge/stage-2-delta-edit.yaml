@@ -1,0 +1,13 @@
+{
+  "recipe_name": "stage-2-delta-edit",
+  "foundation_model": "qwen-image-2512",
+  "delta_source": "qwen-image-edit-2511",
+  "delta_base_hint": "Qwen/Qwen-Image-Edit-2509",
+  "default_blend_weight": 0.35,
+  "target_subsystems": [
+    "mmdit_backbone",
+    "edit_heads",
+    "conditioning_blocks"
+  ]
+}
+

@@ -1,0 +1,21 @@
+{
+  "model_id": "Qwen/Qwen-Image-Layered",
+  "alias": "qwen-image-layered",
+  "role": "layer-logic-donor",
+  "license": "Apache-2.0",
+  "family": "qwen-image",
+  "architecture": {
+    "backbone": "MMDiT",
+    "backbone_size": "20B",
+    "text_encoder": "Qwen2.5-VL",
+    "vae": "RGBA-VAE",
+    "rope": "Layer3D"
+  },
+  "ancestry": {
+    "base_model": "Qwen/Qwen-Image"
+  },
+  "remote": {
+    "checkpoint_uri": "hf://Qwen/Qwen-Image-Layered"
+  }
+}
+

@@ -1,0 +1,15 @@
+{
+  "launcher": {
+    "type": "ssh",
+    "python": "python3",
+    "preflight": [
+      "source /opt/rocm/env.sh",
+      "export HF_HOME=/mnt/cache/huggingface"
+    ],
+    "env": {
+      "CUDA_VISIBLE_DEVICES": "",
+      "HIP_VISIBLE_DEVICES": "0"
+    }
+  }
+}
+

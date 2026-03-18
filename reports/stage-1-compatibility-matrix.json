@@ -1,0 +1,65 @@
+{
+  "generated_at": "2026-03-18T03:33:33.334017+00:00",
+  "models": [
+    "qwen-image-base",
+    "qwen-image-2512",
+    "qwen-image-edit-2511",
+    "qwen-image-layered"
+  ],
+  "subsystems": [
+    {
+      "classification": "delta-merge",
+      "models": [
+        "qwen-image-2512",
+        "qwen-image-edit-2511"
+      ],
+      "reason": "2512 and 2511 advertise the same MMDiT and text encoder family, so ancestry-aware delta transplant is the lowest-risk starting point.",
+      "subsystem": "mmdit_backbone"
+    },
+    {
+      "classification": "adapter-only",
+      "models": [
+        "qwen-image-2512",
+        "qwen-image-edit-2511",
+        "qwen-image-layered"
+      ],
+      "reason": "Shared Qwen2.5-VL family helps, but layered prompt semantics should be merged with conflict resolution rather than naive averaging.",
+      "subsystem": "text_encoder"
+    },
+    {
+      "classification": "incompatible",
+      "models": [
+        "qwen-image-2512",
+        "qwen-image-layered"
+      ],
+      "reason": "Layered exposes RGBA-VAE while the 2512 family uses RGB-VAE. Treat the layered path as adapter-only unless alpha semantics can be preserved.",
+      "subsystem": "vae"
+    },
+    {
+      "classification": "adapter-only",
+      "models": [
+        "qwen-image-2512",
+        "qwen-image-layered"
+      ],
+      "reason": "Foundation uses 2D while layered uses Layer3D; inject only behind an explicit compatibility gate.",
+      "subsystem": "rope"
+    }
+  ],
+  "summary": {
+    "adapter_only": 2,
+    "delta_merge": 1,
+    "direct_merge": 0,
+    "incompatible": 1
+  },
+  "visualization": {
+    "matrix_snapshot": {
+      "adapter_only": 2,
+      "delta_merge": 1,
+      "direct_merge": 0,
+      "incompatible": 1
+    },
+    "source": "flowchart LR\n    A[\"Qwen-Image-2512\"]\n    B[\"Qwen-Image-Edit-2511\"]\n    C[\"Qwen-Image-Layered\"]\n    A -->|\"delta-merge\"| B\n    A -->|\"adapter-only\"| C\n    B -->|\"edit donor\"| D[\"Fusion Candidate\"]\n    C -->|\"layer logic donor\"| D\n",
+    "title": "Stage 1 similarity sketch",
+    "type": "mermaid"
+  }
+}

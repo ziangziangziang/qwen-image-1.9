@@ -1,0 +1,12 @@
+{
+  "profile": "exl2-gptq",
+  "format": "EXL2/GPTQ",
+  "targets": [
+    "4.0bpw"
+  ],
+  "runtime": {
+    "primary": "vllm-omni",
+    "hardware": "ROCm"
+  }
+}
+

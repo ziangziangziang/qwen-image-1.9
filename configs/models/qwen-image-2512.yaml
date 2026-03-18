@@ -1,0 +1,18 @@
+{
+  "model_id": "Qwen/Qwen-Image-2512",
+  "alias": "qwen-image-2512",
+  "role": "foundation",
+  "license": "Apache-2.0",
+  "family": "qwen-image",
+  "architecture": {
+    "backbone": "MMDiT",
+    "backbone_size": "20B",
+    "text_encoder": "Qwen2.5-VL",
+    "vae": "RGB-VAE",
+    "rope": "2D"
+  },
+  "remote": {
+    "checkpoint_uri": "hf://Qwen/Qwen-Image-2512"
+  }
+}
+

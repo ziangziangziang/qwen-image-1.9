@@ -1,0 +1,15 @@
+{
+  "required_top_level": [
+    "generated_at",
+    "models",
+    "subsystems",
+    "visualization"
+  ],
+  "allowed_classifications": [
+    "direct-merge",
+    "delta-merge",
+    "adapter-only",
+    "incompatible"
+  ]
+}
+

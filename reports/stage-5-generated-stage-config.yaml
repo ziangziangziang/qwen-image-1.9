@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "runtime": {
+    "backend": "vllm-omni",
+    "accelerator": "rocm",
+    "features": [
+      "hip-kernels",
+      "paged-attention"
+    ]
+  },
+  "stages": [
+    {
+      "name": "thinker",
+      "kind": "text-encoder",
+      "artifact": "remote://bf16/ablated-text-encoder-placeholder"
+    },
+    {
+      "name": "generator",
+      "kind": "mmdit",
+      "artifact": "remote://bf16/merged-mmdit-placeholder"
+    }
+  ],
+  "outputs": {
+    "artifact_manifest": "/mnt/artifacts/qwen-image-1.9/stage-5/generated-stage-config.yaml"
+  },
+  "remote": {
+    "workdir": "/mnt/experiments/qwen-image-1.9",
+    "artifact_dir": "/mnt/artifacts/qwen-image-1.9",
+    "cache_dir": "/mnt/cache/qwen-image"
+  }
+}

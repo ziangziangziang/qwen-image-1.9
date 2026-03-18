@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "runtime": {
+    "backend": "vllm-omni",
+    "accelerator": "rocm",
+    "features": [
+      "hip-kernels",
+      "paged-attention"
+    ]
+  },
+  "stages": [
+    {
+      "name": "thinker",
+      "kind": "text-encoder",
+      "artifact": "remote://bf16/ablated-text-encoder-placeholder"
+    },
+    {
+      "name": "generator",
+      "kind": "mmdit",
+      "artifact": "remote://bf16/merged-mmdit-placeholder"
+    }
+  ],
+  "outputs": {
+    "artifact_manifest": "reports/stage-5-generated-stage-config.yaml"
+  }
+}
+

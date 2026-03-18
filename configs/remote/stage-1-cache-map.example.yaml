@@ -1,0 +1,6 @@
+{
+  "qwen-image-base": "models--Qwen--Qwen-Image",
+  "qwen-image-2512": "models--Qwen--Qwen-Image-2512",
+  "qwen-image-edit-2511": "models--Qwen--Qwen-Image-Edit-2511",
+  "qwen-image-layered": "models--Qwen--Qwen-Image-Layered"
+}

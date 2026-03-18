@@ -1,0 +1,15 @@
+{
+  "profile": "gguf",
+  "format": "GGUF",
+  "targets": [
+    "Q4_K_M",
+    "IQ4_XS"
+  ],
+  "imatrix": {
+    "required": true,
+    "dataset_name": "stage-4-diverse-image-set",
+    "minimum_images": 2000,
+    "purpose": "vision-preserving quantization"
+  }
+}
+
