@@ -87,8 +87,26 @@ def write_diffusers_style_cache_model(
     for component, tensor_map in components.items():
         component_dir = snapshot / component
         component_dir.mkdir(parents=True, exist_ok=True)
-        write_fake_safetensors(component_dir / "model.safetensors", tensor_map)
-        config_payload = component_configs.get(component, {"component": component})
+        config_payload = dict(component_configs.get(component, {"component": component}))
+        index_name = str(config_payload.pop("index_name", "model.safetensors.index.json"))
+        shard_prefix = str(config_payload.pop("shard_prefix", "model"))
+        shard_count = int(config_payload.pop("shard_count", 1))
+
+        if shard_count == 1:
+            write_fake_safetensors(component_dir / f"{shard_prefix}.safetensors", tensor_map)
+        else:
+            weight_map: dict[str, str] = {}
+            tensor_items = list(tensor_map.items())
+            buckets = [tensor_items[i::shard_count] for i in range(shard_count)]
+            for shard_idx, bucket in enumerate(buckets, start=1):
+                shard_name = f"{shard_prefix}-{shard_idx:05d}-of-{shard_count:05d}.safetensors"
+                write_fake_safetensors(component_dir / shard_name, dict(bucket))
+                for tensor_name, _ in bucket:
+                    weight_map[tensor_name] = shard_name
+            (component_dir / index_name).write_text(
+                json.dumps({"weight_map": weight_map}, indent=2),
+                encoding="utf-8",
+            )
         (component_dir / "config.json").write_text(json.dumps(config_payload), encoding="utf-8")
 
     return snapshot
@@ -276,7 +294,10 @@ class Stage1Tests(unittest.TestCase):
             self.cache_map["qwen-image-base"],
             "commit-base",
             {
-                "transformer": {"transformer.block1.weight": {"shape": [2, 2]}},
+                "transformer": {
+                    "transformer.block1.weight": {"shape": [2, 2]},
+                    "transformer.block2.weight": {"shape": [2, 2]},
+                },
                 "text_encoder": {"layers.0.weight": {"shape": [2, 2]}},
                 "vae": {
                     "encoder.conv_in.weight": {"shape": [8, 3, 3, 3]},
@@ -285,7 +306,12 @@ class Stage1Tests(unittest.TestCase):
             },
             {"architectures": ["DiffusionPipeline"]},
             {
-                "transformer": {"rope_mode": "2D"},
+                "transformer": {
+                    "rope_mode": "2D",
+                    "index_name": "diffusion_pytorch_model.safetensors.index.json",
+                    "shard_prefix": "diffusion_pytorch_model",
+                    "shard_count": 2,
+                },
                 "text_encoder": {"model_type": "qwen2_5_vl"},
                 "vae": {"in_channels": 3, "out_channels": 3},
             },
@@ -295,7 +321,10 @@ class Stage1Tests(unittest.TestCase):
             self.cache_map["qwen-image-layered"],
             "commit-layered",
             {
-                "transformer": {"transformer.block1.weight": {"shape": [2, 2]}},
+                "transformer": {
+                    "transformer.block1.weight": {"shape": [2, 2]},
+                    "transformer.block2.weight": {"shape": [2, 2]},
+                },
                 "text_encoder": {"layers.0.weight": {"shape": [2, 3]}},
                 "vae": {
                     "encoder.conv_in.weight": {"shape": [8, 4, 3, 3]},
@@ -305,7 +334,12 @@ class Stage1Tests(unittest.TestCase):
             },
             {"architectures": ["DiffusionPipeline"]},
             {
-                "transformer": {"rope_mode": "Layer3D"},
+                "transformer": {
+                    "rope_mode": "Layer3D",
+                    "index_name": "diffusion_pytorch_model.safetensors.index.json",
+                    "shard_prefix": "diffusion_pytorch_model",
+                    "shard_count": 2,
+                },
                 "text_encoder": {"model_type": "qwen2_5_vl"},
                 "vae": {"in_channels": 4, "out_channels": 4},
                 "rope": {"name": "layer3d"},
@@ -315,6 +349,105 @@ class Stage1Tests(unittest.TestCase):
         self.assertEqual(manifests["qwen-image-base"]["layout"], "componentized")
         self.assertIn("vae", manifests["qwen-image-base"]["components"])
         self.assertGreater(manifests["qwen-image-base"]["component_tensor_counts"]["vae"], 0)
+        transformer_shards = [shard for shard in manifests["qwen-image-base"]["shards"] if shard["component"] == "transformer"]
+        self.assertEqual(len(transformer_shards), 2)
+
+    def test_multiple_safetensors_indices_in_component_is_error(self) -> None:
+        write_cache_model(
+            self.hub_root,
+            self.cache_map["qwen-image-2512"],
+            "commit-2512",
+            {"model.safetensors": {"transformer.block1.weight": {"shape": [2, 2]}}},
+            {"rope_mode": "2D"},
+        )
+        write_cache_model(
+            self.hub_root,
+            self.cache_map["qwen-image-edit-2511"],
+            "commit-edit",
+            {"model.safetensors": {"transformer.block1.weight": {"shape": [2, 2]}}},
+            {"rope_mode": "2D"},
+        )
+        write_cache_model(
+            self.hub_root,
+            self.cache_map["qwen-image-layered"],
+            "commit-layered",
+            {"model.safetensors": {"transformer.block1.weight": {"shape": [2, 2]}}},
+            {"rope_mode": "Layer3D"},
+        )
+        snapshot = write_diffusers_style_cache_model(
+            self.hub_root,
+            self.cache_map["qwen-image-base"],
+            "commit-base",
+            {
+                "transformer": {
+                    "transformer.block1.weight": {"shape": [2, 2]},
+                    "transformer.block2.weight": {"shape": [2, 2]},
+                }
+            },
+            {"architectures": ["DiffusionPipeline"]},
+            {
+                "transformer": {
+                    "rope_mode": "2D",
+                    "index_name": "diffusion_pytorch_model.safetensors.index.json",
+                    "shard_prefix": "diffusion_pytorch_model",
+                    "shard_count": 2,
+                }
+            },
+        )
+        transformer_dir = snapshot / "transformer"
+        (transformer_dir / "extra.safetensors.index.json").write_text(
+            json.dumps({"weight_map": {"transformer.block1.weight": "diffusion_pytorch_model-00001-of-00002.safetensors"}}, indent=2),
+            encoding="utf-8",
+        )
+        with self.assertRaises(Stage1AnalysisError):
+            inspect_cache_models(self.hf_home, self.metadata, self.cache_map)
+
+    def test_missing_shard_referenced_by_index_is_error(self) -> None:
+        write_cache_model(
+            self.hub_root,
+            self.cache_map["qwen-image-2512"],
+            "commit-2512",
+            {"model.safetensors": {"transformer.block1.weight": {"shape": [2, 2]}}},
+            {"rope_mode": "2D"},
+        )
+        write_cache_model(
+            self.hub_root,
+            self.cache_map["qwen-image-edit-2511"],
+            "commit-edit",
+            {"model.safetensors": {"transformer.block1.weight": {"shape": [2, 2]}}},
+            {"rope_mode": "2D"},
+        )
+        write_cache_model(
+            self.hub_root,
+            self.cache_map["qwen-image-layered"],
+            "commit-layered",
+            {"model.safetensors": {"transformer.block1.weight": {"shape": [2, 2]}}},
+            {"rope_mode": "Layer3D"},
+        )
+        snapshot = write_diffusers_style_cache_model(
+            self.hub_root,
+            self.cache_map["qwen-image-base"],
+            "commit-base",
+            {
+                "transformer": {
+                    "transformer.block1.weight": {"shape": [2, 2]},
+                    "transformer.block2.weight": {"shape": [2, 2]},
+                }
+            },
+            {"architectures": ["DiffusionPipeline"]},
+            {
+                "transformer": {
+                    "rope_mode": "2D",
+                    "index_name": "diffusion_pytorch_model.safetensors.index.json",
+                    "shard_prefix": "diffusion_pytorch_model",
+                    "shard_count": 2,
+                }
+            },
+        )
+        missing_shard = snapshot / "transformer" / "diffusion_pytorch_model-00002-of-00002.safetensors"
+        missing_shard.unlink()
+        with self.assertRaises(Stage1AnalysisError):
+            inspect_cache_models(self.hf_home, self.metadata, self.cache_map)
 
     def test_analyze_uses_hf_home_env_by_default(self) -> None:
         self.create_full_mock_cache()

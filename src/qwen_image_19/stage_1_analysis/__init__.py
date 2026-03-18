@@ -100,7 +100,7 @@ def resolve_cache_snapshot(hf_home: str | Path | None, cache_dir_name: str) -> d
 def load_small_json_files(snapshot: Path) -> dict[str, Any]:
     config_payloads: dict[str, Any] = {}
     for file_path in sorted(snapshot.glob("*.json")):
-        if file_path.name == "model.safetensors.index.json":
+        if file_path.name.endswith(".safetensors.index.json"):
             continue
         if file_path.stat().st_size > 2_000_000:
             continue
@@ -114,7 +114,7 @@ def load_small_json_files(snapshot: Path) -> dict[str, Any]:
 def load_component_json_files(snapshot: Path) -> dict[str, Any]:
     config_payloads: dict[str, Any] = {}
     for file_path in sorted(snapshot.rglob("*.json")):
-        if file_path.name == "model.safetensors.index.json":
+        if file_path.name.endswith(".safetensors.index.json"):
             continue
         if file_path.stat().st_size > 2_000_000:
             continue
@@ -202,8 +202,13 @@ def parse_safetensors_file(file_path: Path) -> dict[str, Any]:
 
 
 def discover_checkpoint_shards(snapshot: Path) -> tuple[list[Path], dict[str, str] | None]:
-    index_path = snapshot / "model.safetensors.index.json"
-    if index_path.exists():
+    index_paths = sorted(snapshot.glob("*.safetensors.index.json"))
+    if len(index_paths) > 1:
+        raise Stage1AnalysisError(
+            f"Multiple safetensors index files found in component directory {snapshot}: {[path.name for path in index_paths]}"
+        )
+    if len(index_paths) == 1:
+        index_path = index_paths[0]
         index_payload = json.loads(index_path.read_text(encoding="utf-8"))
         weight_map = index_payload.get("weight_map", {})
         if not weight_map:
@@ -220,20 +225,20 @@ def discover_checkpoint_shards(snapshot: Path) -> tuple[list[Path], dict[str, st
         raise Stage1AnalysisError(f"No safetensors files found in snapshot: {snapshot}")
     if len(shards) > 1:
         raise Stage1AnalysisError(
-            f"Multiple safetensors files found without model.safetensors.index.json in {snapshot}"
+            f"Multiple safetensors files found without a safetensors index in {snapshot}"
         )
     return shards, None
 
 
 def discover_component_roots(snapshot: Path) -> list[Path]:
     component_roots: set[Path] = set()
-    if (snapshot / "model.safetensors.index.json").exists() or any(snapshot.glob("*.safetensors")):
+    if any(snapshot.glob("*.safetensors.index.json")) or any(snapshot.glob("*.safetensors")):
         component_roots.add(snapshot)
 
     for path in snapshot.rglob("*"):
         if not path.is_dir():
             continue
-        if (path / "model.safetensors.index.json").exists() or any(path.glob("*.safetensors")):
+        if any(path.glob("*.safetensors.index.json")) or any(path.glob("*.safetensors")):
             component_roots.add(path)
 
     return sorted(component_roots)
