@@ -9,6 +9,9 @@ description = "Remote-first scaffold for Project Qwen-Image 1.9."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
+dependencies = [
+  "matplotlib>=3.8"
+]
 authors = [
   { name = "Qwen-Image 1.9 Community Bridge" }
 ]
@@ -29,4 +32,3 @@ package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
-

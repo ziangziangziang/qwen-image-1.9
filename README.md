@@ -108,7 +108,7 @@ examples/  starter prompts and notebook placeholders
 ## Deliverables By Stage
 | Stage | Primary deliverable | Secondary output |
 | --- | --- | --- |
-| 1 | `reports/stage-1-dna-report.md` | `reports/stage-1-compatibility-matrix.json` |
+| 1 | `reports/stage-1/summary.md` | `reports/stage-1/compatibility-matrix.json` plus `reports/stage-1/figures/*.png` |
 | 2 | `reports/stage-2-fusion-report.md` | `reports/stage-2-merge-manifest.json` |
 | 3 | `reports/stage-3-eval-report.md` | eval registry in CLI output |
 | 4 | `reports/stage-4-quantization-report.md` | validated GGUF and EXL2 recipes |

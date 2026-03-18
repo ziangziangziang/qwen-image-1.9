@@ -625,7 +625,104 @@ def render_similarity_visualization(matrix: dict[str, Any]) -> dict[str, str]:
     }
 
 
-def render_dna_report(matrix: dict[str, Any], remote_context: dict[str, Any], hf_home: Path, cache_alias_map: dict[str, str]) -> str:
+def stage1_artifact_paths(target_dir: Path) -> dict[str, Path]:
+    return {
+        "artifact_dir": target_dir,
+        "summary_markdown": target_dir / "summary.md",
+        "matrix_json": target_dir / "compatibility-matrix.json",
+        "figures_dir": target_dir / "figures",
+        "component_overview_png": target_dir / "figures" / "component-overview.png",
+        "pairwise_comparison_png": target_dir / "figures" / "pairwise-comparison.png",
+    }
+
+
+def build_stage1_compatibility_shims(target_dir: Path) -> dict[str, Path]:
+    if target_dir.name == "stage-1":
+        compat_dir = target_dir.parent
+        return {
+            "legacy_matrix_json": compat_dir / "stage-1-compatibility-matrix.json",
+            "legacy_report_md": compat_dir / "stage-1-dna-report.md",
+        }
+    return {}
+
+
+def generate_stage1_figures(matrix: dict[str, Any], figure_paths: dict[str, Path]) -> dict[str, str]:
+    try:
+        import matplotlib
+
+        matplotlib.use("Agg")
+        from matplotlib import pyplot as plt
+    except ModuleNotFoundError as exc:
+        raise Stage1AnalysisError(
+            "matplotlib is required for Stage 1 figures. Install project dependencies before running q19 stage1 analyze."
+        ) from exc
+
+    figure_paths["figures_dir"].mkdir(parents=True, exist_ok=True)
+
+    model_names = list(matrix["model_summaries"].keys())
+    component_names = sorted(
+        {
+            component
+            for summary in matrix["model_summaries"].values()
+            for component in summary["component_tensor_counts"]
+        }
+    )
+    fig, ax = plt.subplots(figsize=(11, max(4, 1.4 * len(model_names))))
+    left = [0 for _ in model_names]
+    palette = ["#4E79A7", "#F28E2B", "#E15759", "#76B7B2", "#59A14F", "#EDC948", "#B07AA1"]
+    for idx, component in enumerate(component_names):
+        values = [
+            matrix["model_summaries"][model]["component_tensor_counts"].get(component, 0)
+            for model in model_names
+        ]
+        ax.barh(model_names, values, left=left, label=component, color=palette[idx % len(palette)])
+        left = [current + value for current, value in zip(left, values)]
+    for model_name, total in zip(model_names, left):
+        ax.text(total + max(1, int(max(left or [1]) * 0.01)), model_name, str(total), va="center", fontsize=9)
+    ax.set_title("Stage 1 Component Overview")
+    ax.set_xlabel("Tensor count")
+    ax.legend(loc="best", fontsize=8)
+    fig.tight_layout()
+    fig.savefig(figure_paths["component_overview_png"], dpi=180)
+    plt.close(fig)
+
+    pair_names = list(matrix["pairwise_comparisons"].keys())
+    metrics = [
+        ("shared_key_count", "Shared keys", "#4E79A7"),
+        ("missing_key_count", "Missing keys", "#F28E2B"),
+        ("shape_mismatch_count", "Shape mismatches", "#E15759"),
+    ]
+    fig, ax = plt.subplots(figsize=(11, 5))
+    width = 0.22
+    base_positions = list(range(len(pair_names)))
+    for metric_idx, (metric_key, label, color) in enumerate(metrics):
+        positions = [position + (metric_idx - 1) * width for position in base_positions]
+        values = [matrix["pairwise_comparisons"][name][metric_key] for name in pair_names]
+        bars = ax.bar(positions, values, width=width, label=label, color=color)
+        for bar, value in zip(bars, values):
+            ax.text(bar.get_x() + bar.get_width() / 2, value, str(value), ha="center", va="bottom", fontsize=8)
+    ax.set_xticks(base_positions)
+    ax.set_xticklabels(pair_names, rotation=10, ha="right")
+    ax.set_ylabel("Count")
+    ax.set_title("Stage 1 Pairwise Comparison")
+    ax.legend(loc="best")
+    fig.tight_layout()
+    fig.savefig(figure_paths["pairwise_comparison_png"], dpi=180)
+    plt.close(fig)
+
+    return {
+        "component_overview": str(figure_paths["component_overview_png"].name),
+        "pairwise_comparison": str(figure_paths["pairwise_comparison_png"].name),
+    }
+
+
+def render_dna_report(
+    matrix: dict[str, Any],
+    remote_context: dict[str, Any],
+    hf_home: Path,
+    cache_alias_map: dict[str, str],
+    figure_refs: dict[str, str],
+) -> str:
     manifest_rows = "\n".join(
         f"| `{alias}` | `{summary['layout']}` | `{', '.join(summary['components'])}` | `{summary['commit']}` | `{summary['shard_count']}` | `{summary['tensor_count']}` | `{summary['vae']['label']}` | `{summary['rope']['label']}` |"
         for alias, summary in matrix["model_summaries"].items()
@@ -685,7 +782,12 @@ This report is built from the Hugging Face cache snapshots, not from repo metada
 - `adapter-only`: {matrix['summary']['adapter_only']}
 - `incompatible`: {matrix['summary']['incompatible']}
 
-## Visualization
+## Figures
+![Component overview]({figure_refs['component_overview']})
+
+![Pairwise comparison]({figure_refs['pairwise_comparison']})
+
+## Secondary visualization
 ```mermaid
 {matrix['visualization']['source'].rstrip()}
 ```
@@ -695,6 +797,59 @@ This report is built from the Hugging Face cache snapshots, not from repo metada
 - `Layered` is judged first against `Qwen-Image` ancestry, then mapped onto the `2512` foundation.
 - VAE and RoPE claims are tied to checkpoint evidence instead of hard-coded roadmap assumptions.
 """
+
+
+def render_stage1_compatibility_stub(target_dir: Path) -> str:
+    return f"""# Stage 1 DNA Report
+
+Canonical Stage 1 report: [stage-1/summary.md](stage-1/summary.md)
+
+This file is kept as a compatibility shim. Open `{target_dir / 'summary.md'}` for the full analyst-facing report.
+"""
+
+
+def build_stage1_terminal_summary(result: dict[str, Any]) -> str:
+    matrix = result["matrix"]
+    pairwise = matrix["pairwise_comparisons"]
+    lines = [
+        "Stage 1 DNA analysis",
+        f"mode: {result['mode']}",
+        f"hf_home: {result['hf_home']}",
+        f"artifacts: {result['artifact_dir']}",
+        (
+            "classifications: "
+            f"direct={matrix['summary']['direct_merge']} "
+            f"delta={matrix['summary']['delta_merge']} "
+            f"adapter={matrix['summary']['adapter_only']} "
+            f"incompatible={matrix['summary']['incompatible']}"
+        ),
+        (
+            "2512 vs 2511: "
+            f"shared={pairwise['foundation_vs_edit']['shared_key_count']} "
+            f"missing={pairwise['foundation_vs_edit']['missing_key_count']} "
+            f"shape_mismatch={pairwise['foundation_vs_edit']['shape_mismatch_count']}"
+        ),
+        (
+            "base vs layered: "
+            f"shared={pairwise['base_vs_layered']['shared_key_count']} "
+            f"missing={pairwise['base_vs_layered']['missing_key_count']} "
+            f"shape_mismatch={pairwise['base_vs_layered']['shape_mismatch_count']}"
+        ),
+    ]
+    artifact_refs = result.get("artifact_paths", {})
+    if artifact_refs:
+        lines.extend(
+            [
+                f"summary: {artifact_refs.get('summary_markdown', '')}",
+                f"matrix: {artifact_refs.get('matrix_json', '')}",
+                f"figure(component): {artifact_refs.get('component_overview_png', '')}",
+                f"figure(pairwise): {artifact_refs.get('pairwise_comparison_png', '')}",
+            ]
+        )
+    if result.get("compatibility_shims"):
+        lines.append(f"compatibility_matrix_shim: {result['compatibility_shims'].get('legacy_matrix_json', '')}")
+    lines.append("use --json for the full machine-readable payload")
+    return "\n".join(lines)
 
 
 def analyze(
@@ -714,8 +869,19 @@ def analyze(
     resolved_hf_home = resolve_hf_home(hf_home)
     manifests = inspect_cache_models(resolved_hf_home, metadata_models, cache_alias_map)
     matrix = build_compatibility_matrix(manifests)
-    report = render_dna_report(matrix, remote_context, resolved_hf_home, cache_alias_map)
-    target_dir = Path(artifact_dir) if artifact_dir else repo_root() / "reports"
+    target_dir = Path(artifact_dir) if artifact_dir else repo_root() / "reports" / "stage-1"
+    artifact_paths = stage1_artifact_paths(target_dir)
+    compatibility_shims = build_stage1_compatibility_shims(target_dir)
+    figure_refs = {
+        "component_overview": f"figures/{artifact_paths['component_overview_png'].name}",
+        "pairwise_comparison": f"figures/{artifact_paths['pairwise_comparison_png'].name}",
+    }
+    matrix["artifact_layout"] = {
+        "summary_markdown": str(artifact_paths["summary_markdown"].name),
+        "matrix_json": str(artifact_paths["matrix_json"].name),
+        "figures": figure_refs,
+    }
+    report = render_dna_report(matrix, remote_context, resolved_hf_home, cache_alias_map, figure_refs)
     result = {
         "stage": "stage1",
         "mode": "dry-run" if dry_run else "write",
@@ -723,14 +889,26 @@ def analyze(
         "cache_alias_map": cache_alias_map,
         "matrix": matrix,
         "artifact_dir": str(target_dir),
+        "artifact_paths": {key: str(value) for key, value in artifact_paths.items() if key != "figures_dir"},
+        "compatibility_shims": {key: str(value) for key, value in compatibility_shims.items()},
     }
     if dry_run:
         result["report_preview"] = report
+        result["terminal_summary"] = build_stage1_terminal_summary(result)
         return result
-    write_json(target_dir / "stage-1-compatibility-matrix.json", matrix)
-    write_text(target_dir / "stage-1-dna-report.md", report)
-    result["written"] = [
-        str(target_dir / "stage-1-compatibility-matrix.json"),
-        str(target_dir / "stage-1-dna-report.md"),
+    generate_stage1_figures(matrix, artifact_paths)
+    write_json(artifact_paths["matrix_json"], matrix)
+    write_text(artifact_paths["summary_markdown"], report)
+    written = [
+        str(artifact_paths["matrix_json"]),
+        str(artifact_paths["summary_markdown"]),
+        str(artifact_paths["component_overview_png"]),
+        str(artifact_paths["pairwise_comparison_png"]),
     ]
+    if compatibility_shims:
+        write_json(compatibility_shims["legacy_matrix_json"], matrix)
+        write_text(compatibility_shims["legacy_report_md"], render_stage1_compatibility_stub(target_dir))
+        written.extend(str(path) for path in compatibility_shims.values())
+    result["written"] = written
+    result["terminal_summary"] = build_stage1_terminal_summary(result)
     return result

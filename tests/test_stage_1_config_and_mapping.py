@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import io
 import json
 import os
 from pathlib import Path
 import struct
 import tempfile
 import unittest
+from unittest.mock import patch
+
+from qwen_image_19.cli import main as cli_main
 
 from qwen_image_19.stage_1_analysis import (
     Stage1AnalysisError,
@@ -37,6 +41,11 @@ def write_fake_safetensors(path: Path, tensors: dict[str, dict[str, object]]) ->
         offset += total_nbytes
     header_bytes = json.dumps(header).encode("utf-8")
     path.write_bytes(struct.pack("<Q", len(header_bytes)) + header_bytes + payload)
+
+
+def write_fake_png(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(b"\x89PNG\r\n\x1a\n")
 
 
 def write_cache_model(
@@ -193,6 +202,14 @@ class Stage1Tests(unittest.TestCase):
             {"rope_mode": "Layer3D"},
         )
 
+    def fake_generate_stage1_figures(self, matrix: dict[str, object], artifact_paths: dict[str, Path]) -> dict[str, str]:
+        write_fake_png(artifact_paths["component_overview_png"])
+        write_fake_png(artifact_paths["pairwise_comparison_png"])
+        return {
+            "component_overview": artifact_paths["component_overview_png"].name,
+            "pairwise_comparison": artifact_paths["pairwise_comparison_png"].name,
+        }
+
     def test_resolves_hf_cache_snapshot(self) -> None:
         self.create_full_mock_cache()
         snapshot = resolve_cache_snapshot(self.hf_home, self.cache_map["qwen-image-2512"])
@@ -209,6 +226,7 @@ class Stage1Tests(unittest.TestCase):
         self.assertEqual(matrix["summary"]["adapter_only"], 2)
         self.assertEqual(matrix["summary"]["incompatible"], 1)
         self.assertIn("Pairwise comparison stats", result["report_preview"])
+        self.assertIn("summary.md", result["artifact_paths"]["summary_markdown"])
 
     def test_compare_state_dicts_uses_real_manifests(self) -> None:
         self.create_full_mock_cache()
@@ -462,6 +480,55 @@ class Stage1Tests(unittest.TestCase):
                 os.environ["HF_HOME"] = original_hf_home
         self.assertEqual(result["hf_home"], str(self.hf_home))
         self.assertIn("Model snapshot inventory", result["report_preview"])
+
+    def test_stage1_write_creates_artifact_folder_and_shims(self) -> None:
+        self.create_full_mock_cache()
+        artifact_root = Path(self.tmpdir.name) / "reports" / "stage-1"
+        with patch("qwen_image_19.stage_1_analysis.generate_stage1_figures", side_effect=self.fake_generate_stage1_figures):
+            result = analyze(hf_home=self.hf_home, artifact_dir=artifact_root)
+        self.assertTrue((artifact_root / "summary.md").exists())
+        self.assertTrue((artifact_root / "compatibility-matrix.json").exists())
+        self.assertTrue((artifact_root / "figures" / "component-overview.png").exists())
+        self.assertTrue((artifact_root / "figures" / "pairwise-comparison.png").exists())
+        self.assertTrue((artifact_root.parent / "stage-1-compatibility-matrix.json").exists())
+        self.assertTrue((artifact_root.parent / "stage-1-dna-report.md").exists())
+        summary_text = (artifact_root / "summary.md").read_text(encoding="utf-8")
+        self.assertIn("figures/component-overview.png", summary_text)
+        self.assertIn("figures/pairwise-comparison.png", summary_text)
+        self.assertIn("terminal_summary", result)
+
+    def test_stage1_cli_default_stdout_is_compact_summary(self) -> None:
+        self.create_full_mock_cache()
+        stdout = io.StringIO()
+        with patch("qwen_image_19.stage_1_analysis.generate_stage1_figures", side_effect=self.fake_generate_stage1_figures):
+            with patch("sys.stdout", new=stdout):
+                exit_code = cli_main(["stage1", "analyze", "--hf-home", str(self.hf_home), "--artifact-dir", str(Path(self.tmpdir.name) / "reports" / "stage-1")])
+        output = stdout.getvalue()
+        self.assertEqual(exit_code, 0)
+        self.assertIn("Stage 1 DNA analysis", output)
+        self.assertIn("classifications:", output)
+        self.assertNotIn('"matrix"', output)
+
+    def test_stage1_cli_json_flag_restores_full_payload(self) -> None:
+        self.create_full_mock_cache()
+        stdout = io.StringIO()
+        with patch("qwen_image_19.stage_1_analysis.generate_stage1_figures", side_effect=self.fake_generate_stage1_figures):
+            with patch("sys.stdout", new=stdout):
+                exit_code = cli_main(
+                    [
+                        "stage1",
+                        "analyze",
+                        "--hf-home",
+                        str(self.hf_home),
+                        "--artifact-dir",
+                        str(Path(self.tmpdir.name) / "reports" / "stage-1"),
+                        "--json",
+                    ]
+                )
+        output = stdout.getvalue()
+        self.assertEqual(exit_code, 0)
+        self.assertIn('"matrix"', output)
+        self.assertIn('"artifact_paths"', output)
 
 
 if __name__ == "__main__":

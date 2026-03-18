@@ -35,6 +35,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--cache-map-config",
         help="Optional JSON/YAML mapping from model aliases to HF cache directory names.",
     )
+    stage1_analyze.add_argument(
+        "--json",
+        dest="json_output",
+        action="store_true",
+        help="Print the full machine-readable Stage 1 payload to stdout.",
+    )
 
     stage2 = subparsers.add_parser("stage2", help="Stage 2 fusion planning.")
     stage2_sub = stage2.add_subparsers(dest="action", required=True)
@@ -90,6 +96,13 @@ def main(argv: list[str] | None = None) -> int:
     except (RuntimeError, ValueError) as exc:
         print(json.dumps({"stage": getattr(args, "stage", None), "error": str(exc)}, indent=2), file=sys.stderr)
         return 1
+    if (
+        getattr(args, "stage", None) == "stage1"
+        and getattr(args, "action", None) == "analyze"
+        and not getattr(args, "json_output", False)
+    ):
+        print(result["terminal_summary"])
+        return 0
     print(json.dumps(result, indent=2))
     return 0
 
