@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-18T05:43:42.892472+00:00",
+  "generated_at": "2026-03-19T19:14:39.434731+00:00",
   "inspection_mode": "hf-cache-real-checkpoint",
   "models": {
     "qwen-image-2512": {
@@ -120526,9 +120526,13 @@
               "family": "__global__",
               "layer_id": "transformer:__global__",
               "left_only_parameter_count": 0,
+              "left_only_parameter_samples": [],
               "left_parameter_count": 13,
               "reason": "right-only params=1",
               "right_only_parameter_count": 1,
+              "right_only_parameter_samples": [
+                "time_text_embed.addition_t_embedding.weight"
+              ],
               "right_parameter_count": 14,
               "sample_shape_mismatches": [],
               "shape_mismatch_count": 0,
@@ -120580,9 +120584,11 @@
               "family": "conv_out",
               "layer_id": "vae:decoder.conv_out",
               "left_only_parameter_count": 0,
+              "left_only_parameter_samples": [],
               "left_parameter_count": 2,
               "reason": "shape mismatches=2",
               "right_only_parameter_count": 0,
+              "right_only_parameter_samples": [],
               "right_parameter_count": 2,
               "sample_shape_mismatches": [
                 "bias",
@@ -120597,9 +120603,11 @@
               "family": "conv_in",
               "layer_id": "vae:encoder.conv_in",
               "left_only_parameter_count": 0,
+              "left_only_parameter_samples": [],
               "left_parameter_count": 2,
               "reason": "shape mismatches=1",
               "right_only_parameter_count": 0,
+              "right_only_parameter_samples": [],
               "right_parameter_count": 2,
               "sample_shape_mismatches": [
                 "weight"
@@ -120632,9 +120640,11 @@
             "family": "conv_out",
             "layer_id": "vae:decoder.conv_out",
             "left_only_parameter_count": 0,
+            "left_only_parameter_samples": [],
             "left_parameter_count": 2,
             "reason": "shape mismatches=2",
             "right_only_parameter_count": 0,
+            "right_only_parameter_samples": [],
             "right_parameter_count": 2,
             "sample_shape_mismatches": [
               "bias",
@@ -120649,9 +120659,11 @@
             "family": "conv_in",
             "layer_id": "vae:encoder.conv_in",
             "left_only_parameter_count": 0,
+            "left_only_parameter_samples": [],
             "left_parameter_count": 2,
             "reason": "shape mismatches=1",
             "right_only_parameter_count": 0,
+            "right_only_parameter_samples": [],
             "right_parameter_count": 2,
             "sample_shape_mismatches": [
               "weight"
@@ -120665,9 +120677,13 @@
             "family": "__global__",
             "layer_id": "transformer:__global__",
             "left_only_parameter_count": 0,
+            "left_only_parameter_samples": [],
             "left_parameter_count": 13,
             "reason": "right-only params=1",
             "right_only_parameter_count": 1,
+            "right_only_parameter_samples": [
+              "time_text_embed.addition_t_embedding.weight"
+            ],
             "right_parameter_count": 14,
             "sample_shape_mismatches": [],
             "shape_mismatch_count": 0,
@@ -120842,9 +120858,13 @@
               "family": "__global__",
               "layer_id": "transformer:__global__",
               "left_only_parameter_count": 0,
+              "left_only_parameter_samples": [],
               "left_parameter_count": 13,
               "reason": "right-only params=1",
               "right_only_parameter_count": 1,
+              "right_only_parameter_samples": [
+                "time_text_embed.addition_t_embedding.weight"
+              ],
               "right_parameter_count": 14,
               "sample_shape_mismatches": [],
               "shape_mismatch_count": 0,
@@ -120896,9 +120916,11 @@
               "family": "conv_out",
               "layer_id": "vae:decoder.conv_out",
               "left_only_parameter_count": 0,
+              "left_only_parameter_samples": [],
               "left_parameter_count": 2,
               "reason": "shape mismatches=2",
               "right_only_parameter_count": 0,
+              "right_only_parameter_samples": [],
               "right_parameter_count": 2,
               "sample_shape_mismatches": [
                 "bias",
@@ -120913,9 +120935,11 @@
               "family": "conv_in",
               "layer_id": "vae:encoder.conv_in",
               "left_only_parameter_count": 0,
+              "left_only_parameter_samples": [],
               "left_parameter_count": 2,
               "reason": "shape mismatches=1",
               "right_only_parameter_count": 0,
+              "right_only_parameter_samples": [],
               "right_parameter_count": 2,
               "sample_shape_mismatches": [
                 "weight"
@@ -120948,9 +120972,11 @@
             "family": "conv_out",
             "layer_id": "vae:decoder.conv_out",
             "left_only_parameter_count": 0,
+            "left_only_parameter_samples": [],
             "left_parameter_count": 2,
             "reason": "shape mismatches=2",
             "right_only_parameter_count": 0,
+            "right_only_parameter_samples": [],
             "right_parameter_count": 2,
             "sample_shape_mismatches": [
               "bias",
@@ -120965,9 +120991,11 @@
             "family": "conv_in",
             "layer_id": "vae:encoder.conv_in",
             "left_only_parameter_count": 0,
+            "left_only_parameter_samples": [],
             "left_parameter_count": 2,
             "reason": "shape mismatches=1",
             "right_only_parameter_count": 0,
+            "right_only_parameter_samples": [],
             "right_parameter_count": 2,
             "sample_shape_mismatches": [
               "weight"
@@ -120981,9 +121009,13 @@
             "family": "__global__",
             "layer_id": "transformer:__global__",
             "left_only_parameter_count": 0,
+            "left_only_parameter_samples": [],
             "left_parameter_count": 13,
             "reason": "right-only params=1",
             "right_only_parameter_count": 1,
+            "right_only_parameter_samples": [
+              "time_text_embed.addition_t_embedding.weight"
+            ],
             "right_parameter_count": 14,
             "sample_shape_mismatches": [],
             "shape_mismatch_count": 0,
@@ -121012,9 +121044,13 @@
               "family": "__global__",
               "layer_id": "transformer:__global__",
               "left_only_parameter_count": 0,
+              "left_only_parameter_samples": [],
               "left_parameter_count": 13,
               "reason": "right-only params=1",
               "right_only_parameter_count": 1,
+              "right_only_parameter_samples": [
+                "time_text_embed.addition_t_embedding.weight"
+              ],
               "right_parameter_count": 14,
               "sample_shape_mismatches": [],
               "shape_mismatch_count": 0,
@@ -121066,9 +121102,11 @@
               "family": "conv_out",
               "layer_id": "vae:decoder.conv_out",
               "left_only_parameter_count": 0,
+              "left_only_parameter_samples": [],
               "left_parameter_count": 2,
               "reason": "shape mismatches=2",
               "right_only_parameter_count": 0,
+              "right_only_parameter_samples": [],
               "right_parameter_count": 2,
               "sample_shape_mismatches": [
                 "bias",
@@ -121083,9 +121121,11 @@
               "family": "conv_in",
               "layer_id": "vae:encoder.conv_in",
               "left_only_parameter_count": 0,
+              "left_only_parameter_samples": [],
               "left_parameter_count": 2,
               "reason": "shape mismatches=1",
               "right_only_parameter_count": 0,
+              "right_only_parameter_samples": [],
               "right_parameter_count": 2,
               "sample_shape_mismatches": [
                 "weight"
@@ -121118,9 +121158,11 @@
             "family": "conv_out",
             "layer_id": "vae:decoder.conv_out",
             "left_only_parameter_count": 0,
+            "left_only_parameter_samples": [],
             "left_parameter_count": 2,
             "reason": "shape mismatches=2",
             "right_only_parameter_count": 0,
+            "right_only_parameter_samples": [],
             "right_parameter_count": 2,
             "sample_shape_mismatches": [
               "bias",
@@ -121135,9 +121177,11 @@
             "family": "conv_in",
             "layer_id": "vae:encoder.conv_in",
             "left_only_parameter_count": 0,
+            "left_only_parameter_samples": [],
             "left_parameter_count": 2,
             "reason": "shape mismatches=1",
             "right_only_parameter_count": 0,
+            "right_only_parameter_samples": [],
             "right_parameter_count": 2,
             "sample_shape_mismatches": [
               "weight"
@@ -121151,9 +121195,13 @@
             "family": "__global__",
             "layer_id": "transformer:__global__",
             "left_only_parameter_count": 0,
+            "left_only_parameter_samples": [],
             "left_parameter_count": 13,
             "reason": "right-only params=1",
             "right_only_parameter_count": 1,
+            "right_only_parameter_samples": [
+              "time_text_embed.addition_t_embedding.weight"
+            ],
             "right_parameter_count": 14,
             "sample_shape_mismatches": [],
             "shape_mismatch_count": 0,
