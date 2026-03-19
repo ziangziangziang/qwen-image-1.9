@@ -14,12 +14,16 @@ from qwen_image_19.cli import main as cli_main
 from qwen_image_19.stage_1_analysis import (
     Stage1AnalysisError,
     analyze,
+    build_hardware_snapshot,
+    build_runtime_estimate,
     compare_state_dicts,
     inspect_cache_models,
     load_cache_alias_map,
     load_model_inventory,
     normalize_layer_descriptor,
     resolve_cache_snapshot,
+    summarize_workload,
+    summarize_weight_pair,
 )
 
 
@@ -215,6 +219,244 @@ class Stage1Tests(unittest.TestCase):
             "layer_sharing_bars": artifact_paths["layer_sharing_bars_png"].name,
         }
 
+    def fake_build_weight_pairwise_analysis(self, manifests: dict[str, dict[str, object]]) -> tuple[dict[str, object], dict[str, object]]:
+        shared_layer = {
+            "layer_id": "mmdit_backbone:transformer_blocks:0",
+            "subsystem": "mmdit_backbone",
+            "family": "transformer_blocks",
+            "comparable_tensor_count": 2,
+            "exact_equal_tensor_count": 2,
+            "exact_tensor_match_ratio": 1.0,
+            "low_delta_tensor_count": 2,
+            "low_delta_tensor_ratio": 1.0,
+            "mean_relative_l2_delta": 0.0,
+            "relative_l2_delta": 0.0,
+            "mean_absolute_delta_mean": 0.0,
+            "max_mean_absolute_delta": 0.0,
+            "layer_weight_similarity_score": 1.0,
+            "top_divergent_tensors": [],
+        }
+        divergent_layer = {
+            "layer_id": "vae:encoder.conv_in",
+            "subsystem": "vae",
+            "family": "conv_in",
+            "comparable_tensor_count": 1,
+            "exact_equal_tensor_count": 0,
+            "exact_tensor_match_ratio": 0.0,
+            "low_delta_tensor_count": 0,
+            "low_delta_tensor_ratio": 0.0,
+            "mean_relative_l2_delta": 0.25,
+            "relative_l2_delta": 0.25,
+            "mean_absolute_delta_mean": 0.5,
+            "max_mean_absolute_delta": 0.5,
+            "layer_weight_similarity_score": 0.75,
+            "top_divergent_tensors": [
+                {
+                    "tensor_key": "vae.encoder.conv_in.weight",
+                    "parameter_suffix": "weight",
+                    "relative_l2_delta": 0.25,
+                    "mean_absolute_delta": 0.5,
+                    "max_absolute_delta": 1.0,
+                    "exact_equal": False,
+                }
+            ],
+        }
+        summary = {
+            "foundation_vs_edit": {
+                "pair_name": "foundation_vs_edit",
+                "models": ["qwen-image-2512", "qwen-image-edit-2511"],
+                "shared_key_count": 5,
+                "shape_mismatch_excluded_count": 0,
+                "dtype_mismatch_excluded_count": 0,
+                "comparable_left_bytes": 4096,
+                "comparable_right_bytes": 4096,
+                "comparable_total_bytes": 8192,
+                "missing_key_excluded_count": 0,
+                "exclusion_accounting": {"missing_keys": 0, "shape_mismatch": 0, "dtype_mismatch": 0},
+                "comparable_tensor_count": 5,
+                "exact_equal_tensor_count": 5,
+                "exact_equal_tensor_ratio": 1.0,
+                "low_delta_tensor_count": 5,
+                "low_delta_tensor_ratio": 1.0,
+                "mean_relative_l2_delta": 0.0,
+                "max_relative_l2_delta": 0.0,
+                "mean_mean_absolute_delta": 0.0,
+                "top_divergent_layers": [],
+                "top_divergent_blocks": [],
+                "top_divergent_tensors": [],
+                "by_subsystem": {
+                    "mmdit_backbone": {
+                        "block_count": 1,
+                        "mean_exact_tensor_match_ratio": 1.0,
+                        "mean_low_delta_tensor_ratio": 1.0,
+                        "mean_block_relative_l2_delta": 0.0,
+                        "worst_blocks": [],
+                    }
+                },
+                "by_block": {shared_layer["layer_id"]: dict(shared_layer)},
+                "layers": {shared_layer["layer_id"]: dict(shared_layer)},
+            },
+            "base_vs_layered": {
+                "pair_name": "base_vs_layered",
+                "models": ["qwen-image-base", "qwen-image-layered"],
+                "shared_key_count": 5,
+                "shape_mismatch_excluded_count": 3,
+                "dtype_mismatch_excluded_count": 0,
+                "comparable_left_bytes": 2048,
+                "comparable_right_bytes": 2048,
+                "comparable_total_bytes": 4096,
+                "missing_key_excluded_count": 1,
+                "exclusion_accounting": {"missing_keys": 1, "shape_mismatch": 3, "dtype_mismatch": 0},
+                "comparable_tensor_count": 2,
+                "exact_equal_tensor_count": 1,
+                "exact_equal_tensor_ratio": 0.5,
+                "low_delta_tensor_count": 1,
+                "low_delta_tensor_ratio": 0.5,
+                "mean_relative_l2_delta": 0.125,
+                "max_relative_l2_delta": 0.25,
+                "mean_mean_absolute_delta": 0.25,
+                "top_divergent_layers": [
+                    {
+                        "layer_id": divergent_layer["layer_id"],
+                        "subsystem": divergent_layer["subsystem"],
+                        "family": divergent_layer["family"],
+                        "relative_l2_delta": divergent_layer["relative_l2_delta"],
+                        "exact_tensor_match_ratio": divergent_layer["exact_tensor_match_ratio"],
+                        "low_delta_tensor_ratio": divergent_layer["low_delta_tensor_ratio"],
+                        "comparable_tensor_count": divergent_layer["comparable_tensor_count"],
+                    }
+                ],
+                "top_divergent_blocks": [
+                    {
+                        "layer_id": divergent_layer["layer_id"],
+                        "subsystem": divergent_layer["subsystem"],
+                        "family": divergent_layer["family"],
+                        "relative_l2_delta": divergent_layer["relative_l2_delta"],
+                        "exact_tensor_match_ratio": divergent_layer["exact_tensor_match_ratio"],
+                        "low_delta_tensor_ratio": divergent_layer["low_delta_tensor_ratio"],
+                        "comparable_tensor_count": divergent_layer["comparable_tensor_count"],
+                    }
+                ],
+                "top_divergent_tensors": [
+                    {
+                        "tensor_key": "vae.encoder.conv_in.weight",
+                        "layer_id": divergent_layer["layer_id"],
+                        "parameter_suffix": "weight",
+                        "relative_l2_delta": 0.25,
+                        "mean_absolute_delta": 0.5,
+                        "max_absolute_delta": 1.0,
+                        "exact_equal": False,
+                    }
+                ],
+                "by_subsystem": {
+                    "mmdit_backbone": {
+                        "block_count": 1,
+                        "mean_exact_tensor_match_ratio": 1.0,
+                        "mean_low_delta_tensor_ratio": 1.0,
+                        "mean_block_relative_l2_delta": 0.0,
+                        "worst_blocks": [],
+                    },
+                    "vae": {
+                        "block_count": 1,
+                        "mean_exact_tensor_match_ratio": 0.0,
+                        "mean_low_delta_tensor_ratio": 0.0,
+                        "mean_block_relative_l2_delta": 0.25,
+                        "worst_blocks": [{"layer_id": divergent_layer["layer_id"], "relative_l2_delta": 0.25, "exact_tensor_match_ratio": 0.0}],
+                    },
+                },
+                "by_block": {
+                    shared_layer["layer_id"]: dict(shared_layer),
+                    divergent_layer["layer_id"]: dict(divergent_layer),
+                },
+                "layers": {
+                    shared_layer["layer_id"]: dict(shared_layer),
+                    divergent_layer["layer_id"]: dict(divergent_layer),
+                },
+            },
+            "foundation_vs_layered": {
+                "pair_name": "foundation_vs_layered",
+                "models": ["qwen-image-2512", "qwen-image-layered"],
+                "shared_key_count": 5,
+                "shape_mismatch_excluded_count": 3,
+                "dtype_mismatch_excluded_count": 0,
+                "comparable_left_bytes": 2048,
+                "comparable_right_bytes": 2048,
+                "comparable_total_bytes": 4096,
+                "missing_key_excluded_count": 1,
+                "exclusion_accounting": {"missing_keys": 1, "shape_mismatch": 3, "dtype_mismatch": 0},
+                "comparable_tensor_count": 2,
+                "exact_equal_tensor_count": 1,
+                "exact_equal_tensor_ratio": 0.5,
+                "low_delta_tensor_count": 1,
+                "low_delta_tensor_ratio": 0.5,
+                "mean_relative_l2_delta": 0.125,
+                "max_relative_l2_delta": 0.25,
+                "mean_mean_absolute_delta": 0.25,
+                "top_divergent_layers": [
+                    {
+                        "layer_id": divergent_layer["layer_id"],
+                        "subsystem": divergent_layer["subsystem"],
+                        "family": divergent_layer["family"],
+                        "relative_l2_delta": divergent_layer["relative_l2_delta"],
+                        "exact_tensor_match_ratio": divergent_layer["exact_tensor_match_ratio"],
+                        "low_delta_tensor_ratio": divergent_layer["low_delta_tensor_ratio"],
+                        "comparable_tensor_count": divergent_layer["comparable_tensor_count"],
+                    }
+                ],
+                "top_divergent_blocks": [
+                    {
+                        "layer_id": divergent_layer["layer_id"],
+                        "subsystem": divergent_layer["subsystem"],
+                        "family": divergent_layer["family"],
+                        "relative_l2_delta": divergent_layer["relative_l2_delta"],
+                        "exact_tensor_match_ratio": divergent_layer["exact_tensor_match_ratio"],
+                        "low_delta_tensor_ratio": divergent_layer["low_delta_tensor_ratio"],
+                        "comparable_tensor_count": divergent_layer["comparable_tensor_count"],
+                    }
+                ],
+                "top_divergent_tensors": [
+                    {
+                        "tensor_key": "vae.encoder.conv_in.weight",
+                        "layer_id": divergent_layer["layer_id"],
+                        "parameter_suffix": "weight",
+                        "relative_l2_delta": 0.25,
+                        "mean_absolute_delta": 0.5,
+                        "max_absolute_delta": 1.0,
+                        "exact_equal": False,
+                    }
+                ],
+                "by_subsystem": {
+                    "mmdit_backbone": {
+                        "block_count": 1,
+                        "mean_exact_tensor_match_ratio": 1.0,
+                        "mean_low_delta_tensor_ratio": 1.0,
+                        "mean_block_relative_l2_delta": 0.0,
+                        "worst_blocks": [],
+                    },
+                    "vae": {
+                        "block_count": 1,
+                        "mean_exact_tensor_match_ratio": 0.0,
+                        "mean_low_delta_tensor_ratio": 0.0,
+                        "mean_block_relative_l2_delta": 0.25,
+                        "worst_blocks": [{"layer_id": divergent_layer["layer_id"], "relative_l2_delta": 0.25, "exact_tensor_match_ratio": 0.0}],
+                    },
+                },
+                "by_block": {
+                    shared_layer["layer_id"]: dict(shared_layer),
+                    divergent_layer["layer_id"]: dict(divergent_layer),
+                },
+                "layers": {
+                    shared_layer["layer_id"]: dict(shared_layer),
+                    divergent_layer["layer_id"]: dict(divergent_layer),
+                },
+            },
+        }
+        details = {
+            key: {**value, "tensor_metrics": {}}
+            for key, value in summary.items()
+        }
+        return summary, details
+
     def test_resolves_hf_cache_snapshot(self) -> None:
         self.create_full_mock_cache()
         snapshot = resolve_cache_snapshot(self.hf_home, self.cache_map["qwen-image-2512"])
@@ -223,18 +465,27 @@ class Stage1Tests(unittest.TestCase):
 
     def test_analyze_produces_evidence_backed_matrix(self) -> None:
         self.create_full_mock_cache()
-        result = analyze(dry_run=True, hf_home=self.hf_home)
+        with patch("qwen_image_19.stage_1_analysis.build_weight_pairwise_analysis", side_effect=self.fake_build_weight_pairwise_analysis):
+            result = analyze(dry_run=True, hf_home=self.hf_home)
         matrix = result["matrix"]
         self.assertEqual(matrix["inspection_mode"], "hf-cache-real-checkpoint")
         self.assertGreater(matrix["pairwise_comparisons"]["foundation_vs_edit"]["shared_key_count"], 0)
         self.assertEqual(matrix["summary"]["delta_merge"], 1)
-        self.assertEqual(matrix["summary"]["adapter_only"], 2)
-        self.assertEqual(matrix["summary"]["incompatible"], 1)
+        self.assertEqual(matrix["summary"]["adapter_only"], 1)
+        self.assertEqual(matrix["summary"]["incompatible"], 2)
         self.assertEqual(len(matrix["layer_pairwise"]), 6)
+        self.assertTrue(matrix["weight_analysis_available"])
+        self.assertIn("foundation_vs_edit", matrix["weight_pairwise"])
+        self.assertIn("block_review_summary", matrix)
         self.assertEqual(matrix["model_summaries"]["qwen-image-base"]["vae"]["input_channels"], 3)
         self.assertEqual(matrix["model_summaries"]["qwen-image-layered"]["vae"]["input_channels"], 4)
-        self.assertIn("Tensor pairwise comparison stats", result["report_preview"])
-        self.assertIn("Layer sharing across all pairs", result["report_preview"])
+        rope = next(item for item in matrix["subsystems"] if item["subsystem"] == "rope")
+        self.assertEqual(rope["evidence"]["shared_key_count"], 0)
+        self.assertEqual(rope["structural_compatibility"], "incompatible")
+        self.assertIn("Tensor Pairwise Comparison Stats", result["report_preview"])
+        self.assertIn("Layer Sharing Across All Pairs", result["report_preview"])
+        self.assertIn("Value-Level Weight Comparison", result["report_preview"])
+        self.assertIn("## Abstract", result["report_preview"])
         self.assertIn("summary.md", result["artifact_paths"]["summary_markdown"])
         self.assertIn("pairs", result["layer_analysis"])
 
@@ -482,23 +733,26 @@ class Stage1Tests(unittest.TestCase):
         original_hf_home = os.environ.get("HF_HOME")
         os.environ["HF_HOME"] = str(self.hf_home)
         try:
-            result = analyze(dry_run=True)
+            with patch("qwen_image_19.stage_1_analysis.build_weight_pairwise_analysis", side_effect=self.fake_build_weight_pairwise_analysis):
+                result = analyze(dry_run=True)
         finally:
             if original_hf_home is None:
                 os.environ.pop("HF_HOME", None)
             else:
                 os.environ["HF_HOME"] = original_hf_home
         self.assertEqual(result["hf_home"], str(self.hf_home))
-        self.assertIn("Model snapshot inventory", result["report_preview"])
+        self.assertIn("Model Snapshot Inventory", result["report_preview"])
 
     def test_stage1_write_creates_artifact_folder_and_shims(self) -> None:
         self.create_full_mock_cache()
         artifact_root = Path(self.tmpdir.name) / "reports" / "stage-1"
         with patch("qwen_image_19.stage_1_analysis.generate_stage1_figures", side_effect=self.fake_generate_stage1_figures):
-            result = analyze(hf_home=self.hf_home, artifact_dir=artifact_root)
+            with patch("qwen_image_19.stage_1_analysis.build_weight_pairwise_analysis", side_effect=self.fake_build_weight_pairwise_analysis):
+                result = analyze(hf_home=self.hf_home, artifact_dir=artifact_root)
         self.assertTrue((artifact_root / "summary.md").exists())
         self.assertTrue((artifact_root / "compatibility-matrix.json").exists())
         self.assertTrue((artifact_root / "layer-analysis.json").exists())
+        self.assertTrue((artifact_root / "weight-analysis.json").exists())
         self.assertTrue((artifact_root / "figures" / "component-overview.png").exists())
         self.assertTrue((artifact_root / "figures" / "pairwise-comparison.png").exists())
         self.assertTrue((artifact_root / "figures" / "layer-sharing-heatmap.png").exists())
@@ -510,37 +764,50 @@ class Stage1Tests(unittest.TestCase):
         self.assertIn("figures/pairwise-comparison.png", summary_text)
         self.assertIn("figures/layer-sharing-heatmap.png", summary_text)
         self.assertIn("figures/layer-sharing-bars.png", summary_text)
+        self.assertIn("Value-Level Weight Comparison", summary_text)
+        self.assertIn("Block-By-Block Weight Tables", summary_text)
+        self.assertIn("Hardware Account + Time Usage", summary_text)
+        matrix_payload = json.loads((artifact_root / "compatibility-matrix.json").read_text(encoding="utf-8"))
+        self.assertIn("resource_accounting", matrix_payload)
+        self.assertIn("hardware", matrix_payload["resource_accounting"])
+        self.assertIn("timing", matrix_payload["resource_accounting"])
+        self.assertIn("workload", matrix_payload["resource_accounting"])
+        self.assertIn("estimate", matrix_payload["resource_accounting"])
         self.assertIn("terminal_summary", result)
 
     def test_stage1_cli_default_stdout_is_compact_summary(self) -> None:
         self.create_full_mock_cache()
         stdout = io.StringIO()
         with patch("qwen_image_19.stage_1_analysis.generate_stage1_figures", side_effect=self.fake_generate_stage1_figures):
-            with patch("sys.stdout", new=stdout):
-                exit_code = cli_main(["stage1", "analyze", "--hf-home", str(self.hf_home), "--artifact-dir", str(Path(self.tmpdir.name) / "reports" / "stage-1")])
+            with patch("qwen_image_19.stage_1_analysis.build_weight_pairwise_analysis", side_effect=self.fake_build_weight_pairwise_analysis):
+                with patch("sys.stdout", new=stdout):
+                    exit_code = cli_main(["stage1", "analyze", "--hf-home", str(self.hf_home), "--artifact-dir", str(Path(self.tmpdir.name) / "reports" / "stage-1")])
         output = stdout.getvalue()
         self.assertEqual(exit_code, 0)
         self.assertIn("Stage 1 DNA analysis", output)
         self.assertIn("strategies:", output)
         self.assertIn("best layer-sharing pair:", output)
+        self.assertIn("2512 vs 2511 weights:", output)
+        self.assertIn("runtime_total_seconds:", output)
         self.assertNotIn('"matrix"', output)
 
     def test_stage1_cli_json_flag_restores_full_payload(self) -> None:
         self.create_full_mock_cache()
         stdout = io.StringIO()
         with patch("qwen_image_19.stage_1_analysis.generate_stage1_figures", side_effect=self.fake_generate_stage1_figures):
-            with patch("sys.stdout", new=stdout):
-                exit_code = cli_main(
-                    [
-                        "stage1",
-                        "analyze",
-                        "--hf-home",
-                        str(self.hf_home),
-                        "--artifact-dir",
-                        str(Path(self.tmpdir.name) / "reports" / "stage-1"),
-                        "--json",
-                    ]
-                )
+            with patch("qwen_image_19.stage_1_analysis.build_weight_pairwise_analysis", side_effect=self.fake_build_weight_pairwise_analysis):
+                with patch("sys.stdout", new=stdout):
+                    exit_code = cli_main(
+                        [
+                            "stage1",
+                            "analyze",
+                            "--hf-home",
+                            str(self.hf_home),
+                            "--artifact-dir",
+                            str(Path(self.tmpdir.name) / "reports" / "stage-1"),
+                            "--json",
+                        ]
+                    )
         output = stdout.getvalue()
         self.assertEqual(exit_code, 0)
         self.assertIn('"matrix"', output)
@@ -584,7 +851,8 @@ class Stage1Tests(unittest.TestCase):
 
     def test_layer_pairwise_emits_all_pairs_and_subsystems(self) -> None:
         self.create_full_mock_cache()
-        result = analyze(dry_run=True, hf_home=self.hf_home)
+        with patch("qwen_image_19.stage_1_analysis.build_weight_pairwise_analysis", side_effect=self.fake_build_weight_pairwise_analysis):
+            result = analyze(dry_run=True, hf_home=self.hf_home)
         layer_pairwise = result["matrix"]["layer_pairwise"]
         self.assertEqual(len(layer_pairwise), 6)
         self.assertIn("qwen-image-base_vs_qwen-image-2512", layer_pairwise)
@@ -595,6 +863,156 @@ class Stage1Tests(unittest.TestCase):
             "mmdit_backbone",
             layer_pairwise["qwen-image-base_vs_qwen-image-2512"]["by_subsystem"],
         )
+
+    def test_summarize_weight_pair_aggregates_numeric_metrics(self) -> None:
+        tensor_metrics = {
+            "a.weight": {
+                "tensor_key": "a.weight",
+                "layer_id": "mmdit_backbone:transformer_blocks:0",
+                "subsystem": "mmdit_backbone",
+                "family": "transformer_blocks",
+                "parameter_suffix": "weight",
+                "exact_equal": True,
+                "l2_norm_delta": 0.0,
+                "mean_absolute_delta": 0.0,
+                "max_absolute_delta": 0.0,
+                "relative_l2_delta": 0.0,
+                "left_l2_norm": 2.0,
+                "right_l2_norm": 2.0,
+            },
+            "b.weight": {
+                "tensor_key": "b.weight",
+                "layer_id": "mmdit_backbone:transformer_blocks:0",
+                "subsystem": "mmdit_backbone",
+                "family": "transformer_blocks",
+                "parameter_suffix": "bias",
+                "exact_equal": False,
+                "l2_norm_delta": 0.5,
+                "mean_absolute_delta": 0.25,
+                "max_absolute_delta": 0.5,
+                "relative_l2_delta": 0.25,
+                "left_l2_norm": 2.0,
+                "right_l2_norm": 2.0,
+            },
+        }
+        summary, details = summarize_weight_pair(
+            pair_name="foundation_vs_edit",
+            models=("qwen-image-2512", "qwen-image-edit-2511"),
+            tensor_metrics=tensor_metrics,
+            left_tensor_count=2,
+            right_tensor_count=2,
+            shared_key_count=2,
+            missing_key_excluded_count=0,
+            shape_mismatch_excluded_count=0,
+            dtype_mismatch_excluded_count=0,
+            comparable_left_bytes=64,
+            comparable_right_bytes=64,
+            comparable_total_bytes=128,
+        )
+        self.assertEqual(summary["comparable_tensor_count"], 2)
+        self.assertEqual(summary["exact_equal_tensor_count"], 1)
+        self.assertEqual(summary["exact_equal_tensor_ratio"], 0.5)
+        self.assertEqual(summary["low_delta_tensor_ratio"], 0.5)
+        self.assertEqual(summary["comparable_total_bytes"], 128)
+        self.assertIn("mmdit_backbone:transformer_blocks:0", summary["by_block"])
+        self.assertIn("exclusion_accounting", summary)
+        self.assertIn("tensor_metrics", details)
+
+    def test_hardware_snapshot_has_stable_keys(self) -> None:
+        snapshot_inventory = {
+            "qwen-image-base": {
+                "cache_dir_name": "models--Qwen--Qwen-Image",
+                "commit": "abc",
+                "snapshot_path": "/tmp/snapshot/base",
+            },
+            "qwen-image-2512": {
+                "cache_dir_name": "models--Qwen--Qwen-Image-2512",
+                "commit": "def",
+                "snapshot_path": "/tmp/snapshot/2512",
+            },
+            "qwen-image-edit-2511": {
+                "cache_dir_name": "models--Qwen--Qwen-Image-Edit-2511",
+                "commit": "ghi",
+                "snapshot_path": "/tmp/snapshot/edit",
+            },
+            "qwen-image-layered": {
+                "cache_dir_name": "models--Qwen--Qwen-Image-Layered",
+                "commit": "jkl",
+                "snapshot_path": "/tmp/snapshot/layered",
+            },
+        }
+        snapshot = build_hardware_snapshot(
+            hf_home=Path("/tmp/hf"),
+            artifact_dir=Path("/tmp/reports/stage-1"),
+            snapshot_inventory=snapshot_inventory,
+        )
+        self.assertIn("hostname", snapshot)
+        self.assertIn("os", snapshot)
+        self.assertIn("python_version", snapshot)
+        self.assertIn("cpu_model", snapshot)
+        self.assertIn("logical_cores", snapshot)
+        self.assertIn("total_ram_bytes", snapshot)
+        self.assertIn("gpu_probe", snapshot)
+        self.assertFalse(snapshot["gpu_used"])
+        self.assertEqual(snapshot["hf_home"], "/tmp/hf")
+        self.assertEqual(snapshot["artifact_dir"], "/tmp/reports/stage-1")
+        self.assertEqual(len(snapshot["snapshot_paths"]), 4)
+
+    def test_workload_and_runtime_estimate_are_deterministic(self) -> None:
+        manifests = {
+            "qwen-image-base": {"total_tensor_bytes": 100},
+            "qwen-image-2512": {"total_tensor_bytes": 200},
+            "qwen-image-edit-2511": {"total_tensor_bytes": 300},
+            "qwen-image-layered": {"total_tensor_bytes": 400},
+        }
+        weight_pairwise = {
+            "foundation_vs_edit": {
+                "models": ["qwen-image-2512", "qwen-image-edit-2511"],
+                "comparable_tensor_count": 10,
+                "comparable_left_bytes": 1024,
+                "comparable_right_bytes": 2048,
+                "comparable_total_bytes": 3072,
+                "exclusion_accounting": {"missing_keys": 1, "shape_mismatch": 2, "dtype_mismatch": 3},
+            },
+            "base_vs_layered": {
+                "models": ["qwen-image-base", "qwen-image-layered"],
+                "comparable_tensor_count": 20,
+                "comparable_left_bytes": 4096,
+                "comparable_right_bytes": 4096,
+                "comparable_total_bytes": 8192,
+                "exclusion_accounting": {"missing_keys": 0, "shape_mismatch": 1, "dtype_mismatch": 0},
+            },
+            "foundation_vs_layered": {
+                "models": ["qwen-image-2512", "qwen-image-layered"],
+                "comparable_tensor_count": 5,
+                "comparable_left_bytes": 512,
+                "comparable_right_bytes": 512,
+                "comparable_total_bytes": 1024,
+                "exclusion_accounting": {"missing_keys": 0, "shape_mismatch": 0, "dtype_mismatch": 1},
+            },
+        }
+        workload = summarize_workload(manifests, weight_pairwise)
+        self.assertEqual(workload["value_analysis_total_bytes"], 12288)
+        self.assertEqual(workload["roadmap_pairs"]["foundation_vs_edit"]["excluded_counts"]["missing"], 1)
+        estimate = build_runtime_estimate(workload, observed_total_seconds=12.5)
+        self.assertIn("total_seconds", estimate)
+        self.assertIn("pair_seconds", estimate)
+        self.assertEqual(estimate["observed_total_seconds"], 12.5)
+        self.assertLessEqual(
+            estimate["total_seconds"]["low"],
+            estimate["total_seconds"]["typical"],
+        )
+        self.assertLessEqual(
+            estimate["total_seconds"]["typical"],
+            estimate["total_seconds"]["high"],
+        )
+
+    def test_analyze_fails_clearly_when_weight_dependencies_are_missing(self) -> None:
+        self.create_full_mock_cache()
+        with self.assertRaises(Stage1AnalysisError) as raised:
+            analyze(dry_run=True, hf_home=self.hf_home)
+        self.assertIn("torch", str(raised.exception))
+        self.assertIn("safetensors", str(raised.exception))
 
 
 if __name__ == "__main__":

@@ -7,7 +7,11 @@ import json
 import math
 import os
 from pathlib import Path
+import platform
+import shutil
+import socket
 import struct
+import time
 from typing import Any, Iterable
 
 from qwen_image_19.config_io import load_json_yaml, repo_root, write_json, write_text
@@ -58,6 +62,16 @@ ROADMAP_LAYER_PAIRS = (
     ("qwen-image-2512", "qwen-image-layered"),
 )
 
+WEIGHT_DELTA_THRESHOLD = 1e-6
+WEIGHT_ANALYSIS_PAIRWISE = {
+    "foundation_vs_edit": ("qwen-image-2512", "qwen-image-edit-2511"),
+    "base_vs_layered": ("qwen-image-base", "qwen-image-layered"),
+    "foundation_vs_layered": ("qwen-image-2512", "qwen-image-layered"),
+}
+
+ESTIMATE_READ_GBPS = {"low": 0.9, "typical": 1.8, "high": 3.2}
+ESTIMATE_REDUCE_GBPS = {"low": 7.0, "typical": 14.0, "high": 28.0}
+
 SHORT_ALIAS = {
     "qwen-image-base": "base",
     "qwen-image-2512": "2512",
@@ -68,6 +82,80 @@ SHORT_ALIAS = {
 
 class Stage1AnalysisError(RuntimeError):
     """Raised when Stage 1 cannot inspect the remote cache layout."""
+
+
+def _safe_round(value: float, digits: int = 4) -> float:
+    return round(float(value), digits)
+
+
+def bytes_to_gib(value: int | float) -> float:
+    return round(float(value) / (1024**3), 4)
+
+
+def format_bytes(value: int | float | None) -> str:
+    if value is None:
+        return "unknown"
+    value = float(value)
+    units = ("B", "KiB", "MiB", "GiB", "TiB")
+    unit_idx = 0
+    while value >= 1024.0 and unit_idx < len(units) - 1:
+        value /= 1024.0
+        unit_idx += 1
+    return f"{value:.2f} {units[unit_idx]}"
+
+
+def detect_gpu_presence() -> dict[str, Any]:
+    nvidia_smi = shutil.which("nvidia-smi")
+    rocm_smi = shutil.which("rocm-smi")
+    if nvidia_smi:
+        return {
+            "detected": True,
+            "vendor_hint": "nvidia",
+            "probe": "nvidia-smi",
+            "probe_path": nvidia_smi,
+        }
+    if rocm_smi:
+        return {
+            "detected": True,
+            "vendor_hint": "amd",
+            "probe": "rocm-smi",
+            "probe_path": rocm_smi,
+        }
+    return {
+        "detected": False,
+        "vendor_hint": "none",
+        "probe": "path-scan",
+        "probe_path": None,
+    }
+
+
+def detect_cpu_model() -> str:
+    processor = platform.processor().strip()
+    if processor:
+        return processor
+    cpuinfo = Path("/proc/cpuinfo")
+    if cpuinfo.exists():
+        try:
+            for line in cpuinfo.read_text(encoding="utf-8", errors="ignore").splitlines():
+                if "model name" in line:
+                    _, value = line.split(":", 1)
+                    return value.strip()
+        except OSError:
+            pass
+    return "unknown"
+
+
+def detect_total_ram_bytes() -> int | None:
+    if hasattr(os, "sysconf"):
+        try:
+            page_size = int(os.sysconf("SC_PAGE_SIZE"))
+            pages = int(os.sysconf("SC_PHYS_PAGES"))
+            total = page_size * pages
+            if total > 0:
+                return total
+        except (TypeError, ValueError, OSError):
+            return None
+    return None
 
 
 def load_model_inventory(model_dir: str | Path | None = None) -> dict[str, dict[str, Any]]:
@@ -392,7 +480,6 @@ def short_model_label(alias: str) -> str:
 def pretty_pair_label(models: list[str] | tuple[str, str]) -> str:
     left, right = models
     return f"{short_model_label(left)} vs {short_model_label(right)}"
-
 
 def component_prefix(component_name: str) -> str:
     return component_name.replace("/", ".") if component_name not in {"", "."} else ""
@@ -753,6 +840,164 @@ def inspect_cache_models(
     return manifests
 
 
+def collect_snapshot_inventory(
+    hf_home: str | Path | None,
+    cache_alias_map: dict[str, str],
+) -> dict[str, dict[str, str]]:
+    inventory: dict[str, dict[str, str]] = {}
+    for alias in MODEL_ORDER:
+        if alias not in cache_alias_map:
+            raise Stage1AnalysisError(f"Missing cache alias mapping for model alias: {alias}")
+        snapshot = resolve_cache_snapshot(hf_home, cache_alias_map[alias])
+        inventory[alias] = {
+            "cache_dir_name": str(snapshot["cache_dir_name"]),
+            "commit": str(snapshot["commit"]),
+            "snapshot_path": str(snapshot["snapshot"]),
+        }
+    return inventory
+
+
+def build_hardware_snapshot(
+    hf_home: Path,
+    artifact_dir: Path,
+    snapshot_inventory: dict[str, dict[str, str]],
+) -> dict[str, Any]:
+    total_ram = detect_total_ram_bytes()
+    return {
+        "hostname": socket.gethostname(),
+        "os": platform.platform(),
+        "python_version": platform.python_version(),
+        "cpu_model": detect_cpu_model(),
+        "logical_cores": os.cpu_count(),
+        "total_ram_bytes": total_ram,
+        "total_ram_gib": bytes_to_gib(total_ram) if total_ram is not None else None,
+        "gpu_probe": detect_gpu_presence(),
+        "gpu_used": False,
+        "hf_home": str(hf_home),
+        "artifact_dir": str(artifact_dir),
+        "snapshot_paths": {
+            alias: item["snapshot_path"] for alias, item in snapshot_inventory.items()
+        },
+    }
+
+
+def summarize_workload(
+    manifests: dict[str, dict[str, Any]],
+    weight_pairwise: dict[str, Any],
+) -> dict[str, Any]:
+    model_tensor_bytes = {
+        alias: int(manifests[alias]["total_tensor_bytes"]) for alias in MODEL_ORDER
+    }
+    roadmap_pairs: dict[str, Any] = {}
+    for pair_name, payload in weight_pairwise.items():
+        roadmap_pairs[pair_name] = {
+            "models": list(payload["models"]),
+            "comparable_tensor_count": int(payload["comparable_tensor_count"]),
+            "comparable_left_bytes": int(payload.get("comparable_left_bytes", 0)),
+            "comparable_right_bytes": int(payload.get("comparable_right_bytes", 0)),
+            "comparable_total_bytes": int(payload.get("comparable_total_bytes", 0)),
+            "excluded_counts": {
+                "missing": int(payload["exclusion_accounting"]["missing_keys"]),
+                "shape_mismatch": int(payload["exclusion_accounting"]["shape_mismatch"]),
+                "dtype_mismatch": int(payload["exclusion_accounting"]["dtype_mismatch"]),
+            },
+        }
+    total_value_bytes = sum(item["comparable_total_bytes"] for item in roadmap_pairs.values())
+    return {
+        "model_tensor_bytes": model_tensor_bytes,
+        "model_tensor_gib": {alias: bytes_to_gib(value) for alias, value in model_tensor_bytes.items()},
+        "roadmap_pairs": roadmap_pairs,
+        "value_analysis_total_bytes": int(total_value_bytes),
+        "value_analysis_total_gib": bytes_to_gib(total_value_bytes),
+    }
+
+
+def estimate_runtime_seconds_for_bytes(byte_count: int, read_gbps: float, reduce_gbps: float) -> float:
+    read_seconds = float(byte_count) / max(read_gbps * 1_000_000_000, 1e-9)
+    reduce_seconds = float(byte_count) / max(reduce_gbps * 1_000_000_000, 1e-9)
+    return read_seconds + reduce_seconds
+
+
+def build_runtime_estimate(workload: dict[str, Any], observed_total_seconds: float) -> dict[str, Any]:
+    pair_estimates: dict[str, Any] = {}
+    totals = {"low": 0.0, "typical": 0.0, "high": 0.0}
+    for pair_name, payload in workload["roadmap_pairs"].items():
+        byte_count = int(payload["comparable_total_bytes"])
+        low_seconds = estimate_runtime_seconds_for_bytes(
+            byte_count,
+            read_gbps=ESTIMATE_READ_GBPS["high"],
+            reduce_gbps=ESTIMATE_REDUCE_GBPS["high"],
+        )
+        typical_seconds = estimate_runtime_seconds_for_bytes(
+            byte_count,
+            read_gbps=ESTIMATE_READ_GBPS["typical"],
+            reduce_gbps=ESTIMATE_REDUCE_GBPS["typical"],
+        )
+        high_seconds = estimate_runtime_seconds_for_bytes(
+            byte_count,
+            read_gbps=ESTIMATE_READ_GBPS["low"],
+            reduce_gbps=ESTIMATE_REDUCE_GBPS["low"],
+        )
+        pair_estimates[pair_name] = {
+            "low_seconds": _safe_round(low_seconds),
+            "typical_seconds": _safe_round(typical_seconds),
+            "high_seconds": _safe_round(high_seconds),
+        }
+        totals["low"] += low_seconds
+        totals["typical"] += typical_seconds
+        totals["high"] += high_seconds
+    return {
+        "assumptions_gbps": {
+            "read": dict(ESTIMATE_READ_GBPS),
+            "reduction": dict(ESTIMATE_REDUCE_GBPS),
+        },
+        "pair_seconds": pair_estimates,
+        "total_seconds": {
+            "low": _safe_round(totals["low"]),
+            "typical": _safe_round(totals["typical"]),
+            "high": _safe_round(totals["high"]),
+        },
+        "observed_total_seconds": _safe_round(observed_total_seconds),
+    }
+
+
+def build_phase_timing(phase_seconds: dict[str, float]) -> dict[str, Any]:
+    total_wall = sum(float(value) for key, value in phase_seconds.items() if key != "total_wall")
+    if "total_wall" in phase_seconds:
+        total_wall = float(phase_seconds["total_wall"])
+    phase_percentages = {}
+    for name, seconds in phase_seconds.items():
+        if name == "total_wall":
+            continue
+        ratio = float(seconds) / total_wall if total_wall > 0 else 0.0
+        phase_percentages[name] = _safe_round(ratio * 100.0)
+    return {
+        "phases_seconds": {name: _safe_round(value) for name, value in phase_seconds.items() if name != "total_wall"},
+        "phase_percentages": phase_percentages,
+        "total_wall_seconds": _safe_round(total_wall),
+    }
+
+
+def build_resource_accounting(
+    hardware_snapshot: dict[str, Any],
+    phase_seconds: dict[str, float],
+    manifests: dict[str, dict[str, Any]],
+    weight_pairwise: dict[str, Any],
+    value_runtime_profile: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    timing = build_phase_timing(phase_seconds)
+    if value_runtime_profile:
+        timing["value_pair_seconds"] = value_runtime_profile.get("pair_value_pass_seconds", {})
+    workload = summarize_workload(manifests, weight_pairwise)
+    estimate = build_runtime_estimate(workload, timing["total_wall_seconds"])
+    return {
+        "hardware": hardware_snapshot,
+        "timing": timing,
+        "workload": workload,
+        "estimate": estimate,
+    }
+
+
 def summarize_manifest(manifest: dict[str, Any]) -> dict[str, Any]:
     return {
         "model_id": manifest["model_id"],
@@ -813,7 +1058,7 @@ def probe_rope_compatibility(manifests: dict[str, dict[str, Any]]) -> dict[str, 
         predicate=lambda key: subsystem_for_tensor(
             key, foundation["tensors"].get(key, layered["tensors"].get(key, {}))
         )
-        in {"text_encoder", "rope"},
+        == "rope",
     )
     preferred = "adapter-only" if foundation["rope"]["label"] != layered["rope"]["label"] else None
     return build_subsystem_result(
@@ -911,6 +1156,8 @@ def compare_layer_sets(
                 "shape_mismatch_count": len(shape_mismatches),
                 "dtype_mismatch_count": len(dtype_mismatches),
                 "sample_shape_mismatches": shape_mismatches[:5],
+                "left_only_parameter_samples": left_only_suffixes[:5],
+                "right_only_parameter_samples": right_only_suffixes[:5],
             }
         )
 
@@ -929,6 +1176,8 @@ def compare_layer_sets(
                 "shape_mismatch_count": 0,
                 "dtype_mismatch_count": 0,
                 "sample_shape_mismatches": [],
+                "left_only_parameter_samples": sorted(left_layer_map[layer_id]["parameters"].keys())[:5],
+                "right_only_parameter_samples": [],
             }
         )
 
@@ -947,6 +1196,8 @@ def compare_layer_sets(
                 "shape_mismatch_count": 0,
                 "dtype_mismatch_count": 0,
                 "sample_shape_mismatches": [],
+                "left_only_parameter_samples": [],
+                "right_only_parameter_samples": sorted(right_layer_map[layer_id]["parameters"].keys())[:5],
             }
         )
 
@@ -993,6 +1244,378 @@ def build_layer_pairwise(manifests: dict[str, dict[str, Any]]) -> dict[str, Any]
             },
         }
     return pairs
+
+
+def require_weight_analysis_runtime() -> tuple[Any, Any]:
+    try:
+        import torch
+        from safetensors import safe_open
+    except ModuleNotFoundError as exc:
+        raise Stage1AnalysisError(
+            "Stage 1 value-level weight analysis requires both `torch` and `safetensors`. "
+            "Install project dependencies on the remote machine before running q19 stage1 analyze."
+        ) from exc
+    return torch, safe_open
+
+
+def compute_tensor_value_metrics(left_tensor: Any, right_tensor: Any, torch_module: Any) -> dict[str, Any]:
+    left_fp = left_tensor.detach().to(dtype=torch_module.float64).reshape(-1).cpu()
+    right_fp = right_tensor.detach().to(dtype=torch_module.float64).reshape(-1).cpu()
+    delta = left_fp - right_fp
+    left_norm = float(torch_module.linalg.vector_norm(left_fp).item())
+    right_norm = float(torch_module.linalg.vector_norm(right_fp).item())
+    l2_norm_delta = float(torch_module.linalg.vector_norm(delta).item())
+    abs_delta = delta.abs()
+    mean_absolute_delta = float(abs_delta.mean().item()) if abs_delta.numel() else 0.0
+    max_absolute_delta = float(abs_delta.max().item()) if abs_delta.numel() else 0.0
+    denominator = max(left_norm, right_norm, 1e-12)
+    relative_l2_delta = l2_norm_delta / denominator
+    return {
+        "exact_equal": bool(torch_module.equal(left_tensor, right_tensor)),
+        "l2_norm_delta": round(l2_norm_delta, 10),
+        "mean_absolute_delta": round(mean_absolute_delta, 10),
+        "max_absolute_delta": round(max_absolute_delta, 10),
+        "relative_l2_delta": round(relative_l2_delta, 10),
+        "left_l2_norm": round(left_norm, 10),
+        "right_l2_norm": round(right_norm, 10),
+    }
+
+
+def load_pair_weight_tensor_metrics(
+    left_manifest: dict[str, Any],
+    right_manifest: dict[str, Any],
+    torch_module: Any,
+    safe_open_fn: Any,
+) -> dict[str, Any]:
+    left_tensors = left_manifest["tensors"]
+    right_tensors = right_manifest["tensors"]
+    left_keys = set(left_tensors)
+    right_keys = set(right_tensors)
+    shared_keys = sorted(left_keys & right_keys)
+    comparable_keys = [
+        key
+        for key in shared_keys
+        if left_tensors[key]["shape"] == right_tensors[key]["shape"]
+        and left_tensors[key]["dtype"] == right_tensors[key]["dtype"]
+    ]
+    shape_mismatch_excluded = [
+        key for key in shared_keys if left_tensors[key]["shape"] != right_tensors[key]["shape"]
+    ]
+    dtype_mismatch_excluded = [
+        key
+        for key in shared_keys
+        if left_tensors[key]["shape"] == right_tensors[key]["shape"]
+        and left_tensors[key]["dtype"] != right_tensors[key]["dtype"]
+    ]
+    comparable_left_bytes = sum(int(left_tensors[key]["payload_nbytes"]) for key in comparable_keys)
+    comparable_right_bytes = sum(int(right_tensors[key]["payload_nbytes"]) for key in comparable_keys)
+
+    grouped_keys: dict[tuple[str, str], list[str]] = {}
+    for key in comparable_keys:
+        left_relative = str(left_tensors[key]["relative_path"])
+        right_relative = str(right_tensors[key]["relative_path"])
+        grouped_keys.setdefault((left_relative, right_relative), []).append(key)
+
+    tensor_metrics: dict[str, Any] = {}
+    for (left_relative, right_relative), keys in grouped_keys.items():
+        left_path = Path(left_manifest["snapshot_path"]) / left_relative
+        right_path = Path(right_manifest["snapshot_path"]) / right_relative
+        with safe_open_fn(str(left_path), framework="pt", device="cpu") as left_handle:
+            with safe_open_fn(str(right_path), framework="pt", device="cpu") as right_handle:
+                for key in keys:
+                    left_tensor = left_handle.get_tensor(str(left_tensors[key]["raw_name"]))
+                    right_tensor = right_handle.get_tensor(str(right_tensors[key]["raw_name"]))
+                    descriptor = normalize_layer_descriptor(key, left_tensors[key])
+                    tensor_metrics[key] = {
+                        "tensor_key": key,
+                        "layer_id": descriptor["layer_id"],
+                        "subsystem": descriptor["subsystem"],
+                        "family": descriptor["family"],
+                        "parameter_suffix": descriptor["parameter_suffix"],
+                        **compute_tensor_value_metrics(left_tensor, right_tensor, torch_module),
+                    }
+
+    return {
+        "left_tensor_count": len(left_keys),
+        "right_tensor_count": len(right_keys),
+        "shared_key_count": len(shared_keys),
+        "missing_key_excluded_count": len(left_keys - right_keys) + len(right_keys - left_keys),
+        "shape_mismatch_excluded_count": len(shape_mismatch_excluded),
+        "dtype_mismatch_excluded_count": len(dtype_mismatch_excluded),
+        "comparable_left_bytes": comparable_left_bytes,
+        "comparable_right_bytes": comparable_right_bytes,
+        "comparable_total_bytes": comparable_left_bytes + comparable_right_bytes,
+        "tensor_metrics": tensor_metrics,
+    }
+
+
+def summarize_weight_pair(
+    pair_name: str,
+    models: tuple[str, str],
+    tensor_metrics: dict[str, Any],
+    left_tensor_count: int,
+    right_tensor_count: int,
+    shared_key_count: int,
+    missing_key_excluded_count: int,
+    shape_mismatch_excluded_count: int,
+    dtype_mismatch_excluded_count: int,
+    comparable_left_bytes: int,
+    comparable_right_bytes: int,
+    comparable_total_bytes: int,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    exact_count = sum(1 for item in tensor_metrics.values() if item["exact_equal"])
+    low_delta_count = sum(
+        1 for item in tensor_metrics.values() if item["relative_l2_delta"] <= WEIGHT_DELTA_THRESHOLD
+    )
+    comparable_count = len(tensor_metrics)
+    relative_values = [item["relative_l2_delta"] for item in tensor_metrics.values()]
+    mean_abs_values = [item["mean_absolute_delta"] for item in tensor_metrics.values()]
+
+    layer_buckets: dict[str, dict[str, Any]] = {}
+    for key, item in tensor_metrics.items():
+        layer = layer_buckets.setdefault(
+            item["layer_id"],
+            {
+                "layer_id": item["layer_id"],
+                "subsystem": item["subsystem"],
+                "family": item["family"],
+                "comparable_tensor_count": 0,
+                "exact_equal_tensor_count": 0,
+                "low_delta_tensor_count": 0,
+                "relative_l2_delta_sum": 0.0,
+                "mean_absolute_delta_sum": 0.0,
+                "max_mean_absolute_delta": 0.0,
+                "l2_norm_delta_sq_sum": 0.0,
+                "left_l2_norm_sq_sum": 0.0,
+                "right_l2_norm_sq_sum": 0.0,
+                "top_divergent_tensors": [],
+            },
+        )
+        layer["comparable_tensor_count"] += 1
+        layer["exact_equal_tensor_count"] += int(item["exact_equal"])
+        layer["low_delta_tensor_count"] += int(item["relative_l2_delta"] <= WEIGHT_DELTA_THRESHOLD)
+        layer["relative_l2_delta_sum"] += float(item["relative_l2_delta"])
+        layer["mean_absolute_delta_sum"] += float(item["mean_absolute_delta"])
+        layer["max_mean_absolute_delta"] = max(
+            layer["max_mean_absolute_delta"], float(item["mean_absolute_delta"])
+        )
+        layer["l2_norm_delta_sq_sum"] += float(item["l2_norm_delta"]) ** 2
+        layer["left_l2_norm_sq_sum"] += float(item["left_l2_norm"]) ** 2
+        layer["right_l2_norm_sq_sum"] += float(item["right_l2_norm"]) ** 2
+        layer["top_divergent_tensors"].append(
+            {
+                "tensor_key": key,
+                "parameter_suffix": item["parameter_suffix"],
+                "relative_l2_delta": item["relative_l2_delta"],
+                "mean_absolute_delta": item["mean_absolute_delta"],
+                "max_absolute_delta": item["max_absolute_delta"],
+                "exact_equal": item["exact_equal"],
+            }
+        )
+
+    summarized_layers: dict[str, Any] = {}
+    for layer_id, layer in layer_buckets.items():
+        comparable = max(layer["comparable_tensor_count"], 1)
+        aggregate_denominator = max(
+            math.sqrt(layer["left_l2_norm_sq_sum"]),
+            math.sqrt(layer["right_l2_norm_sq_sum"]),
+            1e-12,
+        )
+        relative_l2_delta = math.sqrt(layer["l2_norm_delta_sq_sum"]) / aggregate_denominator
+        top_divergent_tensors = sorted(
+            layer["top_divergent_tensors"],
+            key=lambda item: (-item["relative_l2_delta"], -item["mean_absolute_delta"], item["tensor_key"]),
+        )[:5]
+        summarized_layers[layer_id] = {
+            "layer_id": layer_id,
+            "subsystem": layer["subsystem"],
+            "family": layer["family"],
+            "comparable_tensor_count": layer["comparable_tensor_count"],
+            "exact_equal_tensor_count": layer["exact_equal_tensor_count"],
+            "exact_tensor_match_ratio": round(layer["exact_equal_tensor_count"] / comparable, 4),
+            "low_delta_tensor_count": layer["low_delta_tensor_count"],
+            "low_delta_tensor_ratio": round(layer["low_delta_tensor_count"] / comparable, 4),
+            "mean_relative_l2_delta": round(layer["relative_l2_delta_sum"] / comparable, 10),
+            "relative_l2_delta": round(relative_l2_delta, 10),
+            "mean_absolute_delta_mean": round(layer["mean_absolute_delta_sum"] / comparable, 10),
+            "max_mean_absolute_delta": round(layer["max_mean_absolute_delta"], 10),
+            "layer_weight_similarity_score": round(max(0.0, 1.0 - min(relative_l2_delta, 1.0)), 4),
+            "top_divergent_tensors": top_divergent_tensors,
+        }
+
+    sorted_layers = sorted(
+        summarized_layers.values(),
+        key=lambda item: (item["layer_weight_similarity_score"], -item["relative_l2_delta"], item["layer_id"]),
+    )
+    top_divergent_tensors = sorted(
+        tensor_metrics.values(),
+        key=lambda item: (-item["relative_l2_delta"], -item["mean_absolute_delta"], item["tensor_key"]),
+    )[:10]
+    top_divergent_blocks = [
+        {
+            "layer_id": item["layer_id"],
+            "subsystem": item["subsystem"],
+            "family": item["family"],
+            "relative_l2_delta": item["relative_l2_delta"],
+            "exact_tensor_match_ratio": item["exact_tensor_match_ratio"],
+            "low_delta_tensor_ratio": item["low_delta_tensor_ratio"],
+            "comparable_tensor_count": item["comparable_tensor_count"],
+        }
+        for item in sorted_layers[:10]
+    ]
+    by_block = {item["layer_id"]: item for item in sorted_layers}
+    by_subsystem: dict[str, dict[str, Any]] = {}
+    for subsystem in SUBSYSTEM_ORDER:
+        subset = [item for item in sorted_layers if item["subsystem"] == subsystem]
+        if not subset:
+            continue
+        by_subsystem[subsystem] = {
+            "block_count": len(subset),
+            "mean_exact_tensor_match_ratio": round(
+                sum(item["exact_tensor_match_ratio"] for item in subset) / len(subset), 4
+            ),
+            "mean_low_delta_tensor_ratio": round(
+                sum(item["low_delta_tensor_ratio"] for item in subset) / len(subset), 4
+            ),
+            "mean_block_relative_l2_delta": round(
+                sum(item["relative_l2_delta"] for item in subset) / len(subset), 10
+            ),
+            "worst_blocks": [
+                {
+                    "layer_id": item["layer_id"],
+                    "relative_l2_delta": item["relative_l2_delta"],
+                    "exact_tensor_match_ratio": item["exact_tensor_match_ratio"],
+                }
+                for item in sorted(
+                    subset,
+                    key=lambda value: (
+                        value["layer_weight_similarity_score"],
+                        -value["relative_l2_delta"],
+                        value["layer_id"],
+                    ),
+                )[:5]
+            ],
+        }
+    summary = {
+        "pair_name": pair_name,
+        "models": list(models),
+        "left_tensor_count": left_tensor_count,
+        "right_tensor_count": right_tensor_count,
+        "shared_key_count": shared_key_count,
+        "missing_key_excluded_count": missing_key_excluded_count,
+        "shape_mismatch_excluded_count": shape_mismatch_excluded_count,
+        "dtype_mismatch_excluded_count": dtype_mismatch_excluded_count,
+        "comparable_left_bytes": int(comparable_left_bytes),
+        "comparable_right_bytes": int(comparable_right_bytes),
+        "comparable_total_bytes": int(comparable_total_bytes),
+        "exclusion_accounting": {
+            "missing_keys": missing_key_excluded_count,
+            "shape_mismatch": shape_mismatch_excluded_count,
+            "dtype_mismatch": dtype_mismatch_excluded_count,
+        },
+        "comparable_tensor_count": comparable_count,
+        "exact_equal_tensor_count": exact_count,
+        "exact_equal_tensor_ratio": round(exact_count / max(comparable_count, 1), 4),
+        "low_delta_tensor_count": low_delta_count,
+        "low_delta_tensor_ratio": round(low_delta_count / max(comparable_count, 1), 4),
+        "mean_relative_l2_delta": round(sum(relative_values) / max(comparable_count, 1), 10),
+        "max_relative_l2_delta": round(max(relative_values) if relative_values else 0.0, 10),
+        "mean_mean_absolute_delta": round(sum(mean_abs_values) / max(comparable_count, 1), 10),
+        "top_divergent_blocks": top_divergent_blocks,
+        "top_divergent_layers": top_divergent_blocks,
+        "top_divergent_tensors": [
+            {
+                "tensor_key": item["tensor_key"],
+                "layer_id": item["layer_id"],
+                "parameter_suffix": item["parameter_suffix"],
+                "relative_l2_delta": item["relative_l2_delta"],
+                "mean_absolute_delta": item["mean_absolute_delta"],
+                "max_absolute_delta": item["max_absolute_delta"],
+                "exact_equal": item["exact_equal"],
+            }
+            for item in top_divergent_tensors
+        ],
+        "by_block": by_block,
+        "layers": by_block,
+        "by_subsystem": by_subsystem,
+    }
+    details = {
+        **summary,
+        "tensor_metrics": dict(sorted(tensor_metrics.items())),
+    }
+    return summary, details
+
+
+def build_weight_pairwise_analysis(
+    manifests: dict[str, dict[str, Any]]
+) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    torch_module, safe_open_fn = require_weight_analysis_runtime()
+    pairwise_summary: dict[str, Any] = {}
+    pairwise_details: dict[str, Any] = {}
+    pair_timings: dict[str, float] = {}
+    for pair_name, models in WEIGHT_ANALYSIS_PAIRWISE.items():
+        pair_start = time.perf_counter()
+        left_manifest = manifests[models[0]]
+        right_manifest = manifests[models[1]]
+        raw_metrics = load_pair_weight_tensor_metrics(left_manifest, right_manifest, torch_module, safe_open_fn)
+        summary, details = summarize_weight_pair(
+            pair_name=pair_name,
+            models=models,
+            tensor_metrics=raw_metrics["tensor_metrics"],
+            left_tensor_count=raw_metrics["left_tensor_count"],
+            right_tensor_count=raw_metrics["right_tensor_count"],
+            shared_key_count=raw_metrics["shared_key_count"],
+            missing_key_excluded_count=raw_metrics["missing_key_excluded_count"],
+            shape_mismatch_excluded_count=raw_metrics["shape_mismatch_excluded_count"],
+            dtype_mismatch_excluded_count=raw_metrics["dtype_mismatch_excluded_count"],
+            comparable_left_bytes=raw_metrics["comparable_left_bytes"],
+            comparable_right_bytes=raw_metrics["comparable_right_bytes"],
+            comparable_total_bytes=raw_metrics["comparable_total_bytes"],
+        )
+        pair_timings[pair_name] = _safe_round(time.perf_counter() - pair_start, 4)
+        pairwise_summary[pair_name] = summary
+        pairwise_details[pair_name] = details
+    runtime_profile = {
+        "pair_value_pass_seconds": pair_timings,
+    }
+    return pairwise_summary, pairwise_details, runtime_profile
+
+
+def build_block_review_summary(weight_pairwise: dict[str, Any]) -> dict[str, Any]:
+    pair_summary: dict[str, Any] = {}
+    subsystem_totals: dict[str, dict[str, Any]] = {}
+    for pair_name, payload in weight_pairwise.items():
+        pair_summary[pair_name] = {
+            "models": payload["models"],
+            "comparable_tensor_count": payload["comparable_tensor_count"],
+            "exact_equal_tensor_ratio": payload["exact_equal_tensor_ratio"],
+            "low_delta_tensor_ratio": payload["low_delta_tensor_ratio"],
+            "mean_relative_l2_delta": payload["mean_relative_l2_delta"],
+            "mean_block_similarity_score": round(
+                sum(item["layer_weight_similarity_score"] for item in payload["by_block"].values())
+                / max(len(payload["by_block"]), 1),
+                4,
+            ),
+        }
+        for subsystem, subsystem_payload in payload["by_subsystem"].items():
+            stats = subsystem_totals.setdefault(
+                subsystem,
+                {"pair_count": 0, "exact_sum": 0.0, "low_delta_sum": 0.0, "relative_l2_sum": 0.0},
+            )
+            stats["pair_count"] += 1
+            stats["exact_sum"] += subsystem_payload["mean_exact_tensor_match_ratio"]
+            stats["low_delta_sum"] += subsystem_payload["mean_low_delta_tensor_ratio"]
+            stats["relative_l2_sum"] += subsystem_payload["mean_block_relative_l2_delta"]
+    subsystem_summary = {
+        subsystem: {
+            "pair_count": values["pair_count"],
+            "mean_exact_tensor_match_ratio": round(values["exact_sum"] / values["pair_count"], 4),
+            "mean_low_delta_tensor_ratio": round(values["low_delta_sum"] / values["pair_count"], 4),
+            "mean_block_relative_l2_delta": round(values["relative_l2_sum"] / values["pair_count"], 10),
+        }
+        for subsystem, values in subsystem_totals.items()
+    }
+    return {"pairs": pair_summary, "subsystems": subsystem_summary}
 
 
 def build_compatibility_matrix(manifests: dict[str, dict[str, Any]]) -> dict[str, Any]:
@@ -1113,6 +1736,7 @@ def stage1_artifact_paths(target_dir: Path) -> dict[str, Path]:
         "summary_markdown": target_dir / "summary.md",
         "matrix_json": target_dir / "compatibility-matrix.json",
         "layer_analysis_json": target_dir / "layer-analysis.json",
+        "weight_analysis_json": target_dir / "weight-analysis.json",
         "figures_dir": target_dir / "figures",
         "component_overview_png": target_dir / "figures" / "component-overview.png",
         "pairwise_comparison_png": target_dir / "figures" / "pairwise-comparison.png",
@@ -1314,16 +1938,16 @@ def render_top_divergent_layers(layer_pairwise: dict[str, Any]) -> str:
         rows = []
         for item in pair_entry["overall"]["top_divergent_layers"][:5]:
             rows.append(
-                f"| `{item['layer_id']}` | `{item['reason']}` | `{item['left_parameter_count']}` | `{item['right_parameter_count']}` | `{item['shape_mismatch_count']}` |"
+                f"| `{item['layer_id']}` | `{item['reason']}` | `{item['left_parameter_count']}` | `{item['right_parameter_count']}` | `{item['shape_mismatch_count']}` | `{', '.join(item['left_only_parameter_samples']) or 'none'}` | `{', '.join(item['right_only_parameter_samples']) or 'none'}` |"
             )
         if not rows:
-            rows.append("| `none` | `no divergent layers captured` | `0` | `0` | `0` |")
+            rows.append("| `none` | `no divergent layers captured` | `0` | `0` | `0` | `none` | `none` |")
         sections.append(
             "\n".join(
                 [
                     f"### {pretty_pair_label(pair_entry['models'])}",
-                    "| Layer | Reason | Left params | Right params | Shape mismatches |",
-                    "| --- | --- | --- | --- | --- |",
+                    "| Layer | Reason | Left params | Right params | Shape mismatches | Left-only samples | Right-only samples |",
+                    "| --- | --- | --- | --- | --- | --- | --- |",
                     *rows,
                 ]
             )
@@ -1344,6 +1968,134 @@ def render_layer_inventory_rows(matrix: dict[str, Any]) -> str:
     return "\n".join(rows)
 
 
+def render_weight_pair_summary_rows(weight_pairwise: dict[str, Any]) -> str:
+    rows = []
+    for pair_name in WEIGHT_ANALYSIS_PAIRWISE:
+        pair = weight_pairwise[pair_name]
+        rows.append(
+            f"| `{pretty_pair_label(pair['models'])}` | `{pair['comparable_tensor_count']}` | `{pair['exact_equal_tensor_count']}` | `{pair['exact_equal_tensor_ratio']}` | `{pair['low_delta_tensor_ratio']}` | `{pair['mean_relative_l2_delta']}` | `{pair['max_relative_l2_delta']}` | `{pair['exclusion_accounting']['missing_keys']}` | `{pair['exclusion_accounting']['shape_mismatch']}` | `{pair['exclusion_accounting']['dtype_mismatch']}` |"
+        )
+    return "\n".join(rows)
+
+
+def render_weight_layer_tables(weight_pairwise: dict[str, Any]) -> str:
+    sections: list[str] = []
+    for pair_name in WEIGHT_ANALYSIS_PAIRWISE:
+        pair = weight_pairwise[pair_name]
+        subsystem_sections = [f"### {pretty_pair_label(pair['models'])}"]
+        for subsystem in SUBSYSTEM_ORDER:
+            rows = []
+            subsystem_layers = [
+                item for item in pair["by_block"].values() if item["subsystem"] == subsystem
+            ]
+            subsystem_layers = sorted(
+                subsystem_layers,
+                key=lambda item: (-item["relative_l2_delta"], item["layer_id"]),
+            )[:12]
+            for layer in subsystem_layers:
+                rows.append(
+                    f"| `{layer['layer_id']}` | `{layer['comparable_tensor_count']}` | `{layer['exact_tensor_match_ratio']}` | `{layer['low_delta_tensor_ratio']}` | `{layer['relative_l2_delta']}` | `{layer['layer_weight_similarity_score']}` |"
+                )
+            subsystem_sections.extend(
+                [
+                    f"#### {subsystem}",
+                    "| Block | Comparable tensors | Exact ratio | Low-delta ratio | Relative L2 delta | Similarity score |",
+                    "| --- | --- | --- | --- | --- | --- |",
+                    *(rows or ["| `none` | `0` | `0.0` | `0.0` | `0.0` | `0.0` |"]),
+                ]
+            )
+        sections.append("\n".join(subsystem_sections))
+    return "\n\n".join(sections)
+
+
+def render_weight_top_divergences(weight_pairwise: dict[str, Any]) -> str:
+    sections: list[str] = []
+    for pair_name in WEIGHT_ANALYSIS_PAIRWISE:
+        pair = weight_pairwise[pair_name]
+        layer_rows = []
+        for layer in pair["top_divergent_blocks"][:5]:
+            layer_rows.append(
+                f"| `{layer['layer_id']}` | `{layer['relative_l2_delta']}` | `{layer['exact_tensor_match_ratio']}` | `{layer['low_delta_tensor_ratio']}` | `{layer['comparable_tensor_count']}` | `{layer['subsystem']}` |"
+            )
+        tensor_rows = []
+        for tensor in pair["top_divergent_tensors"][:5]:
+            tensor_rows.append(
+                f"| `{tensor['tensor_key']}` | `{tensor['layer_id']}` | `{tensor['relative_l2_delta']}` | `{tensor['mean_absolute_delta']}` | `{tensor['max_absolute_delta']}` |"
+            )
+        sections.append(
+            "\n".join(
+                [
+                    f"### {pretty_pair_label(pair['models'])}",
+                    "",
+                    "| Divergent layer | Relative L2 delta | Exact ratio | Low-delta ratio | Comparable tensors |",
+                    "| --- | --- | --- | --- | --- | --- |",
+                    *(layer_rows or ["| `none` | `0.0` | `1.0` | `1.0` | `0` | `none` |"]),
+                    "",
+                    "| Divergent tensor | Layer | Relative L2 delta | Mean abs delta | Max abs delta |",
+                    "| --- | --- | --- | --- | --- |",
+                    *(tensor_rows or ["| `none` | `none` | `0.0` | `0.0` | `0.0` |"]),
+                ]
+            )
+        )
+    return "\n\n".join(sections)
+
+
+def render_block_review_summary_rows(matrix: dict[str, Any]) -> str:
+    rows = []
+    for pair_name in WEIGHT_ANALYSIS_PAIRWISE:
+        pair = matrix["block_review_summary"]["pairs"][pair_name]
+        rows.append(
+            f"| `{pretty_pair_label(pair['models'])}` | `{pair['comparable_tensor_count']}` | `{pair['exact_equal_tensor_ratio']}` | `{pair['low_delta_tensor_ratio']}` | `{pair['mean_relative_l2_delta']}` | `{pair['mean_block_similarity_score']}` |"
+        )
+    return "\n".join(rows)
+
+
+def render_hardware_account_rows(resource_accounting: dict[str, Any]) -> str:
+    hardware = resource_accounting.get("hardware", {})
+    gpu_probe = hardware.get("gpu_probe", {})
+    rows = [
+        f"| Hostname | `{hardware.get('hostname', 'unknown')}` |",
+        f"| OS | `{hardware.get('os', 'unknown')}` |",
+        f"| Python | `{hardware.get('python_version', 'unknown')}` |",
+        f"| CPU model | `{hardware.get('cpu_model', 'unknown')}` |",
+        f"| Logical cores | `{hardware.get('logical_cores', 'unknown')}` |",
+        f"| Total RAM | `{format_bytes(hardware.get('total_ram_bytes'))}` |",
+        f"| GPU detected | `{gpu_probe.get('detected', False)}` ({gpu_probe.get('vendor_hint', 'unknown')}) |",
+        f"| GPU used in Stage 1 | `{hardware.get('gpu_used', False)}` |",
+        f"| HF home | `{hardware.get('hf_home', 'unknown')}` |",
+        f"| Artifact dir | `{hardware.get('artifact_dir', 'unknown')}` |",
+    ]
+    return "\n".join(rows)
+
+
+def render_timing_rows(resource_accounting: dict[str, Any]) -> str:
+    timing = resource_accounting.get("timing", {})
+    phases = timing.get("phases_seconds", {})
+    percentages = timing.get("phase_percentages", {})
+    rows: list[str] = []
+    for name, seconds in phases.items():
+        rows.append(
+            f"| `{name}` | `{seconds}` | `{percentages.get(name, 0.0)}%` |"
+        )
+    if not rows:
+        rows.append("| `none` | `0.0` | `0.0%` |")
+    return "\n".join(rows)
+
+
+def render_workload_rows(resource_accounting: dict[str, Any]) -> str:
+    workload = resource_accounting.get("workload", {})
+    roadmap_pairs = workload.get("roadmap_pairs", {})
+    rows: list[str] = []
+    for pair_name in WEIGHT_ANALYSIS_PAIRWISE:
+        payload = roadmap_pairs.get(pair_name, {})
+        models = payload.get("models", WEIGHT_ANALYSIS_PAIRWISE[pair_name])
+        excluded = payload.get("excluded_counts", {})
+        rows.append(
+            f"| `{pretty_pair_label(tuple(models))}` | `{payload.get('comparable_tensor_count', 0)}` | `{format_bytes(payload.get('comparable_left_bytes'))}` | `{format_bytes(payload.get('comparable_right_bytes'))}` | `{format_bytes(payload.get('comparable_total_bytes'))}` | `{excluded.get('missing', 0)}` | `{excluded.get('shape_mismatch', 0)}` | `{excluded.get('dtype_mismatch', 0)}` |"
+        )
+    return "\n".join(rows)
+
+
 def render_dna_report(
     matrix: dict[str, Any],
     remote_context: dict[str, Any],
@@ -1351,6 +2103,7 @@ def render_dna_report(
     cache_alias_map: dict[str, str],
     figure_refs: dict[str, str],
 ) -> str:
+    resource_accounting = matrix.get("resource_accounting", {})
     manifest_rows = "\n".join(
         f"| `{alias}` | `{summary['layout']}` | `{', '.join(summary['components'])}` | `{summary['commit']}` | `{summary['shard_count']}` | `{summary['tensor_count']}` | `{summary['normalized_layer_count']}` | `{summary['vae']['label']}` | `{summary['rope']['label']}` |"
         for alias, summary in matrix["model_summaries"].items()
@@ -1368,88 +2121,146 @@ def render_dna_report(
         f"| `{item['subsystem']}` | {', '.join(item['models'])} | `{item['structural_compatibility']}` | `{item['recommended_merge_strategy']}` | `{item['evidence']['shared_key_count']}` | `{item['evidence']['missing_key_count']}` | `{item['evidence']['shape_mismatch_count']}` | {item['reason']} |"
         for item in matrix["subsystems"]
     )
+    timing = resource_accounting.get("timing", {})
+    workload = resource_accounting.get("workload", {})
+    estimate = resource_accounting.get("estimate", {})
     cache_map_lines = "\n".join(f"- `{alias}` -> `{value}`" for alias, value in cache_alias_map.items())
-    return f"""# Stage 1 DNA Report
+    return f"""# Stage 1 Paper-Style Block Architecture Review
 
-## Why this report exists
-This report is built from the Hugging Face cache snapshots, not from repo metadata vibes. If a subsystem gets called compatible here, it had to survive actual shard and tensor inspection first.
+## Abstract
+Stage 1 now combines structural checkpoint compatibility with value-level block comparison for roadmap pairs. The key result is whether models are not only architecturally aligned, but also numerically close enough per block to support low-risk fusion decisions.
 
-## Remote execution context
+## Setup
 - Remote name: `{remote_context['name']}`
 - Remote workdir: `{remote_context['workdir']}`
 - Remote cache: `{remote_context['cache_dir']}`
 - Remote artifact dir: `{remote_context['artifact_dir']}`
 - HF home: `{hf_home}`
+- Weight analysis available: `{matrix['weight_analysis_available']}`
+- Low-delta threshold: `relative_l2_delta <= {matrix['weight_thresholds']['relative_l2_delta_low']}`
 
-## Cache entries inspected
+## Methods
+Phase A: structural analysis from shard metadata (key overlap, missing keys, shape mismatches, layer normalization).
+
+Phase B: value-level analysis from loaded tensor payloads on roadmap pairs, with block rollups:
+- `exact_tensor_match_ratio`
+- `low_delta_tensor_ratio`
+- `block_relative_l2_delta`
+- `block_mean_abs_delta` and `block_max_abs_delta`
+
+## Cache Entries Inspected
 {cache_map_lines}
 
-## Model snapshot inventory
+## Results
+
+### Model Snapshot Inventory
 | Alias | Layout | Components | Commit | Shards | Tensor count | Normalized layers | VAE | RoPE hint |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 {manifest_rows}
 
-## Component tensor counts
+### Component Tensor Counts
 | Alias | Component | Tensor count |
 | --- | --- | --- |
 {component_rows}
 
-## Tensor pairwise comparison stats
+### Tensor Pairwise Comparison Stats
 | Pair | Shared keys | Missing keys | Shape mismatches | Top mismatch prefixes | Left components | Right components |
 | --- | --- | --- | --- | --- | --- | --- |
 {comparison_rows}
 
-## Layer inventory summary
+### Layer Inventory Summary
 | Alias | Normalized layers | Subsystem counts |
 | --- | --- | --- |
 {render_layer_inventory_rows(matrix)}
 
-## Layer sharing across all pairs
+### Layer Sharing Across All Pairs
 | Pair | Shared layers | Exact | Partial | Left-only | Right-only | Shape-mismatched layers | Shared ratio |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 {render_layer_pair_summary_rows(matrix['layer_pairwise'])}
 
-## Subsystem compatibility and strategy
+### Block Review Executive Summary
+| Pair | Comparable tensors | Exact ratio | Low-delta ratio | Mean relative L2 delta | Mean block similarity |
+| --- | --- | --- | --- | --- | --- |
+{render_block_review_summary_rows(matrix)}
+
+### Value-Level Weight Comparison
+| Pair | Comparable tensors | Exact-equal tensors | Exact ratio | Low-delta ratio | Mean relative L2 delta | Max relative L2 delta | Missing excluded | Shape excluded | Dtype excluded |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+{render_weight_pair_summary_rows(matrix['weight_pairwise'])}
+
+## Hardware Account + Time Usage
+### Environment
+| Item | Value |
+| --- | --- |
+{render_hardware_account_rows(resource_accounting)}
+
+### Phase Timing
+| Phase | Seconds | Percent of total |
+| --- | --- | --- |
+{render_timing_rows(resource_accounting)}
+
+### Roadmap Pair Workload
+| Pair | Comparable tensors | Left bytes | Right bytes | Total bytes | Missing excluded | Shape excluded | Dtype excluded |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+{render_workload_rows(resource_accounting)}
+
+### Runtime Estimate vs Observed
+- Observed total wall time: `{timing.get('total_wall_seconds', 'unknown')}s`
+- Value-analysis bytes processed: `{format_bytes(workload.get('value_analysis_total_bytes'))}` (`{workload.get('value_analysis_total_gib', 'unknown')} GiB`)
+- Estimated total runtime (low/typical/high): `{estimate.get('total_seconds', {}).get('low', 'unknown')}s` / `{estimate.get('total_seconds', {}).get('typical', 'unknown')}s` / `{estimate.get('total_seconds', {}).get('high', 'unknown')}s`
+- Operational note: Stage 1 value comparison is CPU and storage I/O bound; GPU is not required.
+
+### Subsystem Compatibility And Strategy
 | Subsystem | Models | Structural compatibility | Recommended merge strategy | Shared keys | Missing keys | Shape mismatches | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 {subsystem_rows}
 
-## Structural summary
+### Structural Summary
 - `direct-merge`: {matrix['structural_summary']['direct_merge']}
 - `adapter-only`: {matrix['structural_summary']['adapter_only']}
 - `incompatible`: {matrix['structural_summary']['incompatible']}
 
-## Recommended strategy summary
+### Recommended Strategy Summary
 - `direct-merge`: {matrix['summary']['direct_merge']}
 - `delta-merge`: {matrix['summary']['delta_merge']}
 - `adapter-only`: {matrix['summary']['adapter_only']}
 - `incompatible`: {matrix['summary']['incompatible']}
 
-## Primary figures
+### Evidence Confidence
+- Structural evidence confidence: `high` for key/shape compatibility and component-level taxonomy.
+- Value evidence confidence: `high` for compared tensors in roadmap pairs, `not-applicable` for excluded tensors (missing/shape/dtype mismatch).
+
+### Primary Figures
 ![Layer sharing heatmap]({figure_refs['layer_sharing_heatmap']})
 
 ![Layer sharing breakdown]({figure_refs['layer_sharing_bars']})
 
-## Supporting figures
+### Supporting Figures
 ![Component overview]({figure_refs['component_overview']})
 
 ![Tensor pairwise comparison]({figure_refs['pairwise_comparison']})
 
-## Layer sharing by subsystem
+### Layer Sharing By Subsystem
 {render_subsystem_layer_tables(matrix['layer_pairwise'])}
 
-## Top divergent layers
+### Top Divergent Layers
 {render_top_divergent_layers(matrix['layer_pairwise'])}
 
-## Secondary visualization
+### Block-By-Block Weight Tables
+{render_weight_layer_tables(matrix['weight_pairwise'])}
+
+### Weight-Level Divergences
+{render_weight_top_divergences(matrix['weight_pairwise'])}
+
+### Secondary Visualization
 ```mermaid
 {matrix['visualization']['source'].rstrip()}
 ```
 
-## Takeaways
-- Stage 1 now compares normalized layers, not just raw tensor sets, so shared architecture can be discussed in block-level terms.
-- `2512` vs `2511` can be structurally direct-merge-compatible while still recommending a `delta-merge` strategy for the actual fusion recipe.
-- VAE evidence now reports clean RGB versus RGBA conclusions instead of dumping random intermediate channel dimensions.
+## Limitations
+- Numeric comparisons are only performed on shared tensors with matching shape and dtype.
+- This report does not measure prompt-level behavior or generation quality; it characterizes checkpoint architecture and weight drift.
+- Non-roadmap pair value analysis is intentionally out of scope for runtime control.
 """
 
 
@@ -1466,6 +2277,10 @@ def build_stage1_terminal_summary(result: dict[str, Any]) -> str:
     matrix = result["matrix"]
     pairwise = matrix["pairwise_comparisons"]
     layer_pairwise = matrix["layer_pairwise"]
+    weight_pairwise = matrix["weight_pairwise"]
+    resource = matrix.get("resource_accounting", {})
+    timing = resource.get("timing", {})
+    workload = resource.get("workload", {})
     best_pair_key = max(
         layer_pairwise,
         key=lambda key: layer_pairwise[key]["overall"]["layer_shared_ratio"],
@@ -1473,6 +2288,15 @@ def build_stage1_terminal_summary(result: dict[str, Any]) -> str:
     worst_pair_key = min(
         layer_pairwise,
         key=lambda key: layer_pairwise[key]["overall"]["layer_shared_ratio"],
+    )
+    block_summary = matrix.get("block_review_summary", {}).get("pairs", {})
+    best_block_pair_key = max(
+        block_summary,
+        key=lambda key: block_summary[key]["mean_block_similarity_score"],
+    )
+    worst_block_pair_key = min(
+        block_summary,
+        key=lambda key: block_summary[key]["mean_block_similarity_score"],
     )
     layer_counts = " ".join(
         f"{short_model_label(alias)}={matrix['model_summaries'][alias]['normalized_layer_count']}"
@@ -1508,6 +2332,16 @@ def build_stage1_terminal_summary(result: dict[str, Any]) -> str:
             f"ratio={layer_pairwise[worst_pair_key]['overall']['layer_shared_ratio']}"
         ),
         (
+            "best block-similarity pair: "
+            f"{pretty_pair_label(block_summary[best_block_pair_key]['models'])} "
+            f"score={block_summary[best_block_pair_key]['mean_block_similarity_score']}"
+        ),
+        (
+            "worst block-similarity pair: "
+            f"{pretty_pair_label(block_summary[worst_block_pair_key]['models'])} "
+            f"score={block_summary[worst_block_pair_key]['mean_block_similarity_score']}"
+        ),
+        (
             "2512 vs 2511 tensors: "
             f"shared={pairwise['foundation_vs_edit']['shared_key_count']} "
             f"missing={pairwise['foundation_vs_edit']['missing_key_count']} "
@@ -1519,6 +2353,24 @@ def build_stage1_terminal_summary(result: dict[str, Any]) -> str:
             f"missing={pairwise['base_vs_layered']['missing_key_count']} "
             f"shape_mismatch={pairwise['base_vs_layered']['shape_mismatch_count']}"
         ),
+        (
+            "2512 vs 2511 weights: "
+            f"exact_ratio={weight_pairwise['foundation_vs_edit']['exact_equal_tensor_ratio']} "
+            f"mean_rel_l2={weight_pairwise['foundation_vs_edit']['mean_relative_l2_delta']}"
+        ),
+        (
+            "base vs layered weights: "
+            f"exact_ratio={weight_pairwise['base_vs_layered']['exact_equal_tensor_ratio']} "
+            f"mean_rel_l2={weight_pairwise['base_vs_layered']['mean_relative_l2_delta']}"
+        ),
+        (
+            "runtime_total_seconds: "
+            f"{timing.get('total_wall_seconds', 'unknown')}"
+        ),
+        (
+            "value_analysis_bytes: "
+            f"{format_bytes(workload.get('value_analysis_total_bytes'))}"
+        ),
     ]
     artifact_refs = result.get("artifact_paths", {})
     if artifact_refs:
@@ -1526,7 +2378,9 @@ def build_stage1_terminal_summary(result: dict[str, Any]) -> str:
             [
                 f"summary: {artifact_refs.get('summary_markdown', '')}",
                 f"matrix: {artifact_refs.get('matrix_json', '')}",
+                f"hardware_account: {artifact_refs.get('summary_markdown', '')} (section: Hardware Account + Time Usage)",
                 f"layer_analysis: {artifact_refs.get('layer_analysis_json', '')}",
+                f"weight_analysis: {artifact_refs.get('weight_analysis_json', '')}",
                 f"figure(heatmap): {artifact_refs.get('layer_sharing_heatmap_png', '')}",
                 f"figure(layer-bars): {artifact_refs.get('layer_sharing_bars_png', '')}",
             ]
@@ -1548,18 +2402,49 @@ def analyze(
     hf_home: str | Path | None = None,
     cache_map_config: str | Path | None = None,
 ) -> dict[str, Any]:
+    target_dir = Path(artifact_dir) if artifact_dir else repo_root() / "reports" / "stage-1"
+    artifact_paths = stage1_artifact_paths(target_dir)
+    compatibility_shims = build_stage1_compatibility_shims(target_dir)
+    total_start = time.perf_counter()
+    phase_seconds: dict[str, float] = {}
+
+    phase_start = time.perf_counter()
     metadata_models = load_model_inventory(model_dir)
     cache_alias_map = load_cache_alias_map(cache_map_config)
     remote_context = default_remote_context(remote_config)
     if cache_dir:
         remote_context["cache_dir"] = cache_dir
     resolved_hf_home = resolve_hf_home(hf_home)
+    phase_seconds["setup_context"] = time.perf_counter() - phase_start
+
+    phase_start = time.perf_counter()
+    snapshot_inventory = collect_snapshot_inventory(resolved_hf_home, cache_alias_map)
+    phase_seconds["cache_snapshot_discovery"] = time.perf_counter() - phase_start
+    hardware_snapshot = build_hardware_snapshot(resolved_hf_home, target_dir, snapshot_inventory)
+
+    phase_start = time.perf_counter()
     manifests = inspect_cache_models(resolved_hf_home, metadata_models, cache_alias_map)
+    phase_seconds["structural_manifest_build"] = time.perf_counter() - phase_start
+
+    phase_start = time.perf_counter()
     matrix = build_compatibility_matrix(manifests)
     layer_analysis = build_layer_analysis_payload(manifests, matrix)
-    target_dir = Path(artifact_dir) if artifact_dir else repo_root() / "reports" / "stage-1"
-    artifact_paths = stage1_artifact_paths(target_dir)
-    compatibility_shims = build_stage1_compatibility_shims(target_dir)
+    phase_seconds["pairwise_structural_layer"] = time.perf_counter() - phase_start
+
+    phase_start = time.perf_counter()
+    weight_result = build_weight_pairwise_analysis(manifests)
+    if len(weight_result) == 2:
+        weight_pairwise, weight_analysis = weight_result
+        value_runtime_profile = {"pair_value_pass_seconds": {}}
+    else:
+        weight_pairwise, weight_analysis, value_runtime_profile = weight_result
+    phase_seconds["value_level_weight_comparison"] = time.perf_counter() - phase_start
+
+    matrix["weight_analysis_available"] = True
+    matrix["weight_thresholds"] = {"relative_l2_delta_low": WEIGHT_DELTA_THRESHOLD}
+    matrix["weight_pairwise"] = weight_pairwise
+    matrix["block_review_summary"] = build_block_review_summary(weight_pairwise)
+
     figure_refs = {
         "component_overview": f"figures/{artifact_paths['component_overview_png'].name}",
         "pairwise_comparison": f"figures/{artifact_paths['pairwise_comparison_png'].name}",
@@ -1570,10 +2455,11 @@ def analyze(
         "summary_markdown": str(artifact_paths["summary_markdown"].name),
         "matrix_json": str(artifact_paths["matrix_json"].name),
         "layer_analysis_json": str(artifact_paths["layer_analysis_json"].name),
+        "weight_analysis_json": str(artifact_paths["weight_analysis_json"].name),
         "figures": figure_refs,
     }
     matrix["layer_visuals"] = figure_refs
-    report = render_dna_report(matrix, remote_context, resolved_hf_home, cache_alias_map, figure_refs)
+
     result = {
         "stage": "stage1",
         "mode": "dry-run" if dry_run else "write",
@@ -1584,18 +2470,56 @@ def analyze(
         "artifact_paths": {key: str(value) for key, value in artifact_paths.items() if key != "figures_dir"},
         "compatibility_shims": {key: str(value) for key, value in compatibility_shims.items()},
     }
+
     if dry_run:
+        phase_seconds["figure_generation"] = 0.0
+        phase_seconds["report_json_write"] = 0.0
+        phase_seconds["total_wall"] = time.perf_counter() - total_start
+        matrix["resource_accounting"] = build_resource_accounting(
+            hardware_snapshot,
+            phase_seconds,
+            manifests,
+            weight_pairwise,
+            value_runtime_profile=value_runtime_profile,
+        )
+        weight_analysis["runtime_profile"] = {
+            "pair_value_pass_seconds": matrix["resource_accounting"]["timing"].get("value_pair_seconds", {}),
+            "roadmap_pair_bytes": matrix["resource_accounting"]["workload"].get("roadmap_pairs", {}),
+        }
+        report = render_dna_report(matrix, remote_context, resolved_hf_home, cache_alias_map, figure_refs)
         result["report_preview"] = report
         result["layer_analysis"] = layer_analysis
+        result["weight_analysis"] = weight_analysis
         result["terminal_summary"] = build_stage1_terminal_summary(result)
         return result
+
+    phase_start = time.perf_counter()
     generate_stage1_figures(matrix, artifact_paths)
+    phase_seconds["figure_generation"] = time.perf_counter() - phase_start
+
+    write_start = time.perf_counter()
+    phase_seconds["report_json_write"] = 0.0
+    phase_seconds["total_wall"] = time.perf_counter() - total_start
+    matrix["resource_accounting"] = build_resource_accounting(
+        hardware_snapshot,
+        phase_seconds,
+        manifests,
+        weight_pairwise,
+        value_runtime_profile=value_runtime_profile,
+    )
+    weight_analysis["runtime_profile"] = {
+        "pair_value_pass_seconds": matrix["resource_accounting"]["timing"].get("value_pair_seconds", {}),
+        "roadmap_pair_bytes": matrix["resource_accounting"]["workload"].get("roadmap_pairs", {}),
+    }
+    report = render_dna_report(matrix, remote_context, resolved_hf_home, cache_alias_map, figure_refs)
     write_json(artifact_paths["matrix_json"], matrix)
     write_json(artifact_paths["layer_analysis_json"], layer_analysis)
+    write_json(artifact_paths["weight_analysis_json"], weight_analysis)
     write_text(artifact_paths["summary_markdown"], report)
     written = [
         str(artifact_paths["matrix_json"]),
         str(artifact_paths["layer_analysis_json"]),
+        str(artifact_paths["weight_analysis_json"]),
         str(artifact_paths["summary_markdown"]),
         str(artifact_paths["component_overview_png"]),
         str(artifact_paths["pairwise_comparison_png"]),
@@ -1606,6 +2530,26 @@ def analyze(
         write_json(compatibility_shims["legacy_matrix_json"], matrix)
         write_text(compatibility_shims["legacy_report_md"], render_stage1_compatibility_stub(target_dir))
         written.extend(str(path) for path in compatibility_shims.values())
+    phase_seconds["report_json_write"] = time.perf_counter() - write_start
+    phase_seconds["total_wall"] = time.perf_counter() - total_start
+    matrix["resource_accounting"] = build_resource_accounting(
+        hardware_snapshot,
+        phase_seconds,
+        manifests,
+        weight_pairwise,
+        value_runtime_profile=value_runtime_profile,
+    )
+    weight_analysis["runtime_profile"] = {
+        "pair_value_pass_seconds": matrix["resource_accounting"]["timing"].get("value_pair_seconds", {}),
+        "roadmap_pair_bytes": matrix["resource_accounting"]["workload"].get("roadmap_pairs", {}),
+    }
+    report = render_dna_report(matrix, remote_context, resolved_hf_home, cache_alias_map, figure_refs)
+    write_json(artifact_paths["matrix_json"], matrix)
+    write_json(artifact_paths["weight_analysis_json"], weight_analysis)
+    write_text(artifact_paths["summary_markdown"], report)
+    if compatibility_shims:
+        write_json(compatibility_shims["legacy_matrix_json"], matrix)
+        write_text(compatibility_shims["legacy_report_md"], render_stage1_compatibility_stub(target_dir))
     result["written"] = written
     result["terminal_summary"] = build_stage1_terminal_summary(result)
     return result
