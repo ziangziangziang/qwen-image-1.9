@@ -46,6 +46,26 @@ def build_parser() -> argparse.ArgumentParser:
     stage2_sub = stage2.add_subparsers(dest="action", required=True)
     stage2_fuse = stage2_sub.add_parser("fuse", help="Build Stage 2 merge artifacts.")
     add_common_args(stage2_fuse)
+    stage2_fuse.add_argument(
+        "--smoke-run",
+        action="store_true",
+        help="Use the reduced Stage 2 smoke profile (1x80GB-target quick bug finder).",
+    )
+    stage2_fuse.add_argument(
+        "--run-profile",
+        choices=("smoke", "full"),
+        help="Stage 2 execution profile. Defaults to smoke when --smoke-run is set, otherwise full.",
+    )
+    stage2_fuse.add_argument(
+        "--execute",
+        action="store_true",
+        help="Execute Stage 2 jobs after writing manifests. Without this flag Stage 2 only plans.",
+    )
+    stage2_fuse.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume Stage 2 execution from previous run-status instead of overwrite mode.",
+    )
 
     stage3 = subparsers.add_parser("stage3", help="Stage 3 evaluation.")
     stage3_sub = stage3.add_subparsers(dest="action", required=True)
@@ -85,6 +105,14 @@ def dispatch(args: argparse.Namespace) -> dict[str, Any]:
         kwargs["hf_home"] = args.hf_home
     if hasattr(args, "cache_map_config"):
         kwargs["cache_map_config"] = args.cache_map_config
+    if hasattr(args, "smoke_run"):
+        kwargs["smoke_run"] = args.smoke_run
+    if hasattr(args, "run_profile"):
+        kwargs["run_profile"] = args.run_profile
+    if hasattr(args, "execute"):
+        kwargs["execute"] = args.execute
+    if hasattr(args, "resume"):
+        kwargs["resume"] = args.resume
     return handler(**kwargs)
 
 
