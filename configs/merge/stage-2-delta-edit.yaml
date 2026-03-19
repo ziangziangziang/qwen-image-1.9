@@ -1,13 +1,24 @@
 {
-  "recipe_name": "stage-2-delta-edit",
+  "recipe_name": "stage-2-core-delta",
   "foundation_model": "qwen-image-2512",
   "delta_source": "qwen-image-edit-2511",
-  "delta_base_hint": "Qwen/Qwen-Image-Edit-2509",
-  "default_blend_weight": 0.35,
+  "delta_base_candidate": "qwen-image-base",
+  "target_components": [
+    "transformer"
+  ],
   "target_subsystems": [
-    "mmdit_backbone",
-    "edit_heads",
-    "conditioning_blocks"
-  ]
+    "mmdit_backbone"
+  ],
+  "excluded_subsystems": [
+    "text_encoder",
+    "vae",
+    "rope"
+  ],
+  "coefficient_sweep": [
+    0.2,
+    0.3,
+    0.35,
+    0.4
+  ],
+  "selection_rule": "Prefer edit retention without visible generation regression on the smoke suite."
 }
-

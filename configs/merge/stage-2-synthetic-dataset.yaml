@@ -1,0 +1,97 @@
+{
+  "recipe_name": "stage-2-synthetic-teacher-dataset",
+  "output_root": "stage-2/datasets/teacher-db",
+  "flatten_layered_rgba": "alpha-composite-to-rgb",
+  "record_schema": [
+    "sample_id",
+    "teacher_model_alias",
+    "teacher_model",
+    "prompt",
+    "source_prompt",
+    "edit_instruction",
+    "seed",
+    "generation_settings",
+    "asset_paths",
+    "output_metadata"
+  ],
+  "splits": {
+    "generation_teacher": {
+      "teacher_model": "qwen-image-2512",
+      "task": "text-to-image",
+      "planned_sample_count": 8,
+      "seed_schedule": [
+        101,
+        202,
+        303,
+        404
+      ],
+      "generation_settings": {
+        "resolution": "1024x1024",
+        "steps": 30,
+        "guidance_scale": 4.0
+      },
+      "prompt_bank": [
+        "cinematic portrait of a botanist in a glass greenhouse with readable name badge text",
+        "studio product photo of a brushed metal camera on cream paper with sharp label text",
+        "rainy neon street at night with a taxi sign and reflective pavement",
+        "storybook castle on a hill at sunrise with crisp title lettering"
+      ]
+    },
+    "edit_teacher": {
+      "teacher_model": "qwen-image-edit-2511",
+      "task": "generate-then-edit",
+      "planned_sample_count": 8,
+      "seed_schedule": [
+        111,
+        222,
+        333,
+        444
+      ],
+      "generation_settings": {
+        "resolution": "1024x1024",
+        "steps": 30,
+        "guidance_scale": 4.0
+      },
+      "prompt_bank": [
+        {
+          "source_prompt": "street style portrait of a runner in a red jacket against a subway wall",
+          "edit_instruction": "change the jacket to white while keeping pose, lighting, and camera angle"
+        },
+        {
+          "source_prompt": "product shot of a ceramic mug on a wooden table in morning light",
+          "edit_instruction": "replace the mug pattern with blue stripes and keep the same composition"
+        },
+        {
+          "source_prompt": "retro poster of a rocket launch with bold orange typography",
+          "edit_instruction": "update the poster palette to teal and cream while preserving layout"
+        },
+        {
+          "source_prompt": "close portrait of a corgi in a yellow raincoat on wet pavement",
+          "edit_instruction": "switch the raincoat to forest green and keep the dog expression unchanged"
+        }
+      ]
+    },
+    "layered_teacher": {
+      "teacher_model": "qwen-image-layered",
+      "task": "layer-aware-generation",
+      "planned_sample_count": 8,
+      "seed_schedule": [
+        121,
+        242,
+        363,
+        484
+      ],
+      "generation_settings": {
+        "resolution": "1024x1024",
+        "steps": 30,
+        "guidance_scale": 4.0
+      },
+      "prompt_bank": [
+        "single toy robot centered on seamless paper backdrop with clean subject separation",
+        "cutout-style potted plant on a tabletop with simple studio background",
+        "fashion mannequin in a trench coat isolated from a soft gradient background",
+        "glass perfume bottle with strong silhouette and easy foreground-background separation"
+      ]
+    }
+  }
+}

@@ -12,8 +12,8 @@ Qwen-Image 2.0 still is not open, so this repo does the obvious internet thing: 
 | Model | Job in 1.9 | Expected conflict |
 | --- | --- | --- |
 | `Qwen/Qwen-Image-2512` | Foundation checkpoint | Baseline for realism/text fidelity |
-| `Qwen/Qwen-Image-Edit-2511` | Edit delta donor | Need ancestry-aware delta recipe |
-| `Qwen/Qwen-Image-Layered` | Layer decomposition logic | RGBA-VAE and RoPE incompatibilities |
+| `Qwen/Qwen-Image-Edit-2511` | Edit delta donor | Transformer-only delta on top of 2512 |
+| `Qwen/Qwen-Image-Layered` | Layered behavior donor | RGBA-VAE and RoPE incompatibilities force a bridge path |
 
 All three public model cards currently advertise Apache-2.0 licensing. The scaffold stores configs, manifests, code, and reports only. Model weights stay remote and uncommitted.
 
@@ -43,7 +43,7 @@ flowchart LR
     subgraph S2["Stage 2: Fusion"]
         M["2512 base checkpoint"]
         D["edit delta transplant"]
-        T["layered logic merge"]
+        T["layered bridge distillation"]
         F16["BF16 research artifact"]
     end
 
@@ -81,6 +81,9 @@ Primary CLI:
 ```bash
 q19 stage1 analyze
 q19 stage2 fuse --dry-run
+q19 stage2 fuse --smoke-run
+q19 stage2 fuse --smoke-run --execute
+q19 stage2 fuse --run-profile full --execute
 q19 stage3 eval --dry-run
 q19 stage4 quantize --dry-run
 q19 stage5 deploy --dry-run
@@ -91,6 +94,9 @@ Common flags:
 - `--artifact-dir`
 - `--cache-dir`
 - `--dry-run`
+- `--smoke-run` for Stage 2 quick bug-finder profile
+- `--run-profile {smoke,full}` for Stage 2
+- `--execute` for Stage 2 job execution after manifest generation
 - `--hf-home` for Stage 1 cache inspection override
 - `--cache-map-config` for custom HF cache alias mapping
 
@@ -109,7 +115,7 @@ examples/  starter prompts and notebook placeholders
 | Stage | Primary deliverable | Secondary output |
 | --- | --- | --- |
 | 1 | `reports/stage-1/summary.md` | `reports/stage-1/compatibility-matrix.json` plus `reports/stage-1/figures/*.png` |
-| 2 | `reports/stage-2-fusion-report.md` | `reports/stage-2-merge-manifest.json` |
+| 2 | `reports/stage-2/README.md` | `reports/stage-2/merge-manifest.json` plus `reports/stage-2/dataset-manifest.json` |
 | 3 | `reports/stage-3-eval-report.md` | eval registry in CLI output |
 | 4 | `reports/stage-4-quantization-report.md` | validated GGUF and EXL2 recipes |
 | 5 | `reports/stage-5-deployment-report.md` | generated stage config |

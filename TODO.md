@@ -30,25 +30,30 @@ Acceptance criteria:
 Goal: produce one reproducible BF16 merge recipe for a community-bridge checkpoint or a clearly documented multi-part bundle.
 
 Deliverables:
-- [ ] `reports/stage-2-fusion-report.md`
-- [ ] `reports/stage-2-merge-manifest.json`
+- [ ] `reports/stage-2/README.md`
+- [ ] `reports/stage-2/merge-manifest.json`
+- [ ] `reports/stage-2/dataset-manifest.json`
 
 Tasks:
-- [ ] S2.1 Build edit delta from upstream-compatible base
-- [ ] S2.2 Decide merge coefficients for realism vs edit stability
-- [ ] S2.3 TIES-merge layered text-encoder logic where supported
-- [ ] S2.4 Compose BF16 artifact manifest with remote output paths
-- [ ] S2.5 Run smoke prompts for generation, editing, and layer-aware behavior
+- [ ] S2.1 Build transformer-only edit delta recipe from `Qwen/Qwen-Image` ancestry into `2512`
+- [ ] S2.2 Sweep coefficients `0.20`, `0.30`, `0.35`, `0.40` and pick a provisional stable core
+- [ ] S2.3 Generate a synthetic teacher dataset from `2512`, `Edit-2511`, and `Layered`
+- [ ] S2.4 Define the Layered bridge scope and trainable adapter/gate modules
+- [ ] S2.5 Compose a dual-track manifest for the stable core and experimental bridge branch
+- [ ] S2.6 Run smoke prompts for generation, editing, and bridge behavior
 
 Dependencies:
 - Stage 1 compatibility matrix
+- Stage 1 weight analysis
 - Remote BF16 merge runtime
 
 Remote execution notes:
 - Store remote job IDs, artifact URIs, and exact command lines in the manifest.
+- Keep manifest and report paths relative; avoid absolute path leakage in public artifacts.
 
 Acceptance criteria:
-- [ ] One recipe exists that another engineer can run without reverse-engineering notebook fragments.
+- [ ] One stable core recipe exists that another engineer can run without reverse-engineering notebook fragments.
+- [ ] One experimental Layered bridge branch is documented with explicit exclusions for direct `text_encoder`, `vae`, and `rope` merge paths.
 
 ## Stage 3: Safety Evaluation and Risk Report
 Goal: measure what the merged system can do, where it fails, and what should block a public release candidate.
@@ -116,4 +121,3 @@ Remote execution notes:
 
 Acceptance criteria:
 - [ ] Deployment recipe is documented end-to-end and benchmarked.
-

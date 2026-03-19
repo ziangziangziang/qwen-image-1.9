@@ -1,0 +1,29 @@
+{
+  "recipe_name": "stage-2-layered-bridge",
+  "foundation_model": "qwen-image-2512",
+  "donor_model": "qwen-image-layered",
+  "strategy": "learnable-bridge",
+  "target_component": "transformer",
+  "target_subsystems": [
+    "mmdit_backbone"
+  ],
+  "bridge_block_window": {
+    "start": 40,
+    "end": 60
+  },
+  "extra_parameter_paths": [
+    "transformer.time_text_embed.addition_t_embedding.weight"
+  ],
+  "freeze_policy": [
+    "text_encoder",
+    "vae",
+    "rope",
+    "transformer_blocks.0-39"
+  ],
+  "trainable_modules": [
+    "bridge_adapter",
+    "per_block_gates"
+  ],
+  "distillation_target": "rgb-output",
+  "layered_output_adapter": "alpha-composite-to-rgb"
+}
