@@ -109,7 +109,7 @@
   "execution_enabled": true,
   "execution_policy": "overwrite",
   "foundation_model": "Qwen/Qwen-Image-2512",
-  "generated_at": "2026-03-20T05:36:02.922668+00:00",
+  "generated_at": "2026-03-20T05:58:05.364971+00:00",
   "layered_bridge_recipe": {
     "base_core_candidate_id": "core-delta-w035",
     "base_core_checkpoint": "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
@@ -157,8 +157,11 @@
     "core_candidate_id": "core-delta-w035",
     "dataset_samples_per_split": 2,
     "eval_prompt_count": 6,
+    "poc_guidance_scale": 1.0,
+    "poc_negative_prompt": "low resolution, low quality, deformed limbs, deformed fingers, oversaturated image, waxy skin, over-smoothed face, artificial look, chaotic composition, blurry text, distorted text",
     "poc_side": 512,
-    "poc_steps": 6
+    "poc_steps": 6,
+    "poc_true_cfg_scale": 4.0
   },
   "path_policy": {
     "absolute_paths_allowed": false,

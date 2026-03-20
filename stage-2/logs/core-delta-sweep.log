@@ -1,42 +1,42 @@
 Loading pipeline components...:   0%|          | 0/5 [00:00<?, ?it/s]
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s][A
+Loading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:08,  2.96s/it][A
+Loading checkpoint shards:  50%|█████     | 2/4 [00:05<00:05,  2.53s/it][A
+Loading checkpoint shards:  75%|███████▌  | 3/4 [00:07<00:02,  2.60s/it][A
+Loading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  1.87s/it][ALoading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  2.16s/it]
+Loading pipeline components...:  20%|██        | 1/5 [00:10<00:40, 10.16s/it]
 Loading checkpoint shards:   0%|          | 0/9 [00:00<?, ?it/s][A
-Loading checkpoint shards:  11%|█         | 1/9 [00:02<00:19,  2.50s/it][A
-Loading checkpoint shards:  22%|██▏       | 2/9 [00:05<00:17,  2.53s/it][A
-Loading checkpoint shards:  33%|███▎      | 3/9 [00:07<00:14,  2.48s/it][A
-Loading checkpoint shards:  44%|████▍     | 4/9 [00:10<00:13,  2.71s/it][A
-Loading checkpoint shards:  56%|█████▌    | 5/9 [00:13<00:10,  2.63s/it][A
-Loading checkpoint shards:  67%|██████▋   | 6/9 [00:15<00:07,  2.59s/it][A
-Loading checkpoint shards:  78%|███████▊  | 7/9 [00:18<00:05,  2.57s/it][A
-Loading checkpoint shards:  89%|████████▉ | 8/9 [00:20<00:02,  2.63s/it][A
-Loading checkpoint shards: 100%|██████████| 9/9 [00:22<00:00,  2.19s/it][ALoading checkpoint shards: 100%|██████████| 9/9 [00:22<00:00,  2.45s/it]
-Loading pipeline components...:  20%|██        | 1/5 [00:22<01:31, 22.94s/it]Loading pipeline components...:  60%|██████    | 3/5 [00:23<00:12,  6.01s/it]
+Loading checkpoint shards:  11%|█         | 1/9 [00:02<00:20,  2.51s/it][A
+Loading checkpoint shards:  22%|██▏       | 2/9 [00:04<00:16,  2.41s/it][A
+Loading checkpoint shards:  33%|███▎      | 3/9 [00:07<00:13,  2.30s/it][A
+Loading checkpoint shards:  44%|████▍     | 4/9 [00:09<00:11,  2.29s/it][A
+Loading checkpoint shards:  56%|█████▌    | 5/9 [00:12<00:09,  2.50s/it][A
+Loading checkpoint shards:  67%|██████▋   | 6/9 [00:14<00:07,  2.48s/it][A
+Loading checkpoint shards:  78%|███████▊  | 7/9 [00:18<00:05,  2.79s/it][A
+Loading checkpoint shards:  89%|████████▉ | 8/9 [00:21<00:03,  3.10s/it][A
+Loading checkpoint shards: 100%|██████████| 9/9 [00:22<00:00,  2.32s/it][ALoading checkpoint shards: 100%|██████████| 9/9 [00:22<00:00,  2.49s/it]
+Loading pipeline components...:  40%|████      | 2/5 [00:33<00:53, 17.89s/it]Loading pipeline components...:  60%|██████    | 3/5 [00:33<00:19,  9.80s/it]Loading pipeline components...:  80%|████████  | 4/5 [00:33<00:05,  5.99s/it]Loading pipeline components...: 100%|██████████| 5/5 [00:33<00:00,  6.76s/it]
+guidance_scale is passed as 1.0, but ignored since the model is not guidance-distilled.
+Loading pipeline components...:   0%|          | 0/6 [00:00<?, ?it/s]
 Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s][A
-Loading checkpoint shards:  25%|██▌       | 1/4 [00:03<00:09,  3.01s/it][A
-Loading checkpoint shards:  50%|█████     | 2/4 [00:05<00:05,  2.68s/it][A
-Loading checkpoint shards:  75%|███████▌  | 3/4 [00:07<00:02,  2.58s/it][A
-Loading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  1.89s/it][ALoading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  2.19s/it]
-Loading pipeline components...: 100%|██████████| 5/5 [00:32<00:00,  5.36s/it]Loading pipeline components...: 100%|██████████| 5/5 [00:32<00:00,  6.52s/it]
-true_cfg_scale is passed as 4.0, but classifier-free guidance is not enabled since no negative_prompt is provided.
-Loading pipeline components...:   0%|          | 0/6 [00:00<?, ?it/s]Loading pipeline components...:  17%|█▋        | 1/6 [00:00<00:02,  1.76it/s]
+Loading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:06,  2.30s/it][A
+Loading checkpoint shards:  50%|█████     | 2/4 [00:04<00:04,  2.26s/it][A
+Loading checkpoint shards:  75%|███████▌  | 3/4 [00:06<00:02,  2.25s/it][A
+Loading checkpoint shards: 100%|██████████| 4/4 [00:07<00:00,  1.66s/it][ALoading checkpoint shards: 100%|██████████| 4/4 [00:07<00:00,  1.88s/it]
+Loading pipeline components...:  17%|█▋        | 1/6 [00:08<00:40,  8.06s/it]
 Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s][A
-Loading checkpoint shards:  20%|██        | 1/5 [00:04<00:19,  4.93s/it][A
-Loading checkpoint shards:  40%|████      | 2/5 [00:10<00:15,  5.14s/it][A
-Loading checkpoint shards:  60%|██████    | 3/5 [00:15<00:09,  5.00s/it][A
-Loading checkpoint shards:  80%|████████  | 4/5 [00:20<00:05,  5.01s/it][A
-Loading checkpoint shards: 100%|██████████| 5/5 [00:20<00:00,  3.49s/it][ALoading checkpoint shards: 100%|██████████| 5/5 [00:20<00:00,  4.18s/it]
-Loading pipeline components...:  33%|███▎      | 2/6 [00:22<00:52, 13.01s/it]Loading pipeline components...:  67%|██████▋   | 4/6 [00:22<00:09,  4.90s/it]
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s][A
-Loading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:07,  2.49s/it][A
-Loading checkpoint shards:  50%|█████     | 2/4 [00:04<00:04,  2.47s/it][A
-Loading checkpoint shards:  75%|███████▌  | 3/4 [00:07<00:02,  2.45s/it][A
-Loading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  1.81s/it][ALoading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  2.05s/it]
-Loading pipeline components...:  83%|████████▎ | 5/6 [00:30<00:05,  5.98s/it]Loading pipeline components...: 100%|██████████| 6/6 [00:31<00:00,  4.21s/it]Loading pipeline components...: 100%|██████████| 6/6 [00:31<00:00,  5.17s/it]
-true_cfg_scale is passed as 4.0, but classifier-free guidance is not enabled since no negative_prompt is provided.
+Loading checkpoint shards:  20%|██        | 1/5 [00:04<00:18,  4.56s/it][A
+Loading checkpoint shards:  40%|████      | 2/5 [00:09<00:15,  5.07s/it][A
+Loading checkpoint shards:  60%|██████    | 3/5 [00:14<00:09,  4.90s/it][A
+Loading checkpoint shards:  80%|████████  | 4/5 [00:21<00:05,  5.60s/it][A
+Loading checkpoint shards: 100%|██████████| 5/5 [00:21<00:00,  3.75s/it][ALoading checkpoint shards: 100%|██████████| 5/5 [00:21<00:00,  4.37s/it]
+Loading pipeline components...:  33%|███▎      | 2/6 [00:30<01:06, 16.50s/it]Loading pipeline components...:  50%|█████     | 3/6 [00:30<00:27,  9.05s/it]Loading pipeline components...:  67%|██████▋   | 4/6 [00:30<00:11,  5.54s/it]Loading pipeline components...: 100%|██████████| 6/6 [00:31<00:00,  2.75s/it]Loading pipeline components...: 100%|██████████| 6/6 [00:31<00:00,  5.22s/it]
+guidance_scale is passed as 1.0, but ignored since the model is not guidance-distilled.
 {
   "status": "ok",
   "output_checkpoint": "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
   "metadata": {
-    "generated_at": "2026-03-20T05:37:25.635182+00:00",
+    "generated_at": "2026-03-20T05:59:33.154086+00:00",
     "candidate_id": "core-delta-w035",
     "artifact_type": "bf16-core-smoke-poc",
     "foundation_model": "Qwen/Qwen-Image-2512",
@@ -47,7 +47,7 @@ true_cfg_scale is passed as 4.0, but classifier-free guidance is not enabled sin
     "steps": 6,
     "width": 512,
     "height": 512,
-    "delta_l2_norm": 40.81989288330078,
-    "delta_mean_abs": 0.03551587834954262
+    "delta_l2_norm": 51.614749908447266,
+    "delta_mean_abs": 0.047478750348091125
   }
 }

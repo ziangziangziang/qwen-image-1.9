@@ -26,21 +26,27 @@
           "512",
           "--height",
           "512",
+          "--true-cfg-scale",
+          "4",
+          "--guidance-scale",
+          "1",
+          "--negative-prompt",
+          "low resolution, low quality, deformed limbs, deformed fingers, oversaturated image, waxy skin, over-smoothed face, artificial look, chaotic composition, blurry text, distorted text",
           "--required-gpus",
           "2",
           "--required-total-vram-gb",
           "160"
         ]
       ],
-      "duration_seconds": 84.2647,
-      "ended_at": "2026-03-20T05:37:27.217478+00:00",
+      "duration_seconds": 89.2747,
+      "ended_at": "2026-03-20T05:59:34.654783+00:00",
       "exit_code": 0,
       "failure_reason": null,
       "missing_outputs": [],
       "outputs": [
         "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors"
       ],
-      "started_at": "2026-03-20T05:36:02.933525+00:00",
+      "started_at": "2026-03-20T05:58:05.378267+00:00",
       "status": "succeeded",
       "stdout_stderr_log": "stage-2/logs/core-delta-sweep.log",
       "workdir": "stage-2/jobs/core-delta-sweep"
@@ -66,19 +72,25 @@
         "512",
         "--height",
         "512",
+        "--true-cfg-scale",
+        "4",
+        "--guidance-scale",
+        "1",
+        "--negative-prompt",
+        "low resolution, low quality, deformed limbs, deformed fingers, oversaturated image, waxy skin, over-smoothed face, artificial look, chaotic composition, blurry text, distorted text",
         "--required-gpus",
         "2",
         "--required-total-vram-gb",
         "160"
       ],
-      "duration_seconds": 49.7909,
-      "ended_at": "2026-03-20T05:38:17.017332+00:00",
+      "duration_seconds": 54.3915,
+      "ended_at": "2026-03-20T06:00:29.050135+00:00",
       "exit_code": 0,
       "missing_outputs": [],
       "outputs": [
         "stage-2/evals/core-candidates/core-delta-w035/smoke-summary.json"
       ],
-      "started_at": "2026-03-20T05:37:27.219437+00:00",
+      "started_at": "2026-03-20T05:59:34.656932+00:00",
       "status": "succeeded",
       "stdout_stderr_log": "stage-2/logs/core-smoke-eval.log",
       "workdir": "stage-2/jobs/core-smoke-eval"
@@ -94,22 +106,26 @@
         "6",
         "--max-side",
         "512",
+        "--true-cfg-scale",
+        "4",
+        "--guidance-scale",
+        "1",
+        "--negative-prompt",
+        "low resolution, low quality, deformed limbs, deformed fingers, oversaturated image, waxy skin, over-smoothed face, artificial look, chaotic composition, blurry text, distorted text",
         "--required-gpus",
         "2",
         "--required-total-vram-gb",
         "160"
       ],
-      "duration_seconds": 42.0686,
-      "ended_at": "2026-03-20T05:38:59.091402+00:00",
+      "duration_seconds": 169.4721,
+      "ended_at": "2026-03-20T06:03:18.528453+00:00",
       "exit_code": 1,
       "failure_reason": "Job returned exit code 1.",
-      "missing_outputs": [
-        "stage-2/datasets/teacher-db"
-      ],
+      "missing_outputs": [],
       "outputs": [
         "stage-2/datasets/teacher-db"
       ],
-      "started_at": "2026-03-20T05:38:17.019512+00:00",
+      "started_at": "2026-03-20T06:00:29.054252+00:00",
       "status": "failed",
       "stdout_stderr_log": "stage-2/logs/teacher-dataset.log",
       "workdir": "stage-2/jobs/teacher-dataset"
@@ -121,5 +137,5 @@
     "failed_job": "teacher_dataset_generation",
     "resume_hint": "Re-run `q19 stage2 fuse --run-profile smoke --execute --resume` after fixing `teacher_dataset_generation`."
   },
-  "updated_at": "2026-03-20T05:36:02.932903+00:00"
+  "updated_at": "2026-03-20T05:58:05.374246+00:00"
 }

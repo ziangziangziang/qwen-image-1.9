@@ -10,7 +10,7 @@ Stage 2 now builds two tracks from the Stage 1 evidence: a stable BF16 core base
 - Execution policy: `overwrite`
 - Cleanup performed: `False`
 - Resource profile: `num_gpus=2`, `vram_target_gb=160`
-- Limits: `{"bridge_batch_size": 1, "bridge_train_steps": 64, "core_candidate_id": "core-delta-w035", "dataset_samples_per_split": 2, "eval_prompt_count": 6, "poc_side": 512, "poc_steps": 6}`
+- Limits: `{"bridge_batch_size": 1, "bridge_train_steps": 64, "core_candidate_id": "core-delta-w035", "dataset_samples_per_split": 2, "eval_prompt_count": 6, "poc_guidance_scale": 1.0, "poc_negative_prompt": "low resolution, low quality, deformed limbs, deformed fingers, oversaturated image, waxy skin, over-smoothed face, artificial look, chaotic composition, blurry text, distorted text", "poc_side": 512, "poc_steps": 6, "poc_true_cfg_scale": 4.0}`
 
 ## Stage 1 Evidence
 - Foundation vs Edit transformer path is the one clean merge lane: `shared=2856`, `exact=0.3246`, `strategy=delta-merge`.
