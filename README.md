@@ -94,7 +94,7 @@ Common flags:
 - `--cache-dir`
 - `--dry-run`
 - `--smoke-run` for Stage 2 quick PoC (auto-executes smoke jobs)
-- `--run-profile {smoke,full}` for Stage 2
+- `--run-profile {smoke,full,quality}` for Stage 2
 - `--execute` for Stage 2 full-profile job execution after manifest generation
 - `--hf-home` for Stage 1 cache inspection override
 - `--cache-map-config` for custom HF cache alias mapping

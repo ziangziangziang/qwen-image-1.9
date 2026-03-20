@@ -219,7 +219,7 @@ class Stage2Tests(unittest.TestCase):
         )
         self.write_json_file(
             config_dir / "stage-2-run-profiles.yaml",
-            {
+                {
                     "profiles": {
                         "smoke": {
                             "resource_profile": {"num_gpus": 2, "vram_target_gb": 160},
@@ -227,22 +227,47 @@ class Stage2Tests(unittest.TestCase):
                                 "core_candidate_id": "core-delta-w035",
                                 "dataset_samples_per_split": 2,
                                 "bridge_train_steps": 64,
-                            "bridge_batch_size": 1,
-                            "eval_prompt_count": 6,
+                                "bridge_batch_size": 1,
+                                "eval_prompt_count": 6,
+                                "poc_steps": 6,
+                                "poc_side": 512,
+                                "poc_true_cfg_scale": 4.0,
+                                "poc_guidance_scale": 1.0,
+                                "poc_negative_prompt": "low quality, blurry, distorted text",
+                            },
+                        },
+                        "full": {
+                            "resource_profile": {"num_gpus": 2, "vram_target_gb": 160},
+                            "limits": {
+                                "core_candidate_id": "core-delta-w035",
+                                "dataset_samples_per_split": 8,
+                                "bridge_train_steps": 500,
+                                "bridge_batch_size": 2,
+                                "eval_prompt_count": 24,
+                                "poc_steps": 30,
+                                "poc_side": 1024,
+                                "poc_true_cfg_scale": 4.0,
+                                "poc_guidance_scale": 1.0,
+                                "poc_negative_prompt": "low quality, blurry, distorted text",
+                            },
+                        },
+                        "quality": {
+                            "resource_profile": {"num_gpus": 2, "vram_target_gb": 160},
+                            "limits": {
+                                "core_candidate_id": "core-delta-w035",
+                                "dataset_samples_per_split": 8,
+                                "bridge_train_steps": 500,
+                                "bridge_batch_size": 2,
+                                "eval_prompt_count": 24,
+                                "poc_steps": 50,
+                                "poc_side": 1328,
+                                "poc_true_cfg_scale": 4.0,
+                                "poc_guidance_scale": 1.0,
+                                "poc_negative_prompt": "low quality, blurry, distorted text",
+                            },
                         },
                     },
-                    "full": {
-                        "resource_profile": {"num_gpus": 2, "vram_target_gb": 160},
-                        "limits": {
-                            "core_candidate_id": "core-delta-w035",
-                            "dataset_samples_per_split": 8,
-                            "bridge_train_steps": 500,
-                            "bridge_batch_size": 2,
-                            "eval_prompt_count": 24,
-                        },
-                    },
-                }
-            },
+                },
         )
 
     def write_stage1_artifacts(self) -> None:
@@ -407,14 +432,26 @@ class Stage2Tests(unittest.TestCase):
         core_delta_cmd = status_payload["jobs"]["core_delta_sweep"]["commands"][0]
         self.assertIn("--required-gpus", core_delta_cmd)
         self.assertIn("--required-total-vram-gb", core_delta_cmd)
+        self.assertIn("--true-cfg-scale", core_delta_cmd)
+        self.assertIn("--guidance-scale", core_delta_cmd)
+        self.assertIn("--negative-prompt", core_delta_cmd)
         self.assertEqual(core_delta_cmd[core_delta_cmd.index("--required-gpus") + 1], "2")
         self.assertEqual(core_delta_cmd[core_delta_cmd.index("--required-total-vram-gb") + 1], "160")
+        self.assertEqual(core_delta_cmd[core_delta_cmd.index("--true-cfg-scale") + 1], "4")
+        self.assertEqual(core_delta_cmd[core_delta_cmd.index("--guidance-scale") + 1], "1")
+        self.assertEqual(core_delta_cmd[core_delta_cmd.index("--negative-prompt") + 1], "low quality, blurry, distorted text")
         for job_name in ("core_smoke_eval", "teacher_dataset_generation", "experimental_smoke_eval"):
             command = status_payload["jobs"][job_name]["command"]
             self.assertIn("--required-gpus", command)
             self.assertIn("--required-total-vram-gb", command)
+            self.assertIn("--true-cfg-scale", command)
+            self.assertIn("--guidance-scale", command)
+            self.assertIn("--negative-prompt", command)
             self.assertEqual(command[command.index("--required-gpus") + 1], "2")
             self.assertEqual(command[command.index("--required-total-vram-gb") + 1], "160")
+            self.assertEqual(command[command.index("--true-cfg-scale") + 1], "4")
+            self.assertEqual(command[command.index("--guidance-scale") + 1], "1")
+            self.assertEqual(command[command.index("--negative-prompt") + 1], "low quality, blurry, distorted text")
         bridge_command = status_payload["jobs"]["layered_bridge_train"]["command"]
         self.assertNotIn("--required-gpus", bridge_command)
         self.assertNotIn("--required-total-vram-gb", bridge_command)

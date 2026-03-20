@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone
+import inspect
 import json
 from pathlib import Path
 import time
@@ -35,9 +36,25 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--width", type=int, default=512)
     parser.add_argument("--height", type=int, default=512)
     parser.add_argument("--seed", type=int, default=2025)
+    parser.add_argument("--negative-prompt", default="")
+    parser.add_argument("--true-cfg-scale", type=float, default=4.0)
+    parser.add_argument("--guidance-scale", type=float, default=1.0)
     parser.add_argument("--required-gpus", type=int, default=2)
     parser.add_argument("--required-total-vram-gb", type=float, default=160.0)
     return parser.parse_args()
+
+
+def add_supported_call_args(pipe, call_kwargs: dict[str, object], optional_kwargs: dict[str, object]) -> None:
+    try:
+        params = inspect.signature(pipe.__call__).parameters
+    except (TypeError, ValueError):  # pragma: no cover
+        params = {}
+    accepts_var_kwargs = any(parameter.kind == inspect.Parameter.VAR_KEYWORD for parameter in params.values())
+    for key, value in optional_kwargs.items():
+        if value is None:
+            continue
+        if accepts_var_kwargs or key in params:
+            call_kwargs[key] = value
 
 
 if __name__ == "__main__":
@@ -89,12 +106,24 @@ if __name__ == "__main__":
         for idx, prompt in enumerate(selected_prompts):
             single_start = time.perf_counter()
             generator = torch.Generator(device=runtime.primary_device).manual_seed(args.seed + idx)
+            call_kwargs = {
+                "prompt": prompt,
+                "num_inference_steps": max(1, args.steps),
+                "width": args.width,
+                "height": args.height,
+                "generator": generator,
+            }
+            add_supported_call_args(
+                pipe,
+                call_kwargs,
+                {
+                    "negative_prompt": args.negative_prompt,
+                    "true_cfg_scale": args.true_cfg_scale,
+                    "guidance_scale": args.guidance_scale,
+                },
+            )
             result = pipe(
-                prompt=prompt,
-                num_inference_steps=max(1, args.steps),
-                width=args.width,
-                height=args.height,
-                generator=generator,
+                **call_kwargs,
             )
             image = result.images[0].convert("RGB")
             image_path = sample_dir / f"{args.task}-{idx + 1:03d}.png"

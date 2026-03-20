@@ -21,7 +21,7 @@ DEFAULT_STAGE2_ARTIFACT_DIR = Path("reports") / "stage-2"
 DEFAULT_STAGE2_RUN_STATUS = Path("stage-2") / "run-status.json"
 CORE_CANDIDATE_DEFAULT_WEIGHT = 0.35
 DEFAULT_RUN_PROFILE = "full"
-SUPPORTED_RUN_PROFILES = {"smoke", "full"}
+SUPPORTED_RUN_PROFILES = {"smoke", "full", "quality"}
 
 
 class Stage2FusionError(RuntimeError):
@@ -64,10 +64,10 @@ def validate_run_options(dry_run: bool, smoke_run: bool, run_profile: str | None
 def load_run_profiles(config_dir: Path) -> dict[str, Any]:
     payload = load_json_yaml(config_dir / "stage-2-run-profiles.yaml")
     profiles = payload.get("profiles", {})
-    for name in ("smoke", "full"):
+    for name in ("smoke", "full", "quality"):
         if name not in profiles:
             raise Stage2FusionError(
-                "Stage 2 run profile config must define both `smoke` and `full` profiles."
+                "Stage 2 run profile config must define `smoke`, `full`, and `quality` profiles."
             )
     return profiles
 
@@ -708,6 +708,26 @@ def diffusion_resource_args(manifest: dict[str, Any]) -> list[str]:
     ]
 
 
+def diffusion_sampling_args(manifest: dict[str, Any]) -> list[str]:
+    limits = manifest.get("limits", {})
+    true_cfg_scale = float(limits.get("poc_true_cfg_scale", 4.0))
+    guidance_scale = float(limits.get("poc_guidance_scale", 1.0))
+    negative_prompt = str(
+        limits.get(
+            "poc_negative_prompt",
+            "low resolution, low quality, deformed limbs, deformed fingers, oversaturated image, waxy skin, over-smoothed face, artificial look, chaotic composition, blurry text, distorted text",
+        )
+    )
+    return [
+        "--true-cfg-scale",
+        f"{true_cfg_scale:g}",
+        "--guidance-scale",
+        f"{guidance_scale:g}",
+        "--negative-prompt",
+        negative_prompt,
+    ]
+
+
 def build_job_command(
     job_name: str,
     job_payload: dict[str, Any],
@@ -743,6 +763,7 @@ def build_job_command(
             str(poc_side),
             "--height",
             str(poc_side),
+            *diffusion_sampling_args(manifest),
             *diffusion_resource_args(manifest),
         ]
     if job_name == "core_smoke_eval":
@@ -766,6 +787,7 @@ def build_job_command(
             str(poc_side),
             "--height",
             str(poc_side),
+            *diffusion_sampling_args(manifest),
             *diffusion_resource_args(manifest),
         ]
     if job_name == "teacher_dataset_generation":
@@ -779,6 +801,7 @@ def build_job_command(
             str(poc_steps),
             "--max-side",
             str(poc_side),
+            *diffusion_sampling_args(manifest),
             *diffusion_resource_args(manifest),
         ]
     if job_name == "layered_bridge_train":
@@ -821,6 +844,7 @@ def build_job_command(
             str(poc_side),
             "--height",
             str(poc_side),
+            *diffusion_sampling_args(manifest),
             *diffusion_resource_args(manifest),
         ]
     raise Stage2FusionError(f"Unsupported remote job `{job_name}` in Stage 2 executor.")
@@ -920,6 +944,7 @@ def run_stage2_jobs(
                     str(poc_side),
                     "--height",
                     str(poc_side),
+                    *diffusion_sampling_args(manifest),
                     *diffusion_resource_args(manifest),
                 ]
                 commands.append(command)

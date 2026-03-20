@@ -106,6 +106,9 @@ class Stage2EditInvocationTests(unittest.TestCase):
                 seed=1234,
                 required_gpus=2,
                 required_total_vram_gb=160,
+                negative_prompt="low quality, blurry",
+                true_cfg_scale=4.0,
+                guidance_scale=1.0,
             )
 
         self.assertEqual(len(FakeDiffusionPipeline.created), 2)
@@ -120,10 +123,12 @@ class Stage2EditInvocationTests(unittest.TestCase):
     def test_dataset_edit_pair_uses_edit_instruction_with_image(self) -> None:
         module = load_script_module("stage-2-generate-teacher-dataset.py", "stage2_dataset_generation_test")
         runtime = SimpleNamespace(primary_device="cuda:0")
-        pipe = FakePipe("Qwen/Qwen-Image-Edit-2511", load_kwargs={})
+        source_pipe = FakePipe("Qwen/Qwen-Image-2512", load_kwargs={})
+        edit_pipe = FakePipe("Qwen/Qwen-Image-Edit-2511", load_kwargs={})
 
         source_image, edited_image = module.render_edit_pair(
-            pipe=pipe,
+            source_pipe=source_pipe,
+            edit_pipe=edit_pipe,
             runtime=runtime,
             source_prompt="a dog on the beach",
             edit_instruction="turn it into a watercolor painting",
@@ -133,11 +138,12 @@ class Stage2EditInvocationTests(unittest.TestCase):
             seed=999,
         )
 
-        self.assertEqual(len(pipe.calls), 2)
-        self.assertEqual(pipe.calls[0]["prompt"], "a dog on the beach")
-        self.assertNotIn("image", pipe.calls[0])
-        self.assertEqual(pipe.calls[1]["prompt"], "turn it into a watercolor painting")
-        self.assertIs(pipe.calls[1]["image"], source_image)
+        self.assertEqual(len(source_pipe.calls), 1)
+        self.assertEqual(source_pipe.calls[0]["prompt"], "a dog on the beach")
+        self.assertNotIn("image", source_pipe.calls[0])
+        self.assertEqual(len(edit_pipe.calls), 1)
+        self.assertEqual(edit_pipe.calls[0]["prompt"], "turn it into a watercolor painting")
+        self.assertIs(edit_pipe.calls[0]["image"], source_image)
         self.assertIsNot(source_image, edited_image)
 
     def test_dataset_non_edit_render_is_text_only(self) -> None:

@@ -53,7 +53,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     stage2_fuse.add_argument(
         "--run-profile",
-        choices=("smoke", "full"),
+        choices=("smoke", "full", "quality"),
         help="Stage 2 execution profile. Defaults to smoke when --smoke-run is set, otherwise full.",
     )
     stage2_fuse.add_argument(

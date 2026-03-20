@@ -31,6 +31,12 @@ class Stage2CliModeTests(unittest.TestCase):
         self.assertTrue(args.execute)
         self.assertTrue(args.resume)
 
+    def test_parser_accepts_quality_profile(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(["stage2", "fuse", "--run-profile", "quality"])
+        self.assertEqual(args.run_profile, "quality")
+        self.assertFalse(args.smoke_run)
+
     def test_dispatch_forwards_stage2_flags(self) -> None:
         parser = build_parser()
         args = parser.parse_args(["stage2", "fuse", "--smoke-run", "--execute"])

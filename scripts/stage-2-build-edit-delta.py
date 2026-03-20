@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone
+import inspect
 import json
 from pathlib import Path
 
@@ -42,6 +43,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--height", type=int, default=512)
     parser.add_argument("--width", type=int, default=512)
     parser.add_argument("--seed", type=int, default=1234)
+    parser.add_argument("--negative-prompt", default="")
+    parser.add_argument("--true-cfg-scale", type=float, default=4.0)
+    parser.add_argument("--guidance-scale", type=float, default=1.0)
     parser.add_argument("--required-gpus", type=int, default=2)
     parser.add_argument("--required-total-vram-gb", type=float, default=160.0)
     return parser.parse_args()
@@ -54,6 +58,19 @@ def to_chw_tensor(image) -> torch.Tensor:
     return data.permute(2, 0, 1).contiguous() / 255.0
 
 
+def add_supported_call_args(pipe, call_kwargs: dict[str, object], optional_kwargs: dict[str, object]) -> None:
+    try:
+        params = inspect.signature(pipe.__call__).parameters
+    except (TypeError, ValueError):  # pragma: no cover
+        params = {}
+    accepts_var_kwargs = any(parameter.kind == inspect.Parameter.VAR_KEYWORD for parameter in params.values())
+    for key, value in optional_kwargs.items():
+        if value is None:
+            continue
+        if accepts_var_kwargs or key in params:
+            call_kwargs[key] = value
+
+
 def generate_pil_image(
     model_id: str,
     prompt: str,
@@ -64,6 +81,9 @@ def generate_pil_image(
     required_gpus: int,
     required_total_vram_gb: float,
     input_image=None,
+    negative_prompt: str | None = None,
+    true_cfg_scale: float | None = None,
+    guidance_scale: float | None = None,
 ):
     try:
         runtime = resolve_stage2_diffusion_runtime(
@@ -91,6 +111,15 @@ def generate_pil_image(
         }
         if input_image is not None:
             call_kwargs["image"] = input_image
+        add_supported_call_args(
+            pipe,
+            call_kwargs,
+            {
+                "negative_prompt": negative_prompt,
+                "true_cfg_scale": true_cfg_scale,
+                "guidance_scale": guidance_scale,
+            },
+        )
         output = pipe(**call_kwargs)
         image = output.images[0]
         del output
@@ -115,6 +144,9 @@ def render_source_and_edit_images(
     seed: int,
     required_gpus: int,
     required_total_vram_gb: float,
+    negative_prompt: str,
+    true_cfg_scale: float,
+    guidance_scale: float,
 ):
     foundation_source_image = generate_pil_image(
         model_id=foundation_model,
@@ -125,6 +157,9 @@ def render_source_and_edit_images(
         seed=seed,
         required_gpus=required_gpus,
         required_total_vram_gb=required_total_vram_gb,
+        negative_prompt=negative_prompt,
+        true_cfg_scale=true_cfg_scale,
+        guidance_scale=guidance_scale,
     )
     edited_image = generate_pil_image(
         model_id=edit_model,
@@ -136,6 +171,9 @@ def render_source_and_edit_images(
         required_gpus=required_gpus,
         required_total_vram_gb=required_total_vram_gb,
         input_image=foundation_source_image,
+        negative_prompt=negative_prompt,
+        true_cfg_scale=true_cfg_scale,
+        guidance_scale=guidance_scale,
     )
     return foundation_source_image, edited_image
 
@@ -153,6 +191,9 @@ def write_artifact(
     seed: int,
     required_gpus: int,
     required_total_vram_gb: float,
+    negative_prompt: str,
+    true_cfg_scale: float,
+    guidance_scale: float,
 ) -> dict[str, object]:
     path = Path(output_checkpoint)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -166,6 +207,9 @@ def write_artifact(
         seed=seed,
         required_gpus=required_gpus,
         required_total_vram_gb=required_total_vram_gb,
+        negative_prompt=negative_prompt,
+        true_cfg_scale=true_cfg_scale,
+        guidance_scale=guidance_scale,
     )
     foundation_image = to_chw_tensor(foundation_source_image)
     edit_image = to_chw_tensor(edited_image)
@@ -226,6 +270,9 @@ if __name__ == "__main__":
         width=args.width,
         height=args.height,
         seed=args.seed,
+        negative_prompt=args.negative_prompt,
+        true_cfg_scale=args.true_cfg_scale,
+        guidance_scale=args.guidance_scale,
         required_gpus=args.required_gpus,
         required_total_vram_gb=args.required_total_vram_gb,
     )

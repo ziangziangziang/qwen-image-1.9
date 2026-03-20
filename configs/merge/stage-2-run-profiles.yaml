@@ -12,7 +12,10 @@
         "bridge_batch_size": 1,
         "eval_prompt_count": 6,
         "poc_steps": 6,
-        "poc_side": 512
+        "poc_side": 512,
+        "poc_true_cfg_scale": 4.0,
+        "poc_guidance_scale": 1.0,
+        "poc_negative_prompt": "low resolution, low quality, deformed limbs, deformed fingers, oversaturated image, waxy skin, over-smoothed face, artificial look, chaotic composition, blurry text, distorted text"
       }
     },
     "full": {
@@ -27,8 +30,30 @@
         "bridge_train_steps": 500,
         "bridge_batch_size": 2,
         "eval_prompt_count": 24,
-        "poc_steps": 10,
-        "poc_side": 768
+        "poc_steps": 30,
+        "poc_side": 1024,
+        "poc_true_cfg_scale": 4.0,
+        "poc_guidance_scale": 1.0,
+        "poc_negative_prompt": "low resolution, low quality, deformed limbs, deformed fingers, oversaturated image, waxy skin, over-smoothed face, artificial look, chaotic composition, blurry text, distorted text"
+      }
+    },
+    "quality": {
+      "resource_profile": {
+        "num_gpus": 2,
+        "gpu_type": "A100",
+        "vram_target_gb": 160
+      },
+      "limits": {
+        "core_candidate_id": "core-delta-w035",
+        "dataset_samples_per_split": 8,
+        "bridge_train_steps": 500,
+        "bridge_batch_size": 2,
+        "eval_prompt_count": 24,
+        "poc_steps": 50,
+        "poc_side": 1328,
+        "poc_true_cfg_scale": 4.0,
+        "poc_guidance_scale": 1.0,
+        "poc_negative_prompt": "low resolution, low quality, deformed limbs, deformed fingers, oversaturated image, waxy skin, over-smoothed face, artificial look, chaotic composition, blurry text, distorted text"
       }
     }
   }

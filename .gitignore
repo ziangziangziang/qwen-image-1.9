@@ -14,3 +14,5 @@ artifacts/
 remote_runs/
 tmp/
 
+# Stage 2 generated datasets
+stage-2/datasets/
