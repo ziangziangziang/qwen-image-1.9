@@ -704,6 +704,9 @@ def build_job_command(
     remote_context: dict[str, Any],
 ) -> list[str]:
     python_cmd = str(remote_context.get("python") or "python3")
+    poc_steps = int(manifest["limits"].get("poc_steps", 6))
+    poc_side = int(manifest["limits"].get("poc_side", 512))
+    prompt = "studio product photo of a camera on a clean table"
     if job_name == "core_delta_sweep":
         candidate = manifest["selected_core_candidate"] if manifest["run_profile"] == "smoke" else manifest["core_delta_candidates"][0]
         return [
@@ -714,6 +717,20 @@ def build_job_command(
             candidate["candidate_id"],
             "--output-checkpoint",
             candidate["output_checkpoint"],
+            "--foundation-model",
+            manifest["core_delta_recipe"]["foundation_model"],
+            "--edit-model",
+            manifest["core_delta_recipe"]["delta_source_model"],
+            "--blend-weight",
+            str(candidate["blend_weight"]),
+            "--prompt",
+            prompt,
+            "--steps",
+            str(poc_steps),
+            "--width",
+            str(poc_side),
+            "--height",
+            str(poc_side),
         ]
     if job_name == "core_smoke_eval":
         return [
@@ -724,10 +741,18 @@ def build_job_command(
             "core-smoke",
             "--model-ref",
             manifest["selected_core_candidate"]["output_checkpoint"],
+            "--model-id",
+            manifest["core_delta_recipe"]["foundation_model"],
             "--output",
             manifest["selected_core_candidate"]["smoke_report"],
             "--num-prompts",
             str(int(manifest["limits"].get("eval_prompt_count", 6))),
+            "--steps",
+            str(poc_steps),
+            "--width",
+            str(poc_side),
+            "--height",
+            str(poc_side),
         ]
     if job_name == "teacher_dataset_generation":
         return [
@@ -736,6 +761,10 @@ def build_job_command(
             "--execute",
             "--manifest",
             manifest["dataset"]["manifest_path"],
+            "--max-steps",
+            str(poc_steps),
+            "--max-side",
+            str(poc_side),
         ]
     if job_name == "layered_bridge_train":
         limits = manifest["layered_bridge_recipe"].get("training_limits", {})
@@ -749,6 +778,8 @@ def build_job_command(
             manifest["layered_bridge_recipe"]["output_checkpoint"],
             "--metrics-output",
             stage2_remote_path("stage-2", "metrics", "layered-bridge-train.json"),
+            "--dataset-root",
+            manifest["dataset"]["output_root"],
             "--max-steps",
             str(int(limits.get("max_steps", 500))),
             "--batch-size",
@@ -763,10 +794,18 @@ def build_job_command(
             "experimental-smoke",
             "--model-ref",
             manifest["layered_bridge_recipe"]["output_checkpoint"],
+            "--model-id",
+            manifest["layered_bridge_recipe"]["donor_model"],
             "--output",
             stage2_remote_path("stage-2", "evals", "experimental", "smoke-summary.json"),
             "--num-prompts",
             str(int(manifest["limits"].get("eval_prompt_count", 6))),
+            "--steps",
+            str(poc_steps),
+            "--width",
+            str(poc_side),
+            "--height",
+            str(poc_side),
         ]
     raise Stage2FusionError(f"Unsupported remote job `{job_name}` in Stage 2 executor.")
 
@@ -841,6 +880,8 @@ def run_stage2_jobs(
             write_json(artifact_paths["run_status_json"], status_payload)
             started = time.perf_counter()
             for candidate in manifest["core_delta_candidates"]:
+                poc_steps = int(manifest["limits"].get("poc_steps", 6))
+                poc_side = int(manifest["limits"].get("poc_side", 512))
                 command = [
                     str(remote_context.get("python") or "python3"),
                     str(repo_root() / "scripts" / "stage-2-build-edit-delta.py"),
@@ -849,6 +890,20 @@ def run_stage2_jobs(
                     candidate["candidate_id"],
                     "--output-checkpoint",
                     candidate["output_checkpoint"],
+                    "--foundation-model",
+                    manifest["core_delta_recipe"]["foundation_model"],
+                    "--edit-model",
+                    manifest["core_delta_recipe"]["delta_source_model"],
+                    "--blend-weight",
+                    str(candidate["blend_weight"]),
+                    "--prompt",
+                    "studio product photo of a camera on a clean table",
+                    "--steps",
+                    str(poc_steps),
+                    "--width",
+                    str(poc_side),
+                    "--height",
+                    str(poc_side),
                 ]
                 commands.append(command)
                 exit_code, _ = run_subprocess_job(command, payload["log_path"], payload["workdir"])

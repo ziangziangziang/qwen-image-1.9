@@ -10,9 +10,13 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
 dependencies = [
+  "accelerate>=0.30",
+  "diffusers>=0.30",
   "matplotlib>=3.8",
+  "Pillow>=10.0",
   "safetensors>=0.4",
-  "torch>=2.2"
+  "torch>=2.2",
+  "transformers>=4.44"
 ]
 authors = [
   { name = "Qwen-Image 1.9 Community Bridge" }

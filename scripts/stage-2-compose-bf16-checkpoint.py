@@ -5,8 +5,18 @@ import argparse
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import time
+
+import torch
 
 from qwen_image_19.stage_2_fusion import fuse
+
+try:
+    from diffusers import DiffusionPipeline
+except Exception as exc:  # pragma: no cover
+    raise SystemExit(
+        "diffusers is required for true smoke evaluation execution."
+    ) from exc
 
 
 def parse_args() -> argparse.Namespace:
@@ -14,8 +24,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--task", default="core-smoke")
     parser.add_argument("--model-ref")
+    parser.add_argument("--model-id")
     parser.add_argument("--output", help="Relative eval summary output path.")
     parser.add_argument("--num-prompts", type=int, default=6)
+    parser.add_argument("--steps", type=int, default=6)
+    parser.add_argument("--width", type=int, default=512)
+    parser.add_argument("--height", type=int, default=512)
+    parser.add_argument("--seed", type=int, default=2025)
     return parser.parse_args()
 
 
@@ -26,16 +41,80 @@ if __name__ == "__main__":
         raise SystemExit(0)
     if not args.output:
         raise SystemExit("--output is required with --execute")
+    if not args.model_id:
+        raise SystemExit("--model-id is required with --execute")
+    if not torch.cuda.is_available():
+        raise SystemExit("GPU is required for true Stage 2 smoke execution.")
+
+    prompts = [
+        "studio product photo of a camera with readable label text",
+        "portrait of a cyclist in white jacket under soft daylight",
+        "neon city street at night with reflective wet pavement",
+        "clean cutout object on neutral studio background",
+        "storybook castle scene with crisp headline typography",
+        "pet portrait with detailed fur and natural expression",
+        "minimal poster design with bold geometric shapes",
+        "macro shot of a watch with metallic highlights",
+    ]
+    prompt_count = max(1, min(args.num_prompts, len(prompts)))
+    selected_prompts = prompts[:prompt_count]
     output = Path(args.output)
     output.parent.mkdir(parents=True, exist_ok=True)
+    sample_dir = output.parent / "samples"
+    sample_dir.mkdir(parents=True, exist_ok=True)
+
+    pipe = DiffusionPipeline.from_pretrained(args.model_id, torch_dtype=torch.bfloat16, use_safetensors=True)
+    pipe = pipe.to("cuda")
+    pipe.set_progress_bar_config(disable=True)
+    generated = 0
+    per_prompt_seconds: list[float] = []
+    luminance_values: list[float] = []
+    started = time.perf_counter()
+    for idx, prompt in enumerate(selected_prompts):
+        single_start = time.perf_counter()
+        generator = torch.Generator(device="cuda").manual_seed(args.seed + idx)
+        result = pipe(
+            prompt=prompt,
+            num_inference_steps=max(1, args.steps),
+            width=args.width,
+            height=args.height,
+            generator=generator,
+        )
+        image = result.images[0].convert("RGB")
+        image_path = sample_dir / f"{args.task}-{idx + 1:03d}.png"
+        image.save(image_path)
+        pixels = torch.tensor(list(image.getdata()), dtype=torch.float32).view(image.height, image.width, 3)
+        luminance_values.append(float(pixels.mean().item()))
+        per_prompt_seconds.append(time.perf_counter() - single_start)
+        generated += 1
+
+    total_seconds = time.perf_counter() - started
+    del pipe
+    torch.cuda.empty_cache()
+
+    model_ref_meta = None
+    if args.model_ref:
+        meta_path = Path(args.model_ref).with_suffix(Path(args.model_ref).suffix + ".meta.json")
+        if meta_path.exists():
+            model_ref_meta = json.loads(meta_path.read_text(encoding="utf-8"))
+
+    output = Path(args.output)
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "task": args.task,
         "model_ref": args.model_ref,
+        "model_id": args.model_id,
         "num_prompts": args.num_prompts,
+        "generated_images": generated,
+        "steps": args.steps,
+        "resolution": f"{args.width}x{args.height}",
+        "elapsed_seconds": round(total_seconds, 3),
+        "per_prompt_seconds": [round(value, 3) for value in per_prompt_seconds],
+        "mean_luminance": sum(luminance_values) / len(luminance_values) if luminance_values else None,
+        "model_ref_meta": model_ref_meta,
         "metrics": {
-            "edit_retention_score": 0.81,
-            "generation_regression_score": 0.14,
+            "edit_retention_score": None,
+            "generation_regression_score": None,
         },
         "status": "passed",
     }
