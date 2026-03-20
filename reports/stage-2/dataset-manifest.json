@@ -1,0 +1,214 @@
+{
+  "flatten_layered_rgba": "alpha-composite-to-rgb",
+  "generated_at": "2026-03-20T01:42:39.795095+00:00",
+  "name": "stage-2-synthetic-teacher-dataset",
+  "output_root": "stage-2/datasets/teacher-db",
+  "planned_records": [
+    {
+      "asset_paths": {
+        "image": "stage-2/datasets/teacher-db/generation_teacher/images/generation_teacher-0001.png",
+        "metadata": "stage-2/datasets/teacher-db/generation_teacher/metadata/generation_teacher-0001.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "text-to-image"
+      },
+      "prompt": "cinematic portrait of a botanist in a glass greenhouse with readable name badge text",
+      "sample_id": "generation_teacher-0001",
+      "seed": 101,
+      "teacher_model": "Qwen/Qwen-Image-2512",
+      "teacher_model_alias": "qwen-image-2512"
+    },
+    {
+      "asset_paths": {
+        "image": "stage-2/datasets/teacher-db/generation_teacher/images/generation_teacher-0002.png",
+        "metadata": "stage-2/datasets/teacher-db/generation_teacher/metadata/generation_teacher-0002.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "text-to-image"
+      },
+      "prompt": "studio product photo of a brushed metal camera on cream paper with sharp label text",
+      "sample_id": "generation_teacher-0002",
+      "seed": 202,
+      "teacher_model": "Qwen/Qwen-Image-2512",
+      "teacher_model_alias": "qwen-image-2512"
+    },
+    {
+      "asset_paths": {
+        "edited_image": "stage-2/datasets/teacher-db/edit_teacher/edited/edit_teacher-0001.png",
+        "metadata": "stage-2/datasets/teacher-db/edit_teacher/metadata/edit_teacher-0001.json",
+        "source_image": "stage-2/datasets/teacher-db/edit_teacher/source/edit_teacher-0001.png"
+      },
+      "edit_instruction": "change the jacket to white while keeping pose, lighting, and camera angle",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "generate-then-edit"
+      },
+      "sample_id": "edit_teacher-0001",
+      "seed": 111,
+      "source_prompt": "street style portrait of a runner in a red jacket against a subway wall",
+      "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+      "teacher_model_alias": "qwen-image-edit-2511"
+    },
+    {
+      "asset_paths": {
+        "edited_image": "stage-2/datasets/teacher-db/edit_teacher/edited/edit_teacher-0002.png",
+        "metadata": "stage-2/datasets/teacher-db/edit_teacher/metadata/edit_teacher-0002.json",
+        "source_image": "stage-2/datasets/teacher-db/edit_teacher/source/edit_teacher-0002.png"
+      },
+      "edit_instruction": "replace the mug pattern with blue stripes and keep the same composition",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "generate-then-edit"
+      },
+      "sample_id": "edit_teacher-0002",
+      "seed": 222,
+      "source_prompt": "product shot of a ceramic mug on a wooden table in morning light",
+      "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+      "teacher_model_alias": "qwen-image-edit-2511"
+    },
+    {
+      "asset_paths": {
+        "image": "stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0001.png",
+        "metadata": "stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0001.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": true,
+        "task": "layer-aware-generation"
+      },
+      "prompt": "single toy robot centered on seamless paper backdrop with clean subject separation",
+      "sample_id": "layered_teacher-0001",
+      "seed": 121,
+      "teacher_model": "Qwen/Qwen-Image-Layered",
+      "teacher_model_alias": "qwen-image-layered"
+    },
+    {
+      "asset_paths": {
+        "image": "stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0002.png",
+        "metadata": "stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0002.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": true,
+        "task": "layer-aware-generation"
+      },
+      "prompt": "cutout-style potted plant on a tabletop with simple studio background",
+      "sample_id": "layered_teacher-0002",
+      "seed": 242,
+      "teacher_model": "Qwen/Qwen-Image-Layered",
+      "teacher_model_alias": "qwen-image-layered"
+    }
+  ],
+  "record_schema": [
+    "sample_id",
+    "teacher_model_alias",
+    "teacher_model",
+    "prompt",
+    "source_prompt",
+    "edit_instruction",
+    "seed",
+    "generation_settings",
+    "asset_paths",
+    "output_metadata"
+  ],
+  "relative_paths_only": true,
+  "splits": {
+    "edit_teacher": {
+      "asset_root": "stage-2/datasets/teacher-db/edit_teacher",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "planned_sample_count": 2,
+      "prompt_bank": [
+        {
+          "edit_instruction": "change the jacket to white while keeping pose, lighting, and camera angle",
+          "source_prompt": "street style portrait of a runner in a red jacket against a subway wall"
+        },
+        {
+          "edit_instruction": "replace the mug pattern with blue stripes and keep the same composition",
+          "source_prompt": "product shot of a ceramic mug on a wooden table in morning light"
+        }
+      ],
+      "seed_schedule": [
+        111,
+        222
+      ],
+      "task": "generate-then-edit",
+      "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+      "teacher_model_alias": "qwen-image-edit-2511"
+    },
+    "generation_teacher": {
+      "asset_root": "stage-2/datasets/teacher-db/generation_teacher",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "planned_sample_count": 2,
+      "prompt_bank": [
+        "cinematic portrait of a botanist in a glass greenhouse with readable name badge text",
+        "studio product photo of a brushed metal camera on cream paper with sharp label text"
+      ],
+      "seed_schedule": [
+        101,
+        202
+      ],
+      "task": "text-to-image",
+      "teacher_model": "Qwen/Qwen-Image-2512",
+      "teacher_model_alias": "qwen-image-2512"
+    },
+    "layered_teacher": {
+      "asset_root": "stage-2/datasets/teacher-db/layered_teacher",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "planned_sample_count": 2,
+      "prompt_bank": [
+        "single toy robot centered on seamless paper backdrop with clean subject separation",
+        "cutout-style potted plant on a tabletop with simple studio background"
+      ],
+      "seed_schedule": [
+        121,
+        242
+      ],
+      "task": "layer-aware-generation",
+      "teacher_model": "Qwen/Qwen-Image-Layered",
+      "teacher_model_alias": "qwen-image-layered"
+    }
+  },
+  "stage": "stage2"
+}

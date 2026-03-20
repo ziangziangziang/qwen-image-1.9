@@ -1,0 +1,305 @@
+{
+  "artifacts": {
+    "artifact_dir": "reports/stage-2",
+    "dataset_manifest": "reports/stage-2/dataset-manifest.json",
+    "experimental_bridge_adapter": "stage-2/artifacts/experimental/layered-bridge-adapter.safetensors",
+    "experimental_bridge_checkpoint": "stage-2/artifacts/experimental/qwen-image-1.9-layered-bridge-bf16.safetensors",
+    "merge_manifest": "reports/stage-2/merge-manifest.json",
+    "report_readme": "reports/stage-2/README.md",
+    "run_status": "stage-2/run-status.json",
+    "stable_core_checkpoint": "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors"
+  },
+  "cleanup_performed": false,
+  "compatibility_summary": {
+    "adapter_only": 1,
+    "delta_merge": 1,
+    "direct_merge": 0,
+    "incompatible": 2
+  },
+  "core_delta_candidates": [
+    {
+      "blend_weight": 0.35,
+      "candidate_id": "core-delta-w035",
+      "output_checkpoint": "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
+      "selection_status": "planned",
+      "smoke_report": "stage-2/evals/core-candidates/core-delta-w035/smoke-summary.json"
+    }
+  ],
+  "core_delta_recipe": {
+    "coefficient_sweep": [
+      0.35
+    ],
+    "delta_base_candidate_alias": "qwen-image-base",
+    "delta_base_candidate_model": "Qwen/Qwen-Image",
+    "delta_source_alias": "qwen-image-edit-2511",
+    "delta_source_model": "Qwen/Qwen-Image-Edit-2511",
+    "excluded_subsystems": [
+      "text_encoder",
+      "vae",
+      "rope"
+    ],
+    "exclusion_refs": {
+      "rope": "skip-direct-merge",
+      "text_encoder": "skip-direct-merge",
+      "vae": "skip-direct-merge"
+    },
+    "foundation_alias": "qwen-image-2512",
+    "foundation_model": "Qwen/Qwen-Image-2512",
+    "name": "stage-2-core-delta",
+    "observed_hot_blocks": [
+      40,
+      42,
+      43,
+      44,
+      46,
+      47,
+      48,
+      49,
+      50,
+      57
+    ],
+    "selection_rule": "Prefer edit retention without visible generation regression on the smoke suite.",
+    "target_components": [
+      "transformer"
+    ],
+    "target_subsystems": [
+      "mmdit_backbone"
+    ]
+  },
+  "dataset": {
+    "manifest_path": "reports/stage-2/dataset-manifest.json",
+    "output_root": "stage-2/datasets/teacher-db",
+    "relative_paths_only": true,
+    "split_counts": {
+      "edit_teacher": 2,
+      "generation_teacher": 2,
+      "layered_teacher": 2
+    }
+  },
+  "exclusions": {
+    "rope": {
+      "decision": "skip-direct-merge",
+      "evidence": {
+        "foundation_label": "2D-or-rotary",
+        "layered_label": "Layer3D",
+        "structural_compatibility": "incompatible"
+      },
+      "reason": "Layer3D positional behavior does not directly align with the 2D foundation, so Stage 2 keeps rope changes behind the bridge experiment."
+    },
+    "text_encoder": {
+      "decision": "skip-direct-merge",
+      "evidence": {
+        "foundation_vs_edit_exact_ratio": 1.0,
+        "foundation_vs_layered_exact_ratio": 1.0,
+        "foundation_vs_layered_mean_relative_l2_delta": 0.0
+      },
+      "reason": "Stage 1 value analysis shows exact text-encoder parity, so Stage 2 does not spend merge budget on a no-op subsystem."
+    },
+    "vae": {
+      "decision": "skip-direct-merge",
+      "evidence": {
+        "base_label": "RGB",
+        "layered_label": "RGBA",
+        "shape_mismatch_count": 3,
+        "structural_compatibility": "incompatible"
+      },
+      "reason": "Layered keeps RGBA semantics while the core stack is RGB, so the VAE stays out of Stage 2 fusion."
+    }
+  },
+  "execution_enabled": true,
+  "execution_policy": "overwrite",
+  "foundation_model": "Qwen/Qwen-Image-2512",
+  "generated_at": "2026-03-20T01:42:39.795779+00:00",
+  "layered_bridge_recipe": {
+    "base_core_candidate_id": "core-delta-w035",
+    "base_core_checkpoint": "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
+    "bridge_block_window": {
+      "end": 60,
+      "start": 40
+    },
+    "distillation_target": "rgb-output",
+    "donor_alias": "qwen-image-layered",
+    "donor_model": "Qwen/Qwen-Image-Layered",
+    "experimental": true,
+    "extra_parameter_paths": [
+      "transformer.time_text_embed.addition_t_embedding.weight"
+    ],
+    "foundation_alias": "qwen-image-2512",
+    "foundation_model": "Qwen/Qwen-Image-2512",
+    "freeze_policy": [
+      "text_encoder",
+      "vae",
+      "rope",
+      "transformer_blocks.0-39"
+    ],
+    "layered_output_adapter": "alpha-composite-to-rgb",
+    "name": "stage-2-layered-bridge",
+    "output_adapter": "stage-2/artifacts/experimental/layered-bridge-adapter.safetensors",
+    "output_checkpoint": "stage-2/artifacts/experimental/qwen-image-1.9-layered-bridge-bf16.safetensors",
+    "strategy": "learnable-bridge",
+    "target_component": "transformer",
+    "target_subsystems": [
+      "mmdit_backbone"
+    ],
+    "trainable_modules": [
+      "bridge_adapter",
+      "per_block_gates"
+    ],
+    "training_limits": {
+      "batch_size": 1,
+      "eval_prompt_count": 6,
+      "max_steps": 64
+    }
+  },
+  "limits": {
+    "bridge_batch_size": 1,
+    "bridge_train_steps": 64,
+    "core_candidate_id": "core-delta-w035",
+    "dataset_samples_per_split": 2,
+    "eval_prompt_count": 6,
+    "poc_side": 512,
+    "poc_steps": 6
+  },
+  "path_policy": {
+    "absolute_paths_allowed": false,
+    "local_paths": "repo-relative",
+    "remote_paths": "relative-to-remote-workdir-or-remote-artifact-root"
+  },
+  "remote": {
+    "name": "local-dry-run",
+    "path_policy": "manifest paths stay relative even when remote roots are absolute in operator config",
+    "python": "python3"
+  },
+  "remote_jobs": {
+    "core_delta_sweep": {
+      "entrypoint": "scripts/stage-2-build-edit-delta.py",
+      "log_path": "stage-2/logs/core-delta-sweep.log",
+      "outputs": [
+        "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors"
+      ],
+      "status": "planned",
+      "workdir": "stage-2/jobs/core-delta-sweep"
+    },
+    "core_smoke_eval": {
+      "entrypoint": "scripts/stage-2-compose-bf16-checkpoint.py",
+      "log_path": "stage-2/logs/core-smoke-eval.log",
+      "outputs": [
+        "stage-2/evals/core-candidates/core-delta-w035/smoke-summary.json"
+      ],
+      "status": "planned",
+      "workdir": "stage-2/jobs/core-smoke-eval"
+    },
+    "experimental_smoke_eval": {
+      "entrypoint": "scripts/stage-2-compose-bf16-checkpoint.py",
+      "log_path": "stage-2/logs/experimental-smoke-eval.log",
+      "outputs": [
+        "stage-2/evals/experimental/smoke-summary.json"
+      ],
+      "status": "planned",
+      "workdir": "stage-2/jobs/experimental-smoke-eval"
+    },
+    "layered_bridge_train": {
+      "entrypoint": "scripts/stage-2-build-layered-bridge.py",
+      "log_path": "stage-2/logs/layered-bridge-train.log",
+      "outputs": [
+        "stage-2/artifacts/experimental/layered-bridge-adapter.safetensors",
+        "stage-2/artifacts/experimental/qwen-image-1.9-layered-bridge-bf16.safetensors"
+      ],
+      "status": "planned",
+      "workdir": "stage-2/jobs/layered-bridge-train"
+    },
+    "teacher_dataset_generation": {
+      "entrypoint": "scripts/stage-2-generate-teacher-dataset.py",
+      "log_path": "stage-2/logs/teacher-dataset.log",
+      "outputs": [
+        "stage-2/datasets/teacher-db"
+      ],
+      "status": "planned",
+      "workdir": "stage-2/jobs/teacher-dataset"
+    }
+  },
+  "resource_profile": {
+    "num_gpus": 1,
+    "vram_target_gb": 80
+  },
+  "run_mode": "write",
+  "run_profile": "smoke",
+  "selected_core_candidate": {
+    "blend_weight": 0.35,
+    "candidate_id": "core-delta-w035",
+    "output_checkpoint": "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
+    "selection_note": "Smoke profile runs one candidate to validate pipeline wiring before the full sweep.",
+    "selection_status": "smoke-only",
+    "smoke_report": "stage-2/evals/core-candidates/core-delta-w035/smoke-summary.json"
+  },
+  "source_models": {
+    "qwen-image-2512": "Qwen/Qwen-Image-2512",
+    "qwen-image-base": "Qwen/Qwen-Image",
+    "qwen-image-edit-2511": "Qwen/Qwen-Image-Edit-2511",
+    "qwen-image-layered": "Qwen/Qwen-Image-Layered"
+  },
+  "stage": "stage2",
+  "stage1_evidence": {
+    "artifact_refs": {
+      "compatibility_matrix": "reports/stage-1/compatibility-matrix.json",
+      "weight_analysis": "reports/stage-1/weight-analysis.json"
+    },
+    "foundation_vs_edit": {
+      "exact_equal_tensor_ratio": 0.3246,
+      "observed_hot_blocks": [
+        40,
+        42,
+        43,
+        44,
+        46,
+        47,
+        48,
+        49,
+        50,
+        57
+      ],
+      "pair": [
+        "qwen-image-2512",
+        "qwen-image-edit-2511"
+      ],
+      "shared_key_count": 2856,
+      "text_encoder_exact_match": true,
+      "transformer_mean_block_relative_l2_delta": 0.2219333524,
+      "transformer_merge_strategy": "delta-merge",
+      "transformer_structural_compatibility": "direct-merge",
+      "vae_exact_match": true
+    },
+    "layered_conflicts": {
+      "base_pair": [
+        "qwen-image-base",
+        "qwen-image-layered"
+      ],
+      "rope": {
+        "foundation_label": "2D-or-rotary",
+        "layered_label": "Layer3D",
+        "structural_compatibility": "incompatible"
+      },
+      "vae": {
+        "base_label": "RGB",
+        "layered_label": "RGBA",
+        "shape_mismatch_count": 3,
+        "structural_compatibility": "incompatible"
+      }
+    },
+    "layered_vs_core": {
+      "exact_equal_tensor_ratio": 0.2597,
+      "layered_conditioning_hint": "transformer.time_text_embed.addition_t_embedding.weight",
+      "layered_transformer_mismatch_prefixes": [
+        "transformer.time_text_embed"
+      ],
+      "observed_hot_blocks": [],
+      "pair": [
+        "qwen-image-2512",
+        "qwen-image-layered"
+      ],
+      "shared_key_count": 2856,
+      "text_encoder_exact_match": true,
+      "transformer_mean_block_relative_l2_delta": 0.1827951559
+    }
+  }
+}

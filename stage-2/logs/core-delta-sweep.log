@@ -1,0 +1,55 @@
+Loading pipeline components...:   0%|          | 0/5 [00:00<?, ?it/s]
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s][A
+Loading checkpoint shards:  25%|██▌       | 1/4 [00:00<00:00,  5.78it/s][A
+Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00, 16.41it/s][ALoading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00, 14.41it/s]
+Loading pipeline components...:  20%|██        | 1/5 [00:00<00:02,  1.75it/s]
+Loading checkpoint shards:   0%|          | 0/9 [00:00<?, ?it/s][A
+Loading checkpoint shards:  22%|██▏       | 2/9 [00:00<00:00, 11.76it/s][A
+Loading checkpoint shards:  44%|████▍     | 4/9 [00:00<00:00, 12.17it/s][A
+Loading checkpoint shards:  67%|██████▋   | 6/9 [00:00<00:00, 11.96it/s][A
+Loading checkpoint shards:  89%|████████▉ | 8/9 [00:00<00:00, 12.13it/s][ALoading checkpoint shards: 100%|██████████| 9/9 [00:00<00:00, 13.09it/s]
+Loading pipeline components...:  60%|██████    | 3/5 [00:01<00:01,  1.63it/s]Loading pipeline components...: 100%|██████████| 5/5 [00:01<00:00,  2.94it/s]Loading pipeline components...: 100%|██████████| 5/5 [00:01<00:00,  2.51it/s]
+true_cfg_scale is passed as 4.0, but classifier-free guidance is not enabled since no negative_prompt is provided.
+Loading pipeline components...:   0%|          | 0/6 [00:00<?, ?it/s]
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s][A
+Loading checkpoint shards:  25%|██▌       | 1/4 [00:00<00:00,  6.52it/s][A
+Loading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00, 17.73it/s][ALoading checkpoint shards: 100%|██████████| 4/4 [00:00<00:00, 15.70it/s]
+Loading pipeline components...:  17%|█▋        | 1/6 [00:00<00:01,  3.12it/s]
+Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s][A
+Loading checkpoint shards:  20%|██        | 1/5 [00:00<00:00,  5.12it/s][A
+Loading checkpoint shards:  40%|████      | 2/5 [00:00<00:00,  5.25it/s][A
+Loading checkpoint shards:  60%|██████    | 3/5 [00:00<00:00,  5.36it/s][A
+Loading checkpoint shards:  80%|████████  | 4/5 [00:00<00:00,  5.35it/s][ALoading checkpoint shards: 100%|██████████| 5/5 [00:00<00:00,  6.49it/s]
+Loading pipeline components...:  50%|█████     | 3/6 [00:01<00:01,  2.03it/s]Loading pipeline components...:  67%|██████▋   | 4/6 [00:02<00:01,  1.85it/s]Loading pipeline components...: 100%|██████████| 6/6 [00:02<00:00,  3.22it/s]Loading pipeline components...: 100%|██████████| 6/6 [00:02<00:00,  2.71it/s]
+Traceback (most recent call last):
+  File "/lustre_scratch/user_scratch/zziang/qwen-image-1.9/scripts/stage-2-build-edit-delta.py", line 158, in <module>
+    artifact = write_artifact(
+               ^^^^^^^^^^^^^^^
+  File "/lustre_scratch/user_scratch/zziang/qwen-image-1.9/scripts/stage-2-build-edit-delta.py", line 104, in write_artifact
+    edit_image = generate_image(
+                 ^^^^^^^^^^^^^^^
+  File "/lustre_scratch/user_scratch/zziang/qwen-image-1.9/scripts/stage-2-build-edit-delta.py", line 64, in generate_image
+    pipe = pipe.to(device)
+           ^^^^^^^^^^^^^^^
+  File "/lustre_scratch/user_scratch/zziang/conda-env/llm-compress/lib/python3.12/site-packages/diffusers/pipelines/pipeline_utils.py", line 565, in to
+    module.to(device, dtype)
+  File "/lustre_scratch/user_scratch/zziang/conda-env/llm-compress/lib/python3.12/site-packages/diffusers/models/modeling_utils.py", line 1451, in to
+    return super().to(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/lustre_scratch/user_scratch/zziang/conda-env/llm-compress/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1371, in to
+    return self._apply(convert)
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/lustre_scratch/user_scratch/zziang/conda-env/llm-compress/lib/python3.12/site-packages/torch/nn/modules/module.py", line 930, in _apply
+    module._apply(fn)
+  File "/lustre_scratch/user_scratch/zziang/conda-env/llm-compress/lib/python3.12/site-packages/torch/nn/modules/module.py", line 930, in _apply
+    module._apply(fn)
+  File "/lustre_scratch/user_scratch/zziang/conda-env/llm-compress/lib/python3.12/site-packages/torch/nn/modules/module.py", line 930, in _apply
+    module._apply(fn)
+  [Previous line repeated 3 more times]
+  File "/lustre_scratch/user_scratch/zziang/conda-env/llm-compress/lib/python3.12/site-packages/torch/nn/modules/module.py", line 957, in _apply
+    param_applied = fn(param)
+                    ^^^^^^^^^
+  File "/lustre_scratch/user_scratch/zziang/conda-env/llm-compress/lib/python3.12/site-packages/torch/nn/modules/module.py", line 1357, in convert
+    return t.to(
+           ^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 72.00 MiB. GPU 0 has a total capacity of 79.25 GiB of which 24.75 MiB is free. Including non-PyTorch memory, this process has 79.22 GiB memory in use. Of the allocated memory 78.53 GiB is allocated by PyTorch, and 193.99 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
