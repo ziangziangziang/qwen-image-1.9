@@ -1092,6 +1092,7 @@ def fuse(
     resume: bool = False,
 ) -> dict[str, Any]:
     selected_run_profile = validate_run_options(dry_run=dry_run, smoke_run=smoke_run, run_profile=run_profile)
+    effective_execute = bool((smoke_run and not dry_run) or (execute and not dry_run))
     models = load_model_inventory()
     matrix, weight_analysis, stage1_refs = require_stage1_artifacts()
     remote_context = default_remote_context(remote_config)
@@ -1119,7 +1120,7 @@ def fuse(
         selected_run_profile,
     )
     manifest["run_mode"] = "dry-run" if dry_run else "write"
-    manifest["execution_enabled"] = bool(execute and not dry_run)
+    manifest["execution_enabled"] = effective_execute
     manifest["execution_policy"] = "resume" if resume else "overwrite"
     manifest["cleanup_performed"] = False
     manifest["artifacts"]["run_status"] = repo_relative_path(artifact_paths["run_status_json"])
@@ -1129,7 +1130,7 @@ def fuse(
         "stage": "stage2",
         "mode": "dry-run" if dry_run else "write",
         "run_profile": selected_run_profile,
-        "execution_enabled": bool(execute and not dry_run),
+        "execution_enabled": effective_execute,
         "execution_policy": manifest["execution_policy"],
         "manifest": manifest,
         "dataset_manifest": dataset_manifest,
@@ -1156,7 +1157,7 @@ def fuse(
         write_json(compatibility_shims["legacy_merge_manifest_json"], manifest)
         write_text(compatibility_shims["legacy_report_md"], render_stage2_compatibility_stub(target_dir))
         written.extend(repo_relative_path(path) for path in compatibility_shims.values())
-    if execute:
+    if effective_execute:
         run_status = run_stage2_jobs(
             manifest,
             dataset_manifest,

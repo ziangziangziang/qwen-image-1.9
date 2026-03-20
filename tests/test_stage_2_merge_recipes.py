@@ -328,11 +328,15 @@ class Stage2Tests(unittest.TestCase):
                     "qwen_image_19.stage_2_fusion.default_remote_context",
                     return_value={"name": "remote-test", "python": "python3"},
                 ):
-                    result = fuse(artifact_dir=artifact_root, smoke_run=True)
+                    with patch("qwen_image_19.stage_2_fusion.run_subprocess_job", return_value=(0, 0.01)):
+                        with patch("qwen_image_19.stage_2_fusion.ensure_outputs_exist", return_value=[]):
+                            result = fuse(artifact_dir=artifact_root, smoke_run=True)
         manifest = result["manifest"]
         self.assertEqual(result["run_profile"], "smoke")
         self.assertEqual(result["execution_policy"], "overwrite")
+        self.assertEqual(result["execution_enabled"], True)
         self.assertEqual(manifest["run_profile"], "smoke")
+        self.assertEqual(manifest["execution_enabled"], True)
         self.assertEqual(manifest["resource_profile"]["num_gpus"], 1)
         self.assertEqual(len(manifest["core_delta_candidates"]), 1)
         self.assertEqual(manifest["core_delta_candidates"][0]["candidate_id"], "core-delta-w035")
@@ -340,6 +344,7 @@ class Stage2Tests(unittest.TestCase):
         self.assertEqual(manifest["dataset"]["split_counts"]["edit_teacher"], 2)
         self.assertEqual(manifest["dataset"]["split_counts"]["layered_teacher"], 2)
         self.assertEqual(result["dataset_manifest"]["splits"]["generation_teacher"]["planned_sample_count"], 2)
+        self.assertIn("run_status", result)
 
     def test_fuse_rejects_dry_and_smoke_together(self) -> None:
         self.write_stage2_configs()
@@ -382,6 +387,7 @@ class Stage2Tests(unittest.TestCase):
         dataset_text = (artifact_root / "dataset-manifest.json").read_text(encoding="utf-8")
         self.assertNotIn("/mnt/private", dataset_text)
         self.assertIn("written", result)
+        self.assertNotIn("run_status", result)
 
     def test_fuse_execute_writes_run_status(self) -> None:
         self.write_stage2_configs()
@@ -409,6 +415,18 @@ class Stage2Tests(unittest.TestCase):
             self.assertIn(status_payload["jobs"][job_name]["status"], ("succeeded", "skipped"))
         self.assertIn("run_status", result)
         self.assertEqual(result["execution_policy"], "overwrite")
+
+    def test_fuse_full_profile_without_execute_is_plan_only(self) -> None:
+        self.write_stage2_configs()
+        self.write_stage1_artifacts()
+        artifact_root = self.root / "reports" / "stage-2"
+        with patch("qwen_image_19.stage_2_fusion.repo_root", return_value=self.root):
+            with patch("qwen_image_19.stage_2_fusion.load_model_inventory", return_value=MODELS):
+                with patch("qwen_image_19.stage_2_fusion.default_remote_context", return_value={"name": "remote-test", "python": "python3"}):
+                    result = fuse(artifact_dir=artifact_root, run_profile="full")
+        self.assertEqual(result["run_profile"], "full")
+        self.assertEqual(result["execution_enabled"], False)
+        self.assertNotIn("run_status", result)
 
     def test_fuse_execute_failure_marks_failed_job(self) -> None:
         self.write_stage2_configs()

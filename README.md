@@ -82,7 +82,6 @@ Primary CLI:
 q19 stage1 analyze
 q19 stage2 fuse --dry-run
 q19 stage2 fuse --smoke-run
-q19 stage2 fuse --smoke-run --execute
 q19 stage2 fuse --run-profile full --execute
 q19 stage3 eval --dry-run
 q19 stage4 quantize --dry-run
@@ -94,9 +93,9 @@ Common flags:
 - `--artifact-dir`
 - `--cache-dir`
 - `--dry-run`
-- `--smoke-run` for Stage 2 quick bug-finder profile
+- `--smoke-run` for Stage 2 quick PoC (auto-executes smoke jobs)
 - `--run-profile {smoke,full}` for Stage 2
-- `--execute` for Stage 2 job execution after manifest generation
+- `--execute` for Stage 2 full-profile job execution after manifest generation
 - `--hf-home` for Stage 1 cache inspection override
 - `--cache-map-config` for custom HF cache alias mapping
 

@@ -49,7 +49,7 @@ def build_parser() -> argparse.ArgumentParser:
     stage2_fuse.add_argument(
         "--smoke-run",
         action="store_true",
-        help="Use the reduced Stage 2 smoke profile (1x80GB-target quick bug finder).",
+        help="Run the reduced Stage 2 smoke profile immediately (quick PoC execution on 1x80GB target).",
     )
     stage2_fuse.add_argument(
         "--run-profile",
@@ -59,7 +59,7 @@ def build_parser() -> argparse.ArgumentParser:
     stage2_fuse.add_argument(
         "--execute",
         action="store_true",
-        help="Execute Stage 2 jobs after writing manifests. Without this flag Stage 2 only plans.",
+        help="Execute Stage 2 jobs after writing manifests. Required for full profile; optional/no-op for --smoke-run.",
     )
     stage2_fuse.add_argument(
         "--resume",

@@ -7,6 +7,12 @@ from qwen_image_19.cli import build_parser, dispatch
 
 
 class Stage2CliModeTests(unittest.TestCase):
+    def test_parser_accepts_smoke_run_without_execute(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(["stage2", "fuse", "--smoke-run"])
+        self.assertTrue(args.smoke_run)
+        self.assertFalse(args.execute)
+
     def test_parser_accepts_smoke_profile_and_execute(self) -> None:
         parser = build_parser()
         args = parser.parse_args(
