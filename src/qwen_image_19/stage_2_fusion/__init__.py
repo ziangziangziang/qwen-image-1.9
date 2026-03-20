@@ -696,6 +696,18 @@ def run_subprocess_job(
     return process.returncode, duration
 
 
+def diffusion_resource_args(manifest: dict[str, Any]) -> list[str]:
+    profile = manifest.get("resource_profile", {})
+    required_gpus = int(profile.get("num_gpus", 1))
+    required_total_vram_gb = float(profile.get("vram_target_gb", 80))
+    return [
+        "--required-gpus",
+        str(required_gpus),
+        "--required-total-vram-gb",
+        f"{required_total_vram_gb:g}",
+    ]
+
+
 def build_job_command(
     job_name: str,
     job_payload: dict[str, Any],
@@ -731,6 +743,7 @@ def build_job_command(
             str(poc_side),
             "--height",
             str(poc_side),
+            *diffusion_resource_args(manifest),
         ]
     if job_name == "core_smoke_eval":
         return [
@@ -753,6 +766,7 @@ def build_job_command(
             str(poc_side),
             "--height",
             str(poc_side),
+            *diffusion_resource_args(manifest),
         ]
     if job_name == "teacher_dataset_generation":
         return [
@@ -765,6 +779,7 @@ def build_job_command(
             str(poc_steps),
             "--max-side",
             str(poc_side),
+            *diffusion_resource_args(manifest),
         ]
     if job_name == "layered_bridge_train":
         limits = manifest["layered_bridge_recipe"].get("training_limits", {})
@@ -806,6 +821,7 @@ def build_job_command(
             str(poc_side),
             "--height",
             str(poc_side),
+            *diffusion_resource_args(manifest),
         ]
     raise Stage2FusionError(f"Unsupported remote job `{job_name}` in Stage 2 executor.")
 
@@ -904,6 +920,7 @@ def run_stage2_jobs(
                     str(poc_side),
                     "--height",
                     str(poc_side),
+                    *diffusion_resource_args(manifest),
                 ]
                 commands.append(command)
                 exit_code, _ = run_subprocess_job(command, payload["log_path"], payload["workdir"])

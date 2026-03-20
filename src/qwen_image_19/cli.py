@@ -49,7 +49,7 @@ def build_parser() -> argparse.ArgumentParser:
     stage2_fuse.add_argument(
         "--smoke-run",
         action="store_true",
-        help="Run the reduced Stage 2 smoke profile immediately (quick PoC execution on 1x80GB target).",
+        help="Run the reduced Stage 2 smoke profile immediately (quick PoC execution on 2x80GB target).",
     )
     stage2_fuse.add_argument(
         "--run-profile",

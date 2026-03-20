@@ -9,6 +9,10 @@ from pathlib import Path
 import torch
 
 from qwen_image_19.stage_2_fusion import fuse
+from qwen_image_19.stage_2_fusion.runtime import (
+    Stage2HardwareError,
+    resolve_stage2_diffusion_runtime,
+)
 
 try:
     from diffusers import DiffusionPipeline
@@ -38,6 +42,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--height", type=int, default=512)
     parser.add_argument("--width", type=int, default=512)
     parser.add_argument("--seed", type=int, default=1234)
+    parser.add_argument("--required-gpus", type=int, default=2)
+    parser.add_argument("--required-total-vram-gb", type=float, default=160.0)
     return parser.parse_args()
 
 
@@ -55,28 +61,44 @@ def generate_image(
     width: int,
     height: int,
     seed: int,
+    required_gpus: int,
+    required_total_vram_gb: float,
 ) -> torch.Tensor:
-    if not torch.cuda.is_available():
-        raise SystemExit("GPU is required for true Stage 2 smoke execution.")
+    try:
+        runtime = resolve_stage2_diffusion_runtime(
+            required_gpus=required_gpus,
+            required_total_vram_gb=required_total_vram_gb,
+        )
+    except Stage2HardwareError as exc:
+        raise SystemExit(str(exc)) from exc
     dtype = torch.bfloat16
-    device = "cuda"
-    pipe = DiffusionPipeline.from_pretrained(model_id, torch_dtype=dtype, use_safetensors=True)
-    pipe = pipe.to(device)
-    pipe.set_progress_bar_config(disable=True)
-    generator = torch.Generator(device=device).manual_seed(seed)
-    output = pipe(
-        prompt=prompt,
-        num_inference_steps=max(1, steps),
-        width=width,
-        height=height,
-        generator=generator,
-    )
-    image = output.images[0]
-    tensor = to_chw_tensor(image)
-    del output
-    del pipe
-    torch.cuda.empty_cache()
-    return tensor
+    try:
+        pipe = DiffusionPipeline.from_pretrained(
+            model_id,
+            torch_dtype=dtype,
+            use_safetensors=True,
+            **runtime.pipeline_load_kwargs,
+        )
+        pipe.set_progress_bar_config(disable=True)
+        generator = torch.Generator(device=runtime.primary_device).manual_seed(seed)
+        output = pipe(
+            prompt=prompt,
+            num_inference_steps=max(1, steps),
+            width=width,
+            height=height,
+            generator=generator,
+        )
+        image = output.images[0]
+        tensor = to_chw_tensor(image)
+        del output
+        del pipe
+        torch.cuda.empty_cache()
+        return tensor
+    except torch.OutOfMemoryError as exc:
+        raise SystemExit(
+            "Stage 2 diffusion OOM while generating core delta artifact. "
+            f"{runtime.summary()}. No fallback/offload retry is configured."
+        ) from exc
 
 
 def write_artifact(
@@ -90,6 +112,8 @@ def write_artifact(
     width: int,
     height: int,
     seed: int,
+    required_gpus: int,
+    required_total_vram_gb: float,
 ) -> dict[str, object]:
     path = Path(output_checkpoint)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -100,6 +124,8 @@ def write_artifact(
         width=width,
         height=height,
         seed=seed,
+        required_gpus=required_gpus,
+        required_total_vram_gb=required_total_vram_gb,
     )
     edit_image = generate_image(
         model_id=edit_model,
@@ -108,6 +134,8 @@ def write_artifact(
         width=width,
         height=height,
         seed=seed,
+        required_gpus=required_gpus,
+        required_total_vram_gb=required_total_vram_gb,
     )
     delta = edit_image - foundation_image
     blended = torch.clamp(foundation_image + (blend_weight * delta), 0.0, 1.0)
@@ -166,5 +194,7 @@ if __name__ == "__main__":
         width=args.width,
         height=args.height,
         seed=args.seed,
+        required_gpus=args.required_gpus,
+        required_total_vram_gb=args.required_total_vram_gb,
     )
     print(json.dumps({"status": "ok", "output_checkpoint": args.output_checkpoint, "metadata": artifact}, indent=2))

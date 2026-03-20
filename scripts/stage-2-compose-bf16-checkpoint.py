@@ -10,6 +10,10 @@ import time
 import torch
 
 from qwen_image_19.stage_2_fusion import fuse
+from qwen_image_19.stage_2_fusion.runtime import (
+    Stage2HardwareError,
+    resolve_stage2_diffusion_runtime,
+)
 
 try:
     from diffusers import DiffusionPipeline
@@ -31,6 +35,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--width", type=int, default=512)
     parser.add_argument("--height", type=int, default=512)
     parser.add_argument("--seed", type=int, default=2025)
+    parser.add_argument("--required-gpus", type=int, default=2)
+    parser.add_argument("--required-total-vram-gb", type=float, default=160.0)
     return parser.parse_args()
 
 
@@ -43,8 +49,13 @@ if __name__ == "__main__":
         raise SystemExit("--output is required with --execute")
     if not args.model_id:
         raise SystemExit("--model-id is required with --execute")
-    if not torch.cuda.is_available():
-        raise SystemExit("GPU is required for true Stage 2 smoke execution.")
+    try:
+        runtime = resolve_stage2_diffusion_runtime(
+            required_gpus=args.required_gpus,
+            required_total_vram_gb=args.required_total_vram_gb,
+        )
+    except Stage2HardwareError as exc:
+        raise SystemExit(str(exc)) from exc
 
     prompts = [
         "studio product photo of a camera with readable label text",
@@ -63,34 +74,44 @@ if __name__ == "__main__":
     sample_dir = output.parent / "samples"
     sample_dir.mkdir(parents=True, exist_ok=True)
 
-    pipe = DiffusionPipeline.from_pretrained(args.model_id, torch_dtype=torch.bfloat16, use_safetensors=True)
-    pipe = pipe.to("cuda")
-    pipe.set_progress_bar_config(disable=True)
-    generated = 0
-    per_prompt_seconds: list[float] = []
-    luminance_values: list[float] = []
-    started = time.perf_counter()
-    for idx, prompt in enumerate(selected_prompts):
-        single_start = time.perf_counter()
-        generator = torch.Generator(device="cuda").manual_seed(args.seed + idx)
-        result = pipe(
-            prompt=prompt,
-            num_inference_steps=max(1, args.steps),
-            width=args.width,
-            height=args.height,
-            generator=generator,
+    try:
+        pipe = DiffusionPipeline.from_pretrained(
+            args.model_id,
+            torch_dtype=torch.bfloat16,
+            use_safetensors=True,
+            **runtime.pipeline_load_kwargs,
         )
-        image = result.images[0].convert("RGB")
-        image_path = sample_dir / f"{args.task}-{idx + 1:03d}.png"
-        image.save(image_path)
-        pixels = torch.tensor(list(image.getdata()), dtype=torch.float32).view(image.height, image.width, 3)
-        luminance_values.append(float(pixels.mean().item()))
-        per_prompt_seconds.append(time.perf_counter() - single_start)
-        generated += 1
+        pipe.set_progress_bar_config(disable=True)
+        generated = 0
+        per_prompt_seconds: list[float] = []
+        luminance_values: list[float] = []
+        started = time.perf_counter()
+        for idx, prompt in enumerate(selected_prompts):
+            single_start = time.perf_counter()
+            generator = torch.Generator(device=runtime.primary_device).manual_seed(args.seed + idx)
+            result = pipe(
+                prompt=prompt,
+                num_inference_steps=max(1, args.steps),
+                width=args.width,
+                height=args.height,
+                generator=generator,
+            )
+            image = result.images[0].convert("RGB")
+            image_path = sample_dir / f"{args.task}-{idx + 1:03d}.png"
+            image.save(image_path)
+            pixels = torch.tensor(list(image.getdata()), dtype=torch.float32).view(image.height, image.width, 3)
+            luminance_values.append(float(pixels.mean().item()))
+            per_prompt_seconds.append(time.perf_counter() - single_start)
+            generated += 1
 
-    total_seconds = time.perf_counter() - started
-    del pipe
-    torch.cuda.empty_cache()
+        total_seconds = time.perf_counter() - started
+        del pipe
+        torch.cuda.empty_cache()
+    except torch.OutOfMemoryError as exc:
+        raise SystemExit(
+            "Stage 2 diffusion OOM during core/experimental smoke eval generation. "
+            f"{runtime.summary()}. No fallback/offload retry is configured."
+        ) from exc
 
     model_ref_meta = None
     if args.model_ref:

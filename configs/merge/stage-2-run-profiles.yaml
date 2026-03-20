@@ -2,8 +2,8 @@
   "profiles": {
     "smoke": {
       "resource_profile": {
-        "num_gpus": 1,
-        "vram_target_gb": 80
+        "num_gpus": 2,
+        "vram_target_gb": 160
       },
       "limits": {
         "core_candidate_id": "core-delta-w035",

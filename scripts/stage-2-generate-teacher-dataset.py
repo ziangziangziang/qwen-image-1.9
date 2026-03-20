@@ -8,6 +8,11 @@ from pathlib import Path
 import time
 
 import torch
+from qwen_image_19.stage_2_fusion.runtime import (
+    Stage2DiffusionRuntimeConfig,
+    Stage2HardwareError,
+    resolve_stage2_diffusion_runtime,
+)
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -15,6 +20,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--manifest", required=True, help="Path to reports/stage-2/dataset-manifest.json")
     parser.add_argument("--max-steps", type=int, default=8)
     parser.add_argument("--max-side", type=int, default=512)
+    parser.add_argument("--required-gpus", type=int, default=2)
+    parser.add_argument("--required-total-vram-gb", type=float, default=160.0)
     return parser.parse_args()
 
 
@@ -43,24 +50,27 @@ def parse_resolution(resolution: str, max_side: int) -> tuple[int, int]:
     return width, height
 
 
-def load_pipeline(model_id: str) -> DiffusionPipeline:
-    if not torch.cuda.is_available():
-        raise SystemExit("GPU is required for true Stage 2 smoke execution.")
-    pipe = DiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.bfloat16, use_safetensors=True)
-    pipe = pipe.to("cuda")
+def load_pipeline(model_id: str, runtime: Stage2DiffusionRuntimeConfig) -> DiffusionPipeline:
+    pipe = DiffusionPipeline.from_pretrained(
+        model_id,
+        torch_dtype=torch.bfloat16,
+        use_safetensors=True,
+        **runtime.pipeline_load_kwargs,
+    )
     pipe.set_progress_bar_config(disable=True)
     return pipe
 
 
 def render_image(
     pipe: DiffusionPipeline,
+    runtime: Stage2DiffusionRuntimeConfig,
     prompt: str,
     steps: int,
     width: int,
     height: int,
     seed: int,
 ):
-    generator = torch.Generator(device="cuda").manual_seed(seed)
+    generator = torch.Generator(device=runtime.primary_device).manual_seed(seed)
     output = pipe(
         prompt=prompt,
         num_inference_steps=max(1, steps),
@@ -80,62 +90,75 @@ if __name__ == "__main__":
     if not args.execute:
         print(json.dumps(payload, indent=2))
         raise SystemExit(0)
+    try:
+        runtime = resolve_stage2_diffusion_runtime(
+            required_gpus=args.required_gpus,
+            required_total_vram_gb=args.required_total_vram_gb,
+        )
+    except Stage2HardwareError as exc:
+        raise SystemExit(str(exc)) from exc
 
     generated = 0
     started = time.perf_counter()
     records = payload.get("planned_records", [])
-    for split_name, split in payload.get("splits", {}).items():
-        split_records = [record for record in records if str(record["sample_id"]).startswith(f"{split_name}-")]
-        if not split_records:
-            continue
-        pipe = load_pipeline(split["teacher_model"])
-        try:
-            for record in split_records:
-                settings = record.get("generation_settings", {})
-                width, height = parse_resolution(str(settings.get("resolution", "512x512")), args.max_side)
-                steps = min(int(settings.get("steps", args.max_steps)), args.max_steps)
-                seed = int(record.get("seed", 0))
-                asset_paths = record.get("asset_paths", {})
+    try:
+        for split_name, split in payload.get("splits", {}).items():
+            split_records = [record for record in records if str(record["sample_id"]).startswith(f"{split_name}-")]
+            if not split_records:
+                continue
+            pipe = load_pipeline(split["teacher_model"], runtime=runtime)
+            try:
+                for record in split_records:
+                    settings = record.get("generation_settings", {})
+                    width, height = parse_resolution(str(settings.get("resolution", "512x512")), args.max_side)
+                    steps = min(int(settings.get("steps", args.max_steps)), args.max_steps)
+                    seed = int(record.get("seed", 0))
+                    asset_paths = record.get("asset_paths", {})
 
-                if "source_prompt" in record and "edit_instruction" in record:
-                    source_prompt = str(record["source_prompt"])
-                    edit_instruction = str(record["edit_instruction"])
-                    source_image = render_image(pipe, source_prompt, steps, width, height, seed)
-                    edited_prompt = f"{source_prompt}. Edit request: {edit_instruction}"
-                    edited_image = render_image(pipe, edited_prompt, steps, width, height, seed + 1)
-                    source_path = Path(asset_paths["source_image"])
-                    edited_path = Path(asset_paths["edited_image"])
-                    source_path.parent.mkdir(parents=True, exist_ok=True)
-                    edited_path.parent.mkdir(parents=True, exist_ok=True)
-                    source_image.save(source_path)
-                    edited_image.save(edited_path)
-                else:
-                    prompt = str(record.get("prompt", ""))
-                    image = render_image(pipe, prompt, steps, width, height, seed)
-                    image_path = Path(asset_paths["image"])
-                    image_path.parent.mkdir(parents=True, exist_ok=True)
-                    image.save(image_path)
+                    if "source_prompt" in record and "edit_instruction" in record:
+                        source_prompt = str(record["source_prompt"])
+                        edit_instruction = str(record["edit_instruction"])
+                        source_image = render_image(pipe, runtime, source_prompt, steps, width, height, seed)
+                        edited_prompt = f"{source_prompt}. Edit request: {edit_instruction}"
+                        edited_image = render_image(pipe, runtime, edited_prompt, steps, width, height, seed + 1)
+                        source_path = Path(asset_paths["source_image"])
+                        edited_path = Path(asset_paths["edited_image"])
+                        source_path.parent.mkdir(parents=True, exist_ok=True)
+                        edited_path.parent.mkdir(parents=True, exist_ok=True)
+                        source_image.save(source_path)
+                        edited_image.save(edited_path)
+                    else:
+                        prompt = str(record.get("prompt", ""))
+                        image = render_image(pipe, runtime, prompt, steps, width, height, seed)
+                        image_path = Path(asset_paths["image"])
+                        image_path.parent.mkdir(parents=True, exist_ok=True)
+                        image.save(image_path)
 
-                metadata_path = Path(asset_paths["metadata"])
-                write_text(
-                    metadata_path,
-                    json.dumps(
-                        {
-                            "sample_id": record["sample_id"],
-                            "teacher_model": record["teacher_model"],
-                            "seed": seed,
-                            "steps": steps,
-                            "resolution": f"{width}x{height}",
-                            "generated_at": datetime.now(timezone.utc).isoformat(),
-                        },
-                        indent=2,
+                    metadata_path = Path(asset_paths["metadata"])
+                    write_text(
+                        metadata_path,
+                        json.dumps(
+                            {
+                                "sample_id": record["sample_id"],
+                                "teacher_model": record["teacher_model"],
+                                "seed": seed,
+                                "steps": steps,
+                                "resolution": f"{width}x{height}",
+                                "generated_at": datetime.now(timezone.utc).isoformat(),
+                            },
+                            indent=2,
+                        )
+                        + "\n",
                     )
-                    + "\n",
-                )
-                generated += 1
-        finally:
-            del pipe
-            torch.cuda.empty_cache()
+                    generated += 1
+            finally:
+                del pipe
+                torch.cuda.empty_cache()
+    except torch.OutOfMemoryError as exc:
+        raise SystemExit(
+            "Stage 2 diffusion OOM during synthetic dataset generation. "
+            f"{runtime.summary()}. No fallback/offload retry is configured."
+        ) from exc
 
     sentinel = Path(payload["output_root"]) / "dataset-ready.json"
     elapsed = time.perf_counter() - started

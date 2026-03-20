@@ -220,13 +220,13 @@ class Stage2Tests(unittest.TestCase):
         self.write_json_file(
             config_dir / "stage-2-run-profiles.yaml",
             {
-                "profiles": {
-                    "smoke": {
-                        "resource_profile": {"num_gpus": 1, "vram_target_gb": 80},
-                        "limits": {
-                            "core_candidate_id": "core-delta-w035",
-                            "dataset_samples_per_split": 2,
-                            "bridge_train_steps": 64,
+                    "profiles": {
+                        "smoke": {
+                            "resource_profile": {"num_gpus": 2, "vram_target_gb": 160},
+                            "limits": {
+                                "core_candidate_id": "core-delta-w035",
+                                "dataset_samples_per_split": 2,
+                                "bridge_train_steps": 64,
                             "bridge_batch_size": 1,
                             "eval_prompt_count": 6,
                         },
@@ -337,7 +337,7 @@ class Stage2Tests(unittest.TestCase):
         self.assertEqual(result["execution_enabled"], True)
         self.assertEqual(manifest["run_profile"], "smoke")
         self.assertEqual(manifest["execution_enabled"], True)
-        self.assertEqual(manifest["resource_profile"]["num_gpus"], 1)
+        self.assertEqual(manifest["resource_profile"]["num_gpus"], 2)
         self.assertEqual(len(manifest["core_delta_candidates"]), 1)
         self.assertEqual(manifest["core_delta_candidates"][0]["candidate_id"], "core-delta-w035")
         self.assertEqual(manifest["dataset"]["split_counts"]["generation_teacher"], 2)
@@ -404,6 +404,20 @@ class Stage2Tests(unittest.TestCase):
         status_payload = json.loads(run_status.read_text(encoding="utf-8"))
         self.assertEqual(status_payload["execution_policy"], "overwrite")
         self.assertEqual(status_payload["summary"]["failed_job"], None)
+        core_delta_cmd = status_payload["jobs"]["core_delta_sweep"]["commands"][0]
+        self.assertIn("--required-gpus", core_delta_cmd)
+        self.assertIn("--required-total-vram-gb", core_delta_cmd)
+        self.assertEqual(core_delta_cmd[core_delta_cmd.index("--required-gpus") + 1], "2")
+        self.assertEqual(core_delta_cmd[core_delta_cmd.index("--required-total-vram-gb") + 1], "160")
+        for job_name in ("core_smoke_eval", "teacher_dataset_generation", "experimental_smoke_eval"):
+            command = status_payload["jobs"][job_name]["command"]
+            self.assertIn("--required-gpus", command)
+            self.assertIn("--required-total-vram-gb", command)
+            self.assertEqual(command[command.index("--required-gpus") + 1], "2")
+            self.assertEqual(command[command.index("--required-total-vram-gb") + 1], "160")
+        bridge_command = status_payload["jobs"]["layered_bridge_train"]["command"]
+        self.assertNotIn("--required-gpus", bridge_command)
+        self.assertNotIn("--required-total-vram-gb", bridge_command)
         for job_name in (
             "core_delta_sweep",
             "core_smoke_eval",
