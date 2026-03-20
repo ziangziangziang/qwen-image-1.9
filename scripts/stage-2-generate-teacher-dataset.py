@@ -69,16 +69,52 @@ def render_image(
     width: int,
     height: int,
     seed: int,
+    input_image=None,
 ):
     generator = torch.Generator(device=runtime.primary_device).manual_seed(seed)
-    output = pipe(
-        prompt=prompt,
-        num_inference_steps=max(1, steps),
-        width=width,
-        height=height,
-        generator=generator,
-    )
+    call_kwargs = {
+        "prompt": prompt,
+        "num_inference_steps": max(1, steps),
+        "width": width,
+        "height": height,
+        "generator": generator,
+    }
+    if input_image is not None:
+        call_kwargs["image"] = input_image
+    output = pipe(**call_kwargs)
     return output.images[0]
+
+
+def render_edit_pair(
+    pipe: DiffusionPipeline,
+    runtime: Stage2DiffusionRuntimeConfig,
+    source_prompt: str,
+    edit_instruction: str,
+    steps: int,
+    width: int,
+    height: int,
+    seed: int,
+):
+    source_image = render_image(
+        pipe,
+        runtime,
+        source_prompt,
+        steps,
+        width,
+        height,
+        seed,
+    )
+    edited_image = render_image(
+        pipe,
+        runtime,
+        edit_instruction,
+        steps,
+        width,
+        height,
+        seed + 1,
+        input_image=source_image,
+    )
+    return source_image, edited_image
 
 
 if __name__ == "__main__":
@@ -118,9 +154,16 @@ if __name__ == "__main__":
                     if "source_prompt" in record and "edit_instruction" in record:
                         source_prompt = str(record["source_prompt"])
                         edit_instruction = str(record["edit_instruction"])
-                        source_image = render_image(pipe, runtime, source_prompt, steps, width, height, seed)
-                        edited_prompt = f"{source_prompt}. Edit request: {edit_instruction}"
-                        edited_image = render_image(pipe, runtime, edited_prompt, steps, width, height, seed + 1)
+                        source_image, edited_image = render_edit_pair(
+                            pipe,
+                            runtime,
+                            source_prompt,
+                            edit_instruction,
+                            steps,
+                            width,
+                            height,
+                            seed,
+                        )
                         source_path = Path(asset_paths["source_image"])
                         edited_path = Path(asset_paths["edited_image"])
                         source_path.parent.mkdir(parents=True, exist_ok=True)

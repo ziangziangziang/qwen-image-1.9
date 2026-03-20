@@ -54,7 +54,7 @@ def to_chw_tensor(image) -> torch.Tensor:
     return data.permute(2, 0, 1).contiguous() / 255.0
 
 
-def generate_image(
+def generate_pil_image(
     model_id: str,
     prompt: str,
     steps: int,
@@ -63,7 +63,8 @@ def generate_image(
     seed: int,
     required_gpus: int,
     required_total_vram_gb: float,
-) -> torch.Tensor:
+    input_image=None,
+):
     try:
         runtime = resolve_stage2_diffusion_runtime(
             required_gpus=required_gpus,
@@ -81,24 +82,62 @@ def generate_image(
         )
         pipe.set_progress_bar_config(disable=True)
         generator = torch.Generator(device=runtime.primary_device).manual_seed(seed)
-        output = pipe(
-            prompt=prompt,
-            num_inference_steps=max(1, steps),
-            width=width,
-            height=height,
-            generator=generator,
-        )
+        call_kwargs = {
+            "prompt": prompt,
+            "num_inference_steps": max(1, steps),
+            "width": width,
+            "height": height,
+            "generator": generator,
+        }
+        if input_image is not None:
+            call_kwargs["image"] = input_image
+        output = pipe(**call_kwargs)
         image = output.images[0]
-        tensor = to_chw_tensor(image)
         del output
         del pipe
         torch.cuda.empty_cache()
-        return tensor
+        return image
     except torch.OutOfMemoryError as exc:
+        generation_mode = "edit" if input_image is not None else "source"
         raise SystemExit(
-            "Stage 2 diffusion OOM while generating core delta artifact. "
+            f"Stage 2 diffusion OOM while generating core delta artifact ({generation_mode}). "
             f"{runtime.summary()}. No fallback/offload retry is configured."
         ) from exc
+
+
+def render_source_and_edit_images(
+    foundation_model: str,
+    edit_model: str,
+    edit_instruction: str,
+    steps: int,
+    width: int,
+    height: int,
+    seed: int,
+    required_gpus: int,
+    required_total_vram_gb: float,
+):
+    foundation_source_image = generate_pil_image(
+        model_id=foundation_model,
+        prompt=edit_instruction,
+        steps=steps,
+        width=width,
+        height=height,
+        seed=seed,
+        required_gpus=required_gpus,
+        required_total_vram_gb=required_total_vram_gb,
+    )
+    edited_image = generate_pil_image(
+        model_id=edit_model,
+        prompt=edit_instruction,
+        steps=steps,
+        width=width,
+        height=height,
+        seed=seed,
+        required_gpus=required_gpus,
+        required_total_vram_gb=required_total_vram_gb,
+        input_image=foundation_source_image,
+    )
+    return foundation_source_image, edited_image
 
 
 def write_artifact(
@@ -117,9 +156,10 @@ def write_artifact(
 ) -> dict[str, object]:
     path = Path(output_checkpoint)
     path.parent.mkdir(parents=True, exist_ok=True)
-    foundation_image = generate_image(
-        model_id=foundation_model,
-        prompt=prompt,
+    foundation_source_image, edited_image = render_source_and_edit_images(
+        foundation_model=foundation_model,
+        edit_model=edit_model,
+        edit_instruction=prompt,
         steps=steps,
         width=width,
         height=height,
@@ -127,16 +167,8 @@ def write_artifact(
         required_gpus=required_gpus,
         required_total_vram_gb=required_total_vram_gb,
     )
-    edit_image = generate_image(
-        model_id=edit_model,
-        prompt=prompt,
-        steps=steps,
-        width=width,
-        height=height,
-        seed=seed,
-        required_gpus=required_gpus,
-        required_total_vram_gb=required_total_vram_gb,
-    )
+    foundation_image = to_chw_tensor(foundation_source_image)
+    edit_image = to_chw_tensor(edited_image)
     delta = edit_image - foundation_image
     blended = torch.clamp(foundation_image + (blend_weight * delta), 0.0, 1.0)
     save_file(
