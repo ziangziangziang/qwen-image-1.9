@@ -1,6 +1,6 @@
 {
   "flatten_layered_rgba": "alpha-composite-to-rgb",
-  "generated_at": "2026-03-20T02:46:26.174931+00:00",
+  "generated_at": "2026-03-20T05:17:35.522797+00:00",
   "name": "stage-2-synthetic-teacher-dataset",
   "output_root": "stage-2/datasets/teacher-db",
   "planned_records": [
