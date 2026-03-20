@@ -7,6 +7,7 @@ import inspect
 import json
 from pathlib import Path
 import time
+from typing import Sequence
 
 import torch
 from qwen_image_19.stage_2_fusion.runtime import (
@@ -35,6 +36,11 @@ except Exception as exc:  # pragma: no cover
     raise SystemExit(
         "diffusers is required for true smoke dataset generation."
     ) from exc
+
+try:
+    from PIL import Image
+except Exception as exc:  # pragma: no cover
+    raise SystemExit("Pillow is required for Stage 2 dataset image processing.") from exc
 
 
 def write_text(path: Path, payload: str) -> None:
@@ -65,6 +71,67 @@ def load_pipeline(model_id: str, runtime: Stage2DiffusionRuntimeConfig) -> Diffu
     return pipe
 
 
+def add_supported_call_args(
+    pipe: DiffusionPipeline,
+    call_kwargs: dict[str, object],
+    optional_kwargs: dict[str, object],
+) -> None:
+    try:
+        params = inspect.signature(pipe.__call__).parameters
+    except (TypeError, ValueError):  # pragma: no cover
+        params = {}
+    accepts_var_kwargs = any(parameter.kind == inspect.Parameter.VAR_KEYWORD for parameter in params.values())
+    for key, value in optional_kwargs.items():
+        if value is None:
+            continue
+        if accepts_var_kwargs or key in params:
+            call_kwargs[key] = value
+
+
+def resolve_layered_resolution_bucket(width: int, height: int) -> int:
+    return 640 if max(width, height) <= 640 else 1024
+
+
+def flatten_layered_output_to_rgb(layers: Sequence[Image.Image]) -> Image.Image:
+    if not layers:
+        raise SystemExit("Layered pipeline returned no layers to flatten.")
+    composite: Image.Image | None = None
+    for index, layer in enumerate(layers):
+        if not isinstance(layer, Image.Image):
+            raise SystemExit(
+                "Layered pipeline returned unsupported layer payload at index "
+                f"{index}: {type(layer).__name__}"
+            )
+        current = layer.convert("RGBA")
+        if composite is None:
+            composite = current
+            continue
+        if current.size != composite.size:
+            raise SystemExit(
+                "Layered pipeline returned mismatched layer sizes while flattening. "
+                f"Expected {composite.size}, got {current.size}."
+            )
+        composite = Image.alpha_composite(composite, current)
+    return composite.convert("RGB")
+
+
+def normalize_layered_output_image(image_payload: object) -> Image.Image:
+    if isinstance(image_payload, Image.Image):
+        if image_payload.mode == "RGBA":
+            return Image.alpha_composite(
+                Image.new("RGBA", image_payload.size, (255, 255, 255, 255)),
+                image_payload,
+            ).convert("RGB")
+        return image_payload.convert("RGB")
+    if isinstance(image_payload, Sequence) and not isinstance(image_payload, (str, bytes, bytearray)):
+        if all(isinstance(layer, Image.Image) for layer in image_payload):
+            return flatten_layered_output_to_rgb(image_payload)
+    raise SystemExit(
+        "Layered pipeline returned unsupported image payload type: "
+        f"{type(image_payload).__name__}"
+    )
+
+
 def render_image(
     pipe: DiffusionPipeline,
     runtime: Stage2DiffusionRuntimeConfig,
@@ -88,21 +155,15 @@ def render_image(
     }
     if input_image is not None:
         call_kwargs["image"] = input_image
-    try:
-        params = inspect.signature(pipe.__call__).parameters
-    except (TypeError, ValueError):  # pragma: no cover
-        params = {}
-    accepts_var_kwargs = any(parameter.kind == inspect.Parameter.VAR_KEYWORD for parameter in params.values())
-    optional_kwargs = {
-        "negative_prompt": negative_prompt,
-        "true_cfg_scale": true_cfg_scale,
-        "guidance_scale": guidance_scale,
-    }
-    for key, value in optional_kwargs.items():
-        if value is None:
-            continue
-        if accepts_var_kwargs or key in params:
-            call_kwargs[key] = value
+    add_supported_call_args(
+        pipe,
+        call_kwargs,
+        {
+            "negative_prompt": negative_prompt,
+            "true_cfg_scale": true_cfg_scale,
+            "guidance_scale": guidance_scale,
+        },
+    )
     output = pipe(**call_kwargs)
     return output.images[0]
 
@@ -147,6 +208,85 @@ def render_edit_pair(
         guidance_scale=guidance_scale,
     )
     return source_image, edited_image
+
+
+def render_layered_image_from_source(
+    layered_pipe: DiffusionPipeline,
+    runtime: Stage2DiffusionRuntimeConfig,
+    source_image: Image.Image,
+    prompt: str,
+    steps: int,
+    width: int,
+    height: int,
+    seed: int,
+    negative_prompt: str | None = None,
+    true_cfg_scale: float | None = None,
+    guidance_scale: float | None = None,
+) -> Image.Image:
+    generator = torch.Generator(device=runtime.primary_device).manual_seed(seed)
+    call_kwargs: dict[str, object] = {
+        "image": source_image.convert("RGBA"),
+        "num_inference_steps": max(1, steps),
+        "generator": generator,
+        "resolution": resolve_layered_resolution_bucket(width, height),
+    }
+    add_supported_call_args(
+        layered_pipe,
+        call_kwargs,
+        {
+            "prompt": prompt,
+            "negative_prompt": negative_prompt,
+            "true_cfg_scale": true_cfg_scale,
+            "guidance_scale": guidance_scale,
+            "layers": 4,
+            "cfg_normalize": True,
+            "use_en_prompt": True,
+            "num_images_per_prompt": 1,
+        },
+    )
+    output = layered_pipe(**call_kwargs)
+    return normalize_layered_output_image(output.images[0])
+
+
+def render_layered_pair(
+    source_pipe: DiffusionPipeline,
+    layered_pipe: DiffusionPipeline,
+    runtime: Stage2DiffusionRuntimeConfig,
+    prompt: str,
+    steps: int,
+    width: int,
+    height: int,
+    seed: int,
+    negative_prompt: str | None = None,
+    true_cfg_scale: float | None = None,
+    guidance_scale: float | None = None,
+) -> tuple[Image.Image, Image.Image]:
+    source_image = render_image(
+        source_pipe,
+        runtime,
+        prompt,
+        steps,
+        width,
+        height,
+        seed,
+        negative_prompt=negative_prompt,
+        true_cfg_scale=true_cfg_scale,
+        guidance_scale=guidance_scale,
+    ).convert("RGB")
+    layered_image = render_layered_image_from_source(
+        layered_pipe=layered_pipe,
+        runtime=runtime,
+        source_image=source_image,
+        prompt=prompt,
+        steps=steps,
+        width=width,
+        height=height,
+        seed=seed + 1,
+        negative_prompt=negative_prompt,
+        true_cfg_scale=true_cfg_scale,
+        guidance_scale=guidance_scale,
+    )
+    return source_image, layered_image
 
 
 if __name__ == "__main__":
@@ -259,6 +399,89 @@ if __name__ == "__main__":
                         generated += 1
                 finally:
                     del edit_pipe
+                    torch.cuda.empty_cache()
+                continue
+
+            if split_name == "layered_teacher":
+                source_split = splits.get("generation_teacher")
+                source_model = source_split.get("teacher_model") if isinstance(source_split, dict) else None
+                if not source_model:
+                    raise SystemExit(
+                        "Layered-teacher split requires `generation_teacher.teacher_model` in dataset manifest."
+                    )
+                source_pipe = load_pipeline(source_model, runtime=runtime)
+                source_images: dict[str, Image.Image] = {}
+                try:
+                    for record in split_records:
+                        settings = record.get("generation_settings", {})
+                        width, height = parse_resolution(str(settings.get("resolution", "512x512")), args.max_side)
+                        steps = min(int(settings.get("steps", args.max_steps)), args.max_steps)
+                        seed = int(record.get("seed", 0))
+                        prompt = str(record.get("prompt", ""))
+                        source_image = render_image(
+                            source_pipe,
+                            runtime,
+                            prompt,
+                            steps,
+                            width,
+                            height,
+                            seed,
+                            negative_prompt=args.negative_prompt,
+                            true_cfg_scale=args.true_cfg_scale,
+                            guidance_scale=args.guidance_scale,
+                        ).convert("RGB")
+                        source_images[str(record["sample_id"])] = source_image
+                finally:
+                    del source_pipe
+                    torch.cuda.empty_cache()
+
+                layered_pipe = load_pipeline(split["teacher_model"], runtime=runtime)
+                try:
+                    for record in split_records:
+                        settings = record.get("generation_settings", {})
+                        width, height = parse_resolution(str(settings.get("resolution", "512x512")), args.max_side)
+                        steps = min(int(settings.get("steps", args.max_steps)), args.max_steps)
+                        seed = int(record.get("seed", 0))
+                        prompt = str(record.get("prompt", ""))
+                        asset_paths = record.get("asset_paths", {})
+                        source_image = source_images[str(record["sample_id"])]
+                        image = render_layered_image_from_source(
+                            layered_pipe=layered_pipe,
+                            runtime=runtime,
+                            source_image=source_image,
+                            prompt=prompt,
+                            steps=steps,
+                            width=width,
+                            height=height,
+                            seed=seed + 1,
+                            negative_prompt=args.negative_prompt,
+                            true_cfg_scale=args.true_cfg_scale,
+                            guidance_scale=args.guidance_scale,
+                        )
+                        image_path = Path(asset_paths["image"])
+                        image_path.parent.mkdir(parents=True, exist_ok=True)
+                        image.save(image_path)
+
+                        metadata_path = Path(asset_paths["metadata"])
+                        write_text(
+                            metadata_path,
+                            json.dumps(
+                                {
+                                    "sample_id": record["sample_id"],
+                                    "teacher_model": record["teacher_model"],
+                                    "seed": seed,
+                                    "steps": steps,
+                                    "resolution": f"{width}x{height}",
+                                    "layered_resolution_bucket": resolve_layered_resolution_bucket(width, height),
+                                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                                },
+                                indent=2,
+                            )
+                            + "\n",
+                        )
+                        generated += 1
+                finally:
+                    del layered_pipe
                     torch.cuda.empty_cache()
                 continue
 

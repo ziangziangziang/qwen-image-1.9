@@ -8,11 +8,17 @@ from unittest.mock import patch
 
 
 class FakePipe:
-    def __init__(self, model_id: str, load_kwargs: dict[str, object]) -> None:
+    def __init__(
+        self,
+        model_id: str,
+        load_kwargs: dict[str, object],
+        output_factory=None,
+    ) -> None:
         self.model_id = model_id
         self.load_kwargs = load_kwargs
         self.calls: list[dict[str, object]] = []
         self._counter = 0
+        self._output_factory = output_factory
 
     def set_progress_bar_config(self, disable: bool) -> None:
         _ = disable
@@ -20,7 +26,10 @@ class FakePipe:
     def __call__(self, **kwargs: object) -> SimpleNamespace:
         self.calls.append(kwargs)
         self._counter += 1
-        image = SimpleNamespace(tag=f"{self.model_id}-image-{self._counter}")
+        if self._output_factory is None:
+            image = SimpleNamespace(tag=f"{self.model_id}-image-{self._counter}")
+        else:
+            image = self._output_factory(self, kwargs)
         return SimpleNamespace(images=[image])
 
 
@@ -32,6 +41,19 @@ class FakeDiffusionPipeline:
         pipe = FakePipe(model_id, load_kwargs=dict(kwargs))
         cls.created.append(pipe)
         return pipe
+
+
+class FakeImage:
+    def __init__(self, mode: str, size: tuple[int, int], color=None) -> None:
+        self.mode = mode
+        self.size = size
+        self.color = color
+
+    def convert(self, mode: str):
+        return FakeImage(mode, self.size, self.color)
+
+    def save(self, _path) -> None:
+        return None
 
 
 def build_fake_torch_module() -> ModuleType:
@@ -57,6 +79,18 @@ def build_fake_torch_module() -> ModuleType:
     return module
 
 
+def build_fake_pil_modules() -> tuple[ModuleType, ModuleType]:
+    pil_module = ModuleType("PIL")
+    pil_image_module = ModuleType("PIL.Image")
+    pil_image_module.Image = FakeImage  # type: ignore[attr-defined]
+    pil_image_module.new = lambda mode, size, color=None: FakeImage(mode, size, color)  # type: ignore[attr-defined]
+    pil_image_module.alpha_composite = (  # type: ignore[attr-defined]
+        lambda left, right: FakeImage("RGBA", left.size, (left, right))
+    )
+    pil_module.Image = pil_image_module  # type: ignore[attr-defined]
+    return pil_module, pil_image_module
+
+
 def load_script_module(script_filename: str, module_name: str):
     root = Path(__file__).resolve().parent.parent
     script_path = root / "scripts" / script_filename
@@ -67,6 +101,7 @@ def load_script_module(script_filename: str, module_name: str):
     fake_safetensors_torch = ModuleType("safetensors.torch")
     fake_safetensors_torch.save_file = lambda *args, **kwargs: None  # type: ignore[attr-defined]
     fake_safetensors.torch = fake_safetensors_torch  # type: ignore[attr-defined]
+    fake_pil, fake_pil_image = build_fake_pil_modules()
     FakeDiffusionPipeline.created = []
 
     spec = importlib.util.spec_from_file_location(module_name, script_path)
@@ -80,6 +115,8 @@ def load_script_module(script_filename: str, module_name: str):
             "diffusers": fake_diffusers,
             "safetensors": fake_safetensors,
             "safetensors.torch": fake_safetensors_torch,
+            "PIL": fake_pil,
+            "PIL.Image": fake_pil_image,
         },
         clear=False,
     ):
@@ -164,6 +201,71 @@ class Stage2EditInvocationTests(unittest.TestCase):
         self.assertEqual(len(pipe.calls), 1)
         self.assertEqual(pipe.calls[0]["prompt"], "studio product photo of a camera")
         self.assertNotIn("image", pipe.calls[0])
+
+    def test_layered_pair_uses_image_conditioned_call_and_defaults(self) -> None:
+        module = load_script_module("stage-2-generate-teacher-dataset.py", "stage2_dataset_layered_pair_test")
+        runtime = SimpleNamespace(primary_device="cuda:0")
+        source_pipe = FakePipe(
+            "Qwen/Qwen-Image-2512",
+            load_kwargs={},
+            output_factory=lambda _pipe, _kwargs: module.Image.new("RGB", (8, 8), (20, 40, 60)),
+        )
+        layered_pipe = FakePipe(
+            "Qwen/Qwen-Image-Layered",
+            load_kwargs={},
+            output_factory=lambda _pipe, _kwargs: [
+                module.Image.new("RGBA", (8, 8), (255, 0, 0, 120)),
+                module.Image.new("RGBA", (8, 8), (0, 0, 255, 120)),
+            ],
+        )
+
+        source_image, layered_image = module.render_layered_pair(
+            source_pipe=source_pipe,
+            layered_pipe=layered_pipe,
+            runtime=runtime,
+            prompt="single toy robot centered on seamless paper backdrop",
+            steps=6,
+            width=512,
+            height=512,
+            seed=121,
+            negative_prompt="low quality",
+            true_cfg_scale=4.0,
+            guidance_scale=1.0,
+        )
+
+        self.assertEqual(source_image.mode, "RGB")
+        self.assertEqual(layered_image.mode, "RGB")
+        self.assertEqual(len(source_pipe.calls), 1)
+        self.assertEqual(source_pipe.calls[0]["prompt"], "single toy robot centered on seamless paper backdrop")
+        self.assertNotIn("image", source_pipe.calls[0])
+
+        self.assertEqual(len(layered_pipe.calls), 1)
+        layered_kwargs = layered_pipe.calls[0]
+        self.assertIn("image", layered_kwargs)
+        self.assertEqual(layered_kwargs["image"].mode, "RGBA")
+        self.assertEqual(layered_kwargs["resolution"], 640)
+        self.assertEqual(layered_kwargs["layers"], 4)
+        self.assertTrue(layered_kwargs["cfg_normalize"])
+        self.assertTrue(layered_kwargs["use_en_prompt"])
+        self.assertNotIn("width", layered_kwargs)
+        self.assertNotIn("height", layered_kwargs)
+
+    def test_flatten_layered_output_to_rgb(self) -> None:
+        module = load_script_module("stage-2-generate-teacher-dataset.py", "stage2_dataset_layered_flatten_test")
+        flattened = module.flatten_layered_output_to_rgb(
+            [
+                module.Image.new("RGBA", (4, 4), (255, 0, 0, 128)),
+                module.Image.new("RGBA", (4, 4), (0, 255, 0, 128)),
+            ]
+        )
+        self.assertIsInstance(flattened, module.Image.Image)
+        self.assertEqual(flattened.mode, "RGB")
+        self.assertEqual(flattened.size, (4, 4))
+
+    def test_layered_resolution_bucket_policy(self) -> None:
+        module = load_script_module("stage-2-generate-teacher-dataset.py", "stage2_layered_resolution_bucket_test")
+        self.assertEqual(module.resolve_layered_resolution_bucket(512, 512), 640)
+        self.assertEqual(module.resolve_layered_resolution_bucket(928, 640), 1024)
 
 
 if __name__ == "__main__":
