@@ -1,82 +1,97 @@
 Loading pipeline components...:   0%|          | 0/5 [00:00<?, ?it/s]
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s][A
-Loading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:06,  2.32s/it][A
-Loading checkpoint shards:  50%|█████     | 2/4 [00:04<00:04,  2.26s/it][A
-Loading checkpoint shards:  75%|███████▌  | 3/4 [00:06<00:02,  2.25s/it][A
-Loading checkpoint shards: 100%|██████████| 4/4 [00:07<00:00,  1.66s/it][ALoading checkpoint shards: 100%|██████████| 4/4 [00:07<00:00,  1.88s/it]
-Loading pipeline components...:  20%|██        | 1/5 [00:08<00:32,  8.07s/it]Loading pipeline components...:  40%|████      | 2/5 [00:08<00:10,  3.41s/it]
 Loading checkpoint shards:   0%|          | 0/9 [00:00<?, ?it/s][A
-Loading checkpoint shards:  11%|█         | 1/9 [00:02<00:18,  2.25s/it][A
-Loading checkpoint shards:  22%|██▏       | 2/9 [00:04<00:16,  2.31s/it][A
-Loading checkpoint shards:  33%|███▎      | 3/9 [00:06<00:13,  2.27s/it][A
-Loading checkpoint shards:  44%|████▍     | 4/9 [00:09<00:11,  2.28s/it][A
-Loading checkpoint shards:  56%|█████▌    | 5/9 [00:11<00:09,  2.29s/it][A
-Loading checkpoint shards:  67%|██████▋   | 6/9 [00:14<00:07,  2.39s/it][A
-Loading checkpoint shards:  78%|███████▊  | 7/9 [00:16<00:05,  2.55s/it][A
-Loading checkpoint shards:  89%|████████▉ | 8/9 [00:19<00:02,  2.51s/it][A
-Loading checkpoint shards: 100%|██████████| 9/9 [00:19<00:00,  1.92s/it][ALoading checkpoint shards: 100%|██████████| 9/9 [00:19<00:00,  2.21s/it]
-Loading pipeline components...:  80%|████████  | 4/5 [00:30<00:08,  8.27s/it]Loading pipeline components...: 100%|██████████| 5/5 [00:30<00:00,  5.77s/it]Loading pipeline components...: 100%|██████████| 5/5 [00:30<00:00,  6.15s/it]
+Loading checkpoint shards:  11%|█         | 1/9 [00:02<00:18,  2.26s/it][A
+Loading checkpoint shards:  22%|██▏       | 2/9 [00:05<00:18,  2.68s/it][A
+Loading checkpoint shards:  33%|███▎      | 3/9 [00:07<00:14,  2.46s/it][A
+Loading checkpoint shards:  44%|████▍     | 4/9 [00:09<00:11,  2.39s/it][A
+Loading checkpoint shards:  56%|█████▌    | 5/9 [00:12<00:10,  2.62s/it][A
+Loading checkpoint shards:  67%|██████▋   | 6/9 [00:15<00:08,  2.70s/it][A
+Loading checkpoint shards:  78%|███████▊  | 7/9 [00:17<00:05,  2.57s/it][A
+Loading checkpoint shards:  89%|████████▉ | 8/9 [00:20<00:02,  2.50s/it][A
+Loading checkpoint shards: 100%|██████████| 9/9 [00:20<00:00,  1.92s/it][ALoading checkpoint shards: 100%|██████████| 9/9 [00:20<00:00,  2.32s/it]
+Loading pipeline components...:  20%|██        | 1/5 [00:21<01:27, 21.78s/it]Loading pipeline components...:  60%|██████    | 3/5 [00:22<00:11,  5.78s/it]Loading pipeline components...:  80%|████████  | 4/5 [00:22<00:03,  3.84s/it]
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s][A
+Loading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:08,  2.75s/it][A
+Loading checkpoint shards:  50%|█████     | 2/4 [00:04<00:04,  2.45s/it][A
+Loading checkpoint shards:  75%|███████▌  | 3/4 [00:07<00:02,  2.37s/it][A
+Loading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  1.73s/it][ALoading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  2.00s/it]
+Loading pipeline components...: 100%|██████████| 5/5 [00:30<00:00,  5.28s/it]Loading pipeline components...: 100%|██████████| 5/5 [00:30<00:00,  6.10s/it]
 guidance_scale is passed as 1.0, but ignored since the model is not guidance-distilled.
 guidance_scale is passed as 1.0, but ignored since the model is not guidance-distilled.
 Loading pipeline components...:   0%|          | 0/6 [00:00<?, ?it/s]
+Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s][A
+Loading checkpoint shards:  20%|██        | 1/5 [00:04<00:19,  4.91s/it][A
+Loading checkpoint shards:  40%|████      | 2/5 [00:10<00:15,  5.23s/it][A
+Loading checkpoint shards:  60%|██████    | 3/5 [00:15<00:10,  5.30s/it][A
+Loading checkpoint shards:  80%|████████  | 4/5 [00:20<00:05,  5.12s/it][A
+Loading checkpoint shards: 100%|██████████| 5/5 [00:21<00:00,  3.44s/it][ALoading checkpoint shards: 100%|██████████| 5/5 [00:21<00:00,  4.21s/it]
+Loading pipeline components...:  17%|█▋        | 1/6 [00:21<01:48, 21.64s/it]Loading pipeline components...:  50%|█████     | 3/6 [00:22<00:17,  5.83s/it]Loading pipeline components...:  67%|██████▋   | 4/6 [00:22<00:07,  3.88s/it]Loading pipeline components...:  83%|████████▎ | 5/6 [00:22<00:02,  2.65s/it]
 Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s][A
 Loading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:06,  2.32s/it][A
-Loading checkpoint shards:  50%|█████     | 2/4 [00:04<00:04,  2.28s/it][A
-Loading checkpoint shards:  75%|███████▌  | 3/4 [00:06<00:02,  2.28s/it][A
-Loading checkpoint shards: 100%|██████████| 4/4 [00:07<00:00,  1.69s/it][ALoading checkpoint shards: 100%|██████████| 4/4 [00:07<00:00,  1.91s/it]
-Loading pipeline components...:  17%|█▋        | 1/6 [00:08<00:40,  8.15s/it]Loading pipeline components...:  33%|███▎      | 2/6 [00:08<00:13,  3.44s/it]
-Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s][A
-Loading checkpoint shards:  20%|██        | 1/5 [00:04<00:18,  4.59s/it][A
-Loading checkpoint shards:  40%|████      | 2/5 [00:09<00:14,  4.92s/it][A
-Loading checkpoint shards:  60%|██████    | 3/5 [00:14<00:10,  5.02s/it][A
-Loading checkpoint shards:  80%|████████  | 4/5 [00:21<00:05,  5.48s/it][A
-Loading checkpoint shards: 100%|██████████| 5/5 [00:21<00:00,  3.67s/it][ALoading checkpoint shards: 100%|██████████| 5/5 [00:21<00:00,  4.31s/it]
-Loading pipeline components...:  67%|██████▋   | 4/6 [00:30<00:16,  8.22s/it]Loading pipeline components...:  83%|████████▎ | 5/6 [00:30<00:05,  5.84s/it]Loading pipeline components...: 100%|██████████| 6/6 [00:31<00:00,  4.10s/it]Loading pipeline components...: 100%|██████████| 6/6 [00:31<00:00,  5.19s/it]
+Loading checkpoint shards:  50%|█████     | 2/4 [00:04<00:04,  2.39s/it][A
+Loading checkpoint shards:  75%|███████▌  | 3/4 [00:07<00:02,  2.43s/it][A
+Loading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  1.80s/it][ALoading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  2.02s/it]
+Loading pipeline components...: 100%|██████████| 6/6 [00:30<00:00,  4.45s/it]Loading pipeline components...: 100%|██████████| 6/6 [00:30<00:00,  5.14s/it]
 guidance_scale is passed as 1.0, but ignored since the model is not guidance-distilled.
 guidance_scale is passed as 1.0, but ignored since the model is not guidance-distilled.
 Loading pipeline components...:   0%|          | 0/5 [00:00<?, ?it/s]
+Loading checkpoint shards:   0%|          | 0/9 [00:00<?, ?it/s][A
+Loading checkpoint shards:  11%|█         | 1/9 [00:02<00:18,  2.25s/it][A
+Loading checkpoint shards:  22%|██▏       | 2/9 [00:04<00:16,  2.30s/it][A
+Loading checkpoint shards:  33%|███▎      | 3/9 [00:06<00:13,  2.25s/it][A
+Loading checkpoint shards:  44%|████▍     | 4/9 [00:09<00:11,  2.26s/it][A
+Loading checkpoint shards:  56%|█████▌    | 5/9 [00:11<00:08,  2.25s/it][A
+Loading checkpoint shards:  67%|██████▋   | 6/9 [00:13<00:06,  2.24s/it][A
+Loading checkpoint shards:  78%|███████▊  | 7/9 [00:15<00:04,  2.23s/it][A
+Loading checkpoint shards:  89%|████████▉ | 8/9 [00:17<00:02,  2.23s/it][A
+Loading checkpoint shards: 100%|██████████| 9/9 [00:18<00:00,  1.72s/it][ALoading checkpoint shards: 100%|██████████| 9/9 [00:18<00:00,  2.06s/it]
+Loading pipeline components...:  20%|██        | 1/5 [00:19<01:16, 19.17s/it]Loading pipeline components...:  60%|██████    | 3/5 [00:19<00:10,  5.04s/it]
 Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s][A
-Loading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:06,  2.30s/it][A
+Loading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:06,  2.32s/it][A
 Loading checkpoint shards:  50%|█████     | 2/4 [00:04<00:04,  2.27s/it][A
 Loading checkpoint shards:  75%|███████▌  | 3/4 [00:06<00:02,  2.26s/it][A
 Loading checkpoint shards: 100%|██████████| 4/4 [00:07<00:00,  1.67s/it][ALoading checkpoint shards: 100%|██████████| 4/4 [00:07<00:00,  1.89s/it]
-Loading pipeline components...:  20%|██        | 1/5 [00:07<00:31,  7.83s/it]Loading pipeline components...:  40%|████      | 2/5 [00:07<00:09,  3.31s/it]
+Loading pipeline components...: 100%|██████████| 5/5 [00:27<00:00,  4.48s/it]Loading pipeline components...: 100%|██████████| 5/5 [00:27<00:00,  5.45s/it]
+guidance_scale is passed as 1.0, but ignored since the model is not guidance-distilled.
+guidance_scale is passed as 1.0, but ignored since the model is not guidance-distilled.
+Loading pipeline components...:   0%|          | 0/5 [00:00<?, ?it/s]
 Loading checkpoint shards:   0%|          | 0/9 [00:00<?, ?it/s][A
-Loading checkpoint shards:  11%|█         | 1/9 [00:02<00:18,  2.34s/it][A
-Loading checkpoint shards:  22%|██▏       | 2/9 [00:04<00:16,  2.33s/it][A
-Loading checkpoint shards:  33%|███▎      | 3/9 [00:06<00:13,  2.27s/it][A
-Loading checkpoint shards:  44%|████▍     | 4/9 [00:09<00:11,  2.27s/it][A
-Loading checkpoint shards:  56%|█████▌    | 5/9 [00:11<00:09,  2.33s/it][A
-Loading checkpoint shards:  67%|██████▋   | 6/9 [00:13<00:07,  2.35s/it][A
-Loading checkpoint shards:  78%|███████▊  | 7/9 [00:16<00:04,  2.35s/it][A
-Loading checkpoint shards:  89%|████████▉ | 8/9 [00:18<00:02,  2.36s/it][A
-Loading checkpoint shards: 100%|██████████| 9/9 [00:19<00:00,  1.81s/it][ALoading checkpoint shards: 100%|██████████| 9/9 [00:19<00:00,  2.14s/it]
-Loading pipeline components...:  80%|████████  | 4/5 [00:27<00:07,  7.46s/it]Loading pipeline components...: 100%|██████████| 5/5 [00:28<00:00,  5.32s/it]Loading pipeline components...: 100%|██████████| 5/5 [00:28<00:00,  5.67s/it]
+Loading checkpoint shards:  11%|█         | 1/9 [00:02<00:18,  2.25s/it][A
+Loading checkpoint shards:  22%|██▏       | 2/9 [00:04<00:16,  2.31s/it][A
+Loading checkpoint shards:  33%|███▎      | 3/9 [00:06<00:13,  2.26s/it][A
+Loading checkpoint shards:  44%|████▍     | 4/9 [00:09<00:11,  2.26s/it][A
+Loading checkpoint shards:  56%|█████▌    | 5/9 [00:11<00:08,  2.25s/it][A
+Loading checkpoint shards:  67%|██████▋   | 6/9 [00:13<00:06,  2.25s/it][A
+Loading checkpoint shards:  78%|███████▊  | 7/9 [00:15<00:04,  2.23s/it][A
+Loading checkpoint shards:  89%|████████▉ | 8/9 [00:17<00:02,  2.23s/it][A
+Loading checkpoint shards: 100%|██████████| 9/9 [00:18<00:00,  1.73s/it][ALoading checkpoint shards: 100%|██████████| 9/9 [00:18<00:00,  2.06s/it]
+Loading pipeline components...:  20%|██        | 1/5 [00:19<01:16, 19.13s/it]Loading pipeline components...:  60%|██████    | 3/5 [00:19<00:10,  5.05s/it]Loading pipeline components...:  80%|████████  | 4/5 [00:19<00:03,  3.35s/it]
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s][A
+Loading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:06,  2.33s/it][A
+Loading checkpoint shards:  50%|█████     | 2/4 [00:04<00:04,  2.27s/it][A
+Loading checkpoint shards:  75%|███████▌  | 3/4 [00:06<00:02,  2.26s/it][A
+Loading checkpoint shards: 100%|██████████| 4/4 [00:07<00:00,  1.67s/it][ALoading checkpoint shards: 100%|██████████| 4/4 [00:07<00:00,  1.89s/it]
+Loading pipeline components...: 100%|██████████| 5/5 [00:27<00:00,  4.86s/it]Loading pipeline components...: 100%|██████████| 5/5 [00:27<00:00,  5.48s/it]
 guidance_scale is passed as 1.0, but ignored since the model is not guidance-distilled.
 guidance_scale is passed as 1.0, but ignored since the model is not guidance-distilled.
 Loading pipeline components...:   0%|          | 0/6 [00:00<?, ?it/s]
+Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s][A
+Loading checkpoint shards:  20%|██        | 1/5 [00:05<00:20,  5.10s/it][A
+Loading checkpoint shards:  40%|████      | 2/5 [00:10<00:16,  5.50s/it][A
+Loading checkpoint shards:  60%|██████    | 3/5 [00:16<00:10,  5.38s/it][A
+Loading checkpoint shards:  80%|████████  | 4/5 [00:22<00:05,  5.67s/it][A
+Loading checkpoint shards: 100%|██████████| 5/5 [00:22<00:00,  3.85s/it][ALoading checkpoint shards: 100%|██████████| 5/5 [00:22<00:00,  4.57s/it]
+Loading pipeline components...:  17%|█▋        | 1/6 [00:23<01:57, 23.43s/it]The image processor of type `Qwen2VLImageProcessor` is now loaded as a fast processor by default, even if the model checkpoint was saved with a slow processor. This is a breaking change and may produce slightly different outputs. To continue using the slow processor, instantiate this class with `use_fast=False`. Note that this behavior will be extended to all models in a future release.
+Loading pipeline components...:  50%|█████     | 3/6 [00:23<00:18,  6.28s/it]Loading pipeline components...:  67%|██████▋   | 4/6 [00:24<00:08,  4.20s/it]Loading pipeline components...:  83%|████████▎ | 5/6 [00:24<00:02,  2.86s/it]
 Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s][A
 Loading checkpoint shards:  25%|██▌       | 1/4 [00:03<00:09,  3.02s/it][A
-Loading checkpoint shards:  50%|█████     | 2/4 [00:06<00:06,  3.03s/it][A
-Loading checkpoint shards:  75%|███████▌  | 3/4 [00:08<00:02,  2.94s/it][A
-Loading checkpoint shards: 100%|██████████| 4/4 [00:09<00:00,  2.18s/it][ALoading checkpoint shards: 100%|██████████| 4/4 [00:09<00:00,  2.48s/it]
-Loading pipeline components...:  17%|█▋        | 1/6 [00:10<00:50, 10.19s/it]Loading pipeline components...:  33%|███▎      | 2/6 [00:10<00:17,  4.28s/it]
-Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s][A
-Loading checkpoint shards:  20%|██        | 1/5 [00:06<00:24,  6.02s/it][A
-Loading checkpoint shards:  40%|████      | 2/5 [00:12<00:18,  6.07s/it][A
-Loading checkpoint shards:  60%|██████    | 3/5 [00:18<00:12,  6.25s/it][A
-Loading checkpoint shards:  80%|████████  | 4/5 [00:25<00:06,  6.51s/it][A
-Loading checkpoint shards: 100%|██████████| 5/5 [00:26<00:00,  4.50s/it][ALoading checkpoint shards: 100%|██████████| 5/5 [00:26<00:00,  5.29s/it]
-Loading pipeline components...:  67%|██████▋   | 4/6 [00:37<00:20, 10.08s/it]The image processor of type `Qwen2VLImageProcessor` is now loaded as a fast processor by default, even if the model checkpoint was saved with a slow processor. This is a breaking change and may produce slightly different outputs. To continue using the slow processor, instantiate this class with `use_fast=False`. Note that this behavior will be extended to all models in a future release.
-Loading pipeline components...:  83%|████████▎ | 5/6 [00:38<00:07,  7.15s/it]Loading pipeline components...: 100%|██████████| 6/6 [00:38<00:00,  5.11s/it]Loading pipeline components...: 100%|██████████| 6/6 [00:38<00:00,  6.42s/it]
-Traceback (most recent call last):
-  File "/lustre_scratch/user_scratch/zziang/qwen-image-1.9/scripts/stage-2-generate-teacher-dataset.py", line 275, in <module>
-    image = render_image(
-            ^^^^^^^^^^^^^
-  File "/lustre_scratch/user_scratch/zziang/qwen-image-1.9/scripts/stage-2-generate-teacher-dataset.py", line 106, in render_image
-    output = pipe(**call_kwargs)
-             ^^^^^^^^^^^^^^^^^^^
-  File "/lustre_scratch/user_scratch/zziang/conda-env/llm-compress/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
-    return func(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^
-TypeError: QwenImageLayeredPipeline.__call__() got an unexpected keyword argument 'width'
+Loading checkpoint shards:  50%|█████     | 2/4 [00:05<00:05,  2.72s/it][A
+Loading checkpoint shards:  75%|███████▌  | 3/4 [00:07<00:02,  2.60s/it][A
+Loading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  1.90s/it][ALoading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  2.20s/it]
+Loading pipeline components...: 100%|██████████| 6/6 [00:34<00:00,  5.06s/it]Loading pipeline components...: 100%|██████████| 6/6 [00:34<00:00,  5.69s/it]
+guidance_scale is passed as 1.0, but ignored since the model is not guidance-distilled.
+guidance_scale is passed as 1.0, but ignored since the model is not guidance-distilled.
+{
+  "status": "ok",
+  "output_root": "stage-2/datasets/teacher-db"
+}

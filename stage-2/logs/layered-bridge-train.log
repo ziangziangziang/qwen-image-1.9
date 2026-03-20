@@ -1,0 +1,6 @@
+{
+  "status": "ok",
+  "output_adapter": "stage-2/artifacts/experimental/layered-bridge-adapter.safetensors",
+  "output_checkpoint": "stage-2/artifacts/experimental/qwen-image-1.9-layered-bridge-bf16.safetensors",
+  "metrics_output": "stage-2/metrics/layered-bridge-train.json"
+}
