@@ -1,0 +1,28 @@
+Loading pipeline components...:   0%|          | 0/5 [00:00<?, ?it/s]Loading pipeline components...:  40%|████      | 2/5 [00:00<00:00, 12.78it/s]
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s][A
+Loading checkpoint shards:  25%|██▌       | 1/4 [00:03<00:09,  3.18s/it][A
+Loading checkpoint shards:  50%|█████     | 2/4 [00:05<00:05,  2.63s/it][A
+Loading checkpoint shards:  75%|███████▌  | 3/4 [00:07<00:02,  2.45s/it][A
+Loading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  1.79s/it][ALoading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  2.11s/it]
+Loading pipeline components...:  80%|████████  | 4/5 [00:09<00:02,  2.86s/it]
+Loading checkpoint shards:   0%|          | 0/9 [00:00<?, ?it/s][A
+Loading checkpoint shards:  11%|█         | 1/9 [00:02<00:17,  2.24s/it][A
+Loading checkpoint shards:  22%|██▏       | 2/9 [00:04<00:15,  2.28s/it][A
+Loading checkpoint shards:  33%|███▎      | 3/9 [00:06<00:13,  2.24s/it][A
+Loading checkpoint shards:  44%|████▍     | 4/9 [00:09<00:11,  2.32s/it][A
+Loading checkpoint shards:  56%|█████▌    | 5/9 [00:11<00:09,  2.29s/it][A
+Loading checkpoint shards:  67%|██████▋   | 6/9 [00:13<00:06,  2.29s/it][A
+Loading checkpoint shards:  78%|███████▊  | 7/9 [00:16<00:04,  2.37s/it][A
+Loading checkpoint shards:  89%|████████▉ | 8/9 [00:19<00:02,  2.55s/it][A
+Loading checkpoint shards: 100%|██████████| 9/9 [00:19<00:00,  1.95s/it][ALoading checkpoint shards: 100%|██████████| 9/9 [00:19<00:00,  2.20s/it]
+Loading pipeline components...: 100%|██████████| 5/5 [00:30<00:00,  8.15s/it]Loading pipeline components...: 100%|██████████| 5/5 [00:30<00:00,  6.10s/it]
+true_cfg_scale is passed as 4.0, but classifier-free guidance is not enabled since no negative_prompt is provided.
+true_cfg_scale is passed as 4.0, but classifier-free guidance is not enabled since no negative_prompt is provided.
+true_cfg_scale is passed as 4.0, but classifier-free guidance is not enabled since no negative_prompt is provided.
+true_cfg_scale is passed as 4.0, but classifier-free guidance is not enabled since no negative_prompt is provided.
+true_cfg_scale is passed as 4.0, but classifier-free guidance is not enabled since no negative_prompt is provided.
+true_cfg_scale is passed as 4.0, but classifier-free guidance is not enabled since no negative_prompt is provided.
+{
+  "status": "ok",
+  "output": "stage-2/evals/core-candidates/core-delta-w035/smoke-summary.json"
+}

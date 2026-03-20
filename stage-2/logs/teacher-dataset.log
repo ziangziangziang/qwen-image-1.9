@@ -1,0 +1,31 @@
+Loading pipeline components...:   0%|          | 0/6 [00:00<?, ?it/s]Loading pipeline components...:  17%|█▋        | 1/6 [00:00<00:02,  1.67it/s]
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s][A
+Loading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:06,  2.32s/it][A
+Loading checkpoint shards:  50%|█████     | 2/4 [00:04<00:04,  2.27s/it][A
+Loading checkpoint shards:  75%|███████▌  | 3/4 [00:06<00:02,  2.26s/it][A
+Loading checkpoint shards: 100%|██████████| 4/4 [00:07<00:00,  1.66s/it][ALoading checkpoint shards: 100%|██████████| 4/4 [00:07<00:00,  1.89s/it]
+Loading pipeline components...:  33%|███▎      | 2/6 [00:08<00:19,  4.98s/it]
+Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s][A
+Loading checkpoint shards:  20%|██        | 1/5 [00:04<00:17,  4.48s/it][A
+Loading checkpoint shards:  40%|████      | 2/5 [00:09<00:14,  4.86s/it][A
+Loading checkpoint shards:  60%|██████    | 3/5 [00:14<00:09,  4.74s/it][A
+Loading checkpoint shards:  80%|████████  | 4/5 [00:19<00:04,  4.92s/it][A
+Loading checkpoint shards: 100%|██████████| 5/5 [00:19<00:00,  3.35s/it][ALoading checkpoint shards: 100%|██████████| 5/5 [00:19<00:00,  4.00s/it]
+Loading pipeline components...:  50%|█████     | 3/6 [00:29<00:36, 12.17s/it]Loading pipeline components...:  83%|████████▎ | 5/6 [00:29<00:05,  5.45s/it]Loading pipeline components...: 100%|██████████| 6/6 [00:30<00:00,  3.93s/it]Loading pipeline components...: 100%|██████████| 6/6 [00:30<00:00,  5.03s/it]
+Traceback (most recent call last):
+  File "/lustre_scratch/user_scratch/zziang/qwen-image-1.9/scripts/stage-2-generate-teacher-dataset.py", line 157, in <module>
+    source_image, edited_image = render_edit_pair(
+                                 ^^^^^^^^^^^^^^^^^
+  File "/lustre_scratch/user_scratch/zziang/qwen-image-1.9/scripts/stage-2-generate-teacher-dataset.py", line 98, in render_edit_pair
+    source_image = render_image(
+                   ^^^^^^^^^^^^^
+  File "/lustre_scratch/user_scratch/zziang/qwen-image-1.9/scripts/stage-2-generate-teacher-dataset.py", line 84, in render_image
+    output = pipe(**call_kwargs)
+             ^^^^^^^^^^^^^^^^^^^
+  File "/lustre_scratch/user_scratch/zziang/conda-env/llm-compress/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/lustre_scratch/user_scratch/zziang/conda-env/llm-compress/lib/python3.12/site-packages/diffusers/pipelines/qwenimage/pipeline_qwenimage_edit_plus.py", line 633, in __call__
+    image_size = image[-1].size if isinstance(image, list) else image.size
+                                                                ^^^^^^^^^^
+AttributeError: 'NoneType' object has no attribute 'size'

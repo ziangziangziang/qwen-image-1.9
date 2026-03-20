@@ -32,27 +32,94 @@
           "160"
         ]
       ],
-      "duration_seconds": 108.003,
-      "ended_at": "2026-03-20T05:19:23.542709+00:00",
-      "exit_code": 1,
-      "failure_reason": "core sweep candidate command failed with exit code 1",
-      "missing_outputs": [
-        "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors"
-      ],
+      "duration_seconds": 84.2647,
+      "ended_at": "2026-03-20T05:37:27.217478+00:00",
+      "exit_code": 0,
+      "failure_reason": null,
+      "missing_outputs": [],
       "outputs": [
         "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors"
       ],
-      "started_at": "2026-03-20T05:17:35.538484+00:00",
-      "status": "failed",
+      "started_at": "2026-03-20T05:36:02.933525+00:00",
+      "status": "succeeded",
       "stdout_stderr_log": "stage-2/logs/core-delta-sweep.log",
       "workdir": "stage-2/jobs/core-delta-sweep"
+    },
+    "core_smoke_eval": {
+      "command": [
+        "python3",
+        "/lustre_scratch/user_scratch/zziang/qwen-image-1.9/scripts/stage-2-compose-bf16-checkpoint.py",
+        "--execute",
+        "--task",
+        "core-smoke",
+        "--model-ref",
+        "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
+        "--model-id",
+        "Qwen/Qwen-Image-2512",
+        "--output",
+        "stage-2/evals/core-candidates/core-delta-w035/smoke-summary.json",
+        "--num-prompts",
+        "6",
+        "--steps",
+        "6",
+        "--width",
+        "512",
+        "--height",
+        "512",
+        "--required-gpus",
+        "2",
+        "--required-total-vram-gb",
+        "160"
+      ],
+      "duration_seconds": 49.7909,
+      "ended_at": "2026-03-20T05:38:17.017332+00:00",
+      "exit_code": 0,
+      "missing_outputs": [],
+      "outputs": [
+        "stage-2/evals/core-candidates/core-delta-w035/smoke-summary.json"
+      ],
+      "started_at": "2026-03-20T05:37:27.219437+00:00",
+      "status": "succeeded",
+      "stdout_stderr_log": "stage-2/logs/core-smoke-eval.log",
+      "workdir": "stage-2/jobs/core-smoke-eval"
+    },
+    "teacher_dataset_generation": {
+      "command": [
+        "python3",
+        "/lustre_scratch/user_scratch/zziang/qwen-image-1.9/scripts/stage-2-generate-teacher-dataset.py",
+        "--execute",
+        "--manifest",
+        "reports/stage-2/dataset-manifest.json",
+        "--max-steps",
+        "6",
+        "--max-side",
+        "512",
+        "--required-gpus",
+        "2",
+        "--required-total-vram-gb",
+        "160"
+      ],
+      "duration_seconds": 42.0686,
+      "ended_at": "2026-03-20T05:38:59.091402+00:00",
+      "exit_code": 1,
+      "failure_reason": "Job returned exit code 1.",
+      "missing_outputs": [
+        "stage-2/datasets/teacher-db"
+      ],
+      "outputs": [
+        "stage-2/datasets/teacher-db"
+      ],
+      "started_at": "2026-03-20T05:38:17.019512+00:00",
+      "status": "failed",
+      "stdout_stderr_log": "stage-2/logs/teacher-dataset.log",
+      "workdir": "stage-2/jobs/teacher-dataset"
     }
   },
   "run_profile": "smoke",
   "stage": "stage2",
   "summary": {
-    "failed_job": "core_delta_sweep",
-    "resume_hint": "Re-run `q19 stage2 fuse --run-profile smoke --execute --resume` after fixing `core_delta_sweep`."
+    "failed_job": "teacher_dataset_generation",
+    "resume_hint": "Re-run `q19 stage2 fuse --run-profile smoke --execute --resume` after fixing `teacher_dataset_generation`."
   },
-  "updated_at": "2026-03-20T05:17:35.536643+00:00"
+  "updated_at": "2026-03-20T05:36:02.932903+00:00"
 }

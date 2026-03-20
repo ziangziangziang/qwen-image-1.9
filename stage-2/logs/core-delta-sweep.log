@@ -1,50 +1,53 @@
 Loading pipeline components...:   0%|          | 0/5 [00:00<?, ?it/s]
+Loading checkpoint shards:   0%|          | 0/9 [00:00<?, ?it/s][A
+Loading checkpoint shards:  11%|█         | 1/9 [00:02<00:19,  2.50s/it][A
+Loading checkpoint shards:  22%|██▏       | 2/9 [00:05<00:17,  2.53s/it][A
+Loading checkpoint shards:  33%|███▎      | 3/9 [00:07<00:14,  2.48s/it][A
+Loading checkpoint shards:  44%|████▍     | 4/9 [00:10<00:13,  2.71s/it][A
+Loading checkpoint shards:  56%|█████▌    | 5/9 [00:13<00:10,  2.63s/it][A
+Loading checkpoint shards:  67%|██████▋   | 6/9 [00:15<00:07,  2.59s/it][A
+Loading checkpoint shards:  78%|███████▊  | 7/9 [00:18<00:05,  2.57s/it][A
+Loading checkpoint shards:  89%|████████▉ | 8/9 [00:20<00:02,  2.63s/it][A
+Loading checkpoint shards: 100%|██████████| 9/9 [00:22<00:00,  2.19s/it][ALoading checkpoint shards: 100%|██████████| 9/9 [00:22<00:00,  2.45s/it]
+Loading pipeline components...:  20%|██        | 1/5 [00:22<01:31, 22.94s/it]Loading pipeline components...:  60%|██████    | 3/5 [00:23<00:12,  6.01s/it]
 Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s][A
 Loading checkpoint shards:  25%|██▌       | 1/4 [00:03<00:09,  3.01s/it][A
-Loading checkpoint shards:  50%|█████     | 2/4 [00:05<00:05,  2.98s/it][A
-Loading checkpoint shards:  75%|███████▌  | 3/4 [00:08<00:02,  2.87s/it][A
-Loading checkpoint shards: 100%|██████████| 4/4 [00:09<00:00,  2.12s/it][ALoading checkpoint shards: 100%|██████████| 4/4 [00:09<00:00,  2.42s/it]
-Loading pipeline components...:  20%|██        | 1/5 [00:10<00:41, 10.34s/it]
-Loading checkpoint shards:   0%|          | 0/9 [00:00<?, ?it/s][A
-Loading checkpoint shards:  11%|█         | 1/9 [00:02<00:23,  2.99s/it][A
-Loading checkpoint shards:  22%|██▏       | 2/9 [00:05<00:20,  2.93s/it][A
-Loading checkpoint shards:  33%|███▎      | 3/9 [00:08<00:17,  2.87s/it][A
-Loading checkpoint shards:  44%|████▍     | 4/9 [00:11<00:14,  2.90s/it][A
-Loading checkpoint shards:  56%|█████▌    | 5/9 [00:14<00:11,  2.94s/it][A
-Loading checkpoint shards:  67%|██████▋   | 6/9 [00:17<00:08,  2.96s/it][A
-Loading checkpoint shards:  78%|███████▊  | 7/9 [00:21<00:06,  3.22s/it][A
-Loading checkpoint shards:  89%|████████▉ | 8/9 [00:25<00:03,  3.51s/it][A
-Loading checkpoint shards: 100%|██████████| 9/9 [00:26<00:00,  2.71s/it][ALoading checkpoint shards: 100%|██████████| 9/9 [00:26<00:00,  2.94s/it]
-Loading pipeline components...:  60%|██████    | 3/5 [00:37<00:25, 12.76s/it]Loading pipeline components...:  80%|████████  | 4/5 [00:37<00:08,  8.40s/it]Loading pipeline components...: 100%|██████████| 5/5 [00:38<00:00,  5.76s/it]Loading pipeline components...: 100%|██████████| 5/5 [00:38<00:00,  7.62s/it]
+Loading checkpoint shards:  50%|█████     | 2/4 [00:05<00:05,  2.68s/it][A
+Loading checkpoint shards:  75%|███████▌  | 3/4 [00:07<00:02,  2.58s/it][A
+Loading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  1.89s/it][ALoading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  2.19s/it]
+Loading pipeline components...: 100%|██████████| 5/5 [00:32<00:00,  5.36s/it]Loading pipeline components...: 100%|██████████| 5/5 [00:32<00:00,  6.52s/it]
 true_cfg_scale is passed as 4.0, but classifier-free guidance is not enabled since no negative_prompt is provided.
-Loading pipeline components...:   0%|          | 0/6 [00:00<?, ?it/s]
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s][A
-Loading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:08,  2.93s/it][A
-Loading checkpoint shards:  50%|█████     | 2/4 [00:05<00:05,  2.93s/it][A
-Loading checkpoint shards:  75%|███████▌  | 3/4 [00:08<00:02,  2.82s/it][A
-Loading checkpoint shards: 100%|██████████| 4/4 [00:09<00:00,  2.10s/it][ALoading checkpoint shards: 100%|██████████| 4/4 [00:09<00:00,  2.39s/it]
-Loading pipeline components...:  17%|█▋        | 1/6 [00:09<00:49,  9.83s/it]
+Loading pipeline components...:   0%|          | 0/6 [00:00<?, ?it/s]Loading pipeline components...:  17%|█▋        | 1/6 [00:00<00:02,  1.76it/s]
 Loading checkpoint shards:   0%|          | 0/5 [00:00<?, ?it/s][A
-Loading checkpoint shards:  20%|██        | 1/5 [00:05<00:22,  5.63s/it][A
-Loading checkpoint shards:  40%|████      | 2/5 [00:11<00:17,  5.80s/it][A
-Loading checkpoint shards:  60%|██████    | 3/5 [00:17<00:11,  5.97s/it][A
-Loading checkpoint shards:  80%|████████  | 4/5 [00:24<00:06,  6.18s/it][A
-Loading checkpoint shards: 100%|██████████| 5/5 [00:25<00:00,  4.33s/it][ALoading checkpoint shards: 100%|██████████| 5/5 [00:25<00:00,  5.05s/it]
-Loading pipeline components...:  50%|█████     | 3/6 [00:35<00:36, 12.11s/it]Loading pipeline components...:  67%|██████▋   | 4/6 [00:35<00:15,  7.98s/it]Loading pipeline components...:  83%|████████▎ | 5/6 [00:36<00:05,  5.53s/it]Loading pipeline components...: 100%|██████████| 6/6 [00:36<00:00,  3.86s/it]Loading pipeline components...: 100%|██████████| 6/6 [00:36<00:00,  6.12s/it]
-Traceback (most recent call last):
-  File "/lustre_scratch/user_scratch/zziang/qwen-image-1.9/scripts/stage-2-build-edit-delta.py", line 186, in <module>
-    artifact = write_artifact(
-               ^^^^^^^^^^^^^^^
-  File "/lustre_scratch/user_scratch/zziang/qwen-image-1.9/scripts/stage-2-build-edit-delta.py", line 130, in write_artifact
-    edit_image = generate_image(
-                 ^^^^^^^^^^^^^^^
-  File "/lustre_scratch/user_scratch/zziang/qwen-image-1.9/scripts/stage-2-build-edit-delta.py", line 84, in generate_image
-    output = pipe(
-             ^^^^^
-  File "/lustre_scratch/user_scratch/zziang/conda-env/llm-compress/lib/python3.12/site-packages/torch/utils/_contextlib.py", line 120, in decorate_context
-    return func(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "/lustre_scratch/user_scratch/zziang/conda-env/llm-compress/lib/python3.12/site-packages/diffusers/pipelines/qwenimage/pipeline_qwenimage_edit_plus.py", line 633, in __call__
-    image_size = image[-1].size if isinstance(image, list) else image.size
-                                                                ^^^^^^^^^^
-AttributeError: 'NoneType' object has no attribute 'size'
+Loading checkpoint shards:  20%|██        | 1/5 [00:04<00:19,  4.93s/it][A
+Loading checkpoint shards:  40%|████      | 2/5 [00:10<00:15,  5.14s/it][A
+Loading checkpoint shards:  60%|██████    | 3/5 [00:15<00:09,  5.00s/it][A
+Loading checkpoint shards:  80%|████████  | 4/5 [00:20<00:05,  5.01s/it][A
+Loading checkpoint shards: 100%|██████████| 5/5 [00:20<00:00,  3.49s/it][ALoading checkpoint shards: 100%|██████████| 5/5 [00:20<00:00,  4.18s/it]
+Loading pipeline components...:  33%|███▎      | 2/6 [00:22<00:52, 13.01s/it]Loading pipeline components...:  67%|██████▋   | 4/6 [00:22<00:09,  4.90s/it]
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s][A
+Loading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:07,  2.49s/it][A
+Loading checkpoint shards:  50%|█████     | 2/4 [00:04<00:04,  2.47s/it][A
+Loading checkpoint shards:  75%|███████▌  | 3/4 [00:07<00:02,  2.45s/it][A
+Loading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  1.81s/it][ALoading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  2.05s/it]
+Loading pipeline components...:  83%|████████▎ | 5/6 [00:30<00:05,  5.98s/it]Loading pipeline components...: 100%|██████████| 6/6 [00:31<00:00,  4.21s/it]Loading pipeline components...: 100%|██████████| 6/6 [00:31<00:00,  5.17s/it]
+true_cfg_scale is passed as 4.0, but classifier-free guidance is not enabled since no negative_prompt is provided.
+{
+  "status": "ok",
+  "output_checkpoint": "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
+  "metadata": {
+    "generated_at": "2026-03-20T05:37:25.635182+00:00",
+    "candidate_id": "core-delta-w035",
+    "artifact_type": "bf16-core-smoke-poc",
+    "foundation_model": "Qwen/Qwen-Image-2512",
+    "edit_model": "Qwen/Qwen-Image-Edit-2511",
+    "blend_weight": 0.35,
+    "prompt": "studio product photo of a camera on a clean table",
+    "seed": 1234,
+    "steps": 6,
+    "width": 512,
+    "height": 512,
+    "delta_l2_norm": 40.81989288330078,
+    "delta_mean_abs": 0.03551587834954262
+  }
+}
