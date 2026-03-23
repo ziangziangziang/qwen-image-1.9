@@ -300,9 +300,9 @@ class Stage2EditInvocationTests(unittest.TestCase):
         self.assertEqual(FakeQwenImageLayeredPipeline.created[0].model_id, "Qwen/Qwen-Image-Layered")
         self.assertEqual(len(FakeDiffusionPipeline.created), 0,
                          "DiffusionPipeline must NOT be used for Qwen/Qwen-Image-Layered")
-        # pipeline_load_kwargs (device_map, max_memory) must NOT be forwarded — Layered uses .to()
-        self.assertNotIn("device_map", fake_pipe.load_kwargs)
-        self.assertNotIn("max_memory", fake_pipe.load_kwargs)
+        # pipeline_load_kwargs (device_map, max_memory) must be forwarded — balanced multi-GPU load
+        self.assertIn("device_map", fake_pipe.load_kwargs)
+        self.assertIn("max_memory", fake_pipe.load_kwargs)
 
     def test_load_pipeline_uses_diffusion_pipeline_for_standard_models(self) -> None:
         module = load_script_module(

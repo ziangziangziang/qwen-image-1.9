@@ -76,8 +76,8 @@ def load_pipeline(model_id: str, runtime: Stage2DiffusionRuntimeConfig) -> Diffu
         pipe = _LAYERED_PIPELINE_CLASS.from_pretrained(
             model_id,
             torch_dtype=torch.bfloat16,
+            **runtime.pipeline_load_kwargs,
         )
-        pipe = pipe.to(runtime.primary_device)
         pipe.set_progress_bar_config(disable=True)
         return pipe
     pipe = DiffusionPipeline.from_pretrained(
