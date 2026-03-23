@@ -38,6 +38,13 @@ def parse_args() -> argparse.Namespace:
              "stage-2/metrics/{name}-train.json and stage-2/evals/{name}/.",
     )
     parser.add_argument(
+        "--metrics",
+        default=None,
+        help="Explicit path to a metrics JSON file. "
+             "When provided, also resolved via --workflows; this flag is accepted "
+             "for compatibility with the stage-2 launcher.",
+    )
+    parser.add_argument(
         "--mode",
         choices=["smoke", "real", "auto"],
         default="auto",
