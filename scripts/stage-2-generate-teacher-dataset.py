@@ -38,6 +38,12 @@ except Exception as exc:  # pragma: no cover
     ) from exc
 
 try:
+    from diffusers import QwenImageLayeredPipeline as _QwenImageLayeredPipeline
+    _LAYERED_PIPELINE_CLASS = _QwenImageLayeredPipeline
+except Exception:  # pragma: no cover
+    _LAYERED_PIPELINE_CLASS = None  # type: ignore[assignment,misc]
+
+try:
     from PIL import Image
 except Exception as exc:  # pragma: no cover
     raise SystemExit("Pillow is required for Stage 2 dataset image processing.") from exc
@@ -61,6 +67,19 @@ def parse_resolution(resolution: str, max_side: int) -> tuple[int, int]:
 
 
 def load_pipeline(model_id: str, runtime: Stage2DiffusionRuntimeConfig) -> DiffusionPipeline:
+    if model_id == "Qwen/Qwen-Image-Layered":
+        if _LAYERED_PIPELINE_CLASS is None:  # pragma: no cover
+            raise SystemExit(
+                "diffusers.QwenImageLayeredPipeline is required to load "
+                "Qwen/Qwen-Image-Layered but was not found in the installed diffusers version."
+            )
+        pipe = _LAYERED_PIPELINE_CLASS.from_pretrained(
+            model_id,
+            torch_dtype=torch.bfloat16,
+        )
+        pipe = pipe.to(runtime.primary_device)
+        pipe.set_progress_bar_config(disable=True)
+        return pipe
     pipe = DiffusionPipeline.from_pretrained(
         model_id,
         torch_dtype=torch.bfloat16,

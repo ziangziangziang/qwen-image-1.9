@@ -43,6 +43,18 @@ class FakeDiffusionPipeline:
         return pipe
 
 
+class FakeQwenImageLayeredPipeline:
+    """Fake stand-in for diffusers.QwenImageLayeredPipeline."""
+
+    created: list[FakePipe] = []
+
+    @classmethod
+    def from_pretrained(cls, model_id: str, **kwargs: object) -> FakePipe:
+        pipe = FakePipe(model_id, load_kwargs=dict(kwargs))
+        cls.created.append(pipe)
+        return pipe
+
+
 class FakeImage:
     def __init__(self, mode: str, size: tuple[int, int], color=None) -> None:
         self.mode = mode
@@ -97,12 +109,14 @@ def load_script_module(script_filename: str, module_name: str):
     fake_torch = build_fake_torch_module()
     fake_diffusers = ModuleType("diffusers")
     fake_diffusers.DiffusionPipeline = FakeDiffusionPipeline  # type: ignore[attr-defined]
+    fake_diffusers.QwenImageLayeredPipeline = FakeQwenImageLayeredPipeline  # type: ignore[attr-defined]
     fake_safetensors = ModuleType("safetensors")
     fake_safetensors_torch = ModuleType("safetensors.torch")
     fake_safetensors_torch.save_file = lambda *args, **kwargs: None  # type: ignore[attr-defined]
     fake_safetensors.torch = fake_safetensors_torch  # type: ignore[attr-defined]
     fake_pil, fake_pil_image = build_fake_pil_modules()
     FakeDiffusionPipeline.created = []
+    FakeQwenImageLayeredPipeline.created = []
 
     spec = importlib.util.spec_from_file_location(module_name, script_path)
     if spec is None or spec.loader is None:  # pragma: no cover
@@ -266,6 +280,46 @@ class Stage2EditInvocationTests(unittest.TestCase):
         module = load_script_module("stage-2-generate-teacher-dataset.py", "stage2_layered_resolution_bucket_test")
         self.assertEqual(module.resolve_layered_resolution_bucket(512, 512), 640)
         self.assertEqual(module.resolve_layered_resolution_bucket(928, 640), 1024)
+
+    def test_load_pipeline_uses_qwen_layered_class_for_layered_model(self) -> None:
+        # QwenImageLayeredPipeline must be used for Qwen/Qwen-Image-Layered, not DiffusionPipeline,
+        # because the Layered model's RGBA-VAE + Layer3D-RoPE architecture is incompatible with
+        # the generic DiffusionPipeline loader.
+        module = load_script_module(
+            "stage-2-generate-teacher-dataset.py", "stage2_load_pipeline_branch_test"
+        )
+        runtime = SimpleNamespace(
+            primary_device="cuda:0",
+            pipeline_load_kwargs={"device_map": "balanced", "max_memory": {0: "76000MiB"}},
+        )
+
+        fake_pipe = module.load_pipeline("Qwen/Qwen-Image-Layered", runtime)
+
+        # Must have gone through QwenImageLayeredPipeline, not DiffusionPipeline
+        self.assertEqual(len(FakeQwenImageLayeredPipeline.created), 1)
+        self.assertEqual(FakeQwenImageLayeredPipeline.created[0].model_id, "Qwen/Qwen-Image-Layered")
+        self.assertEqual(len(FakeDiffusionPipeline.created), 0,
+                         "DiffusionPipeline must NOT be used for Qwen/Qwen-Image-Layered")
+        # pipeline_load_kwargs (device_map, max_memory) must NOT be forwarded — Layered uses .to()
+        self.assertNotIn("device_map", fake_pipe.load_kwargs)
+        self.assertNotIn("max_memory", fake_pipe.load_kwargs)
+
+    def test_load_pipeline_uses_diffusion_pipeline_for_standard_models(self) -> None:
+        module = load_script_module(
+            "stage-2-generate-teacher-dataset.py", "stage2_load_pipeline_standard_test"
+        )
+        runtime = SimpleNamespace(
+            primary_device="cuda:0",
+            pipeline_load_kwargs={"device_map": "balanced", "max_memory": {0: "76000MiB"}},
+        )
+
+        module.load_pipeline("Qwen/Qwen-Image-2512", runtime)
+
+        self.assertEqual(len(FakeDiffusionPipeline.created), 1)
+        self.assertEqual(FakeDiffusionPipeline.created[0].model_id, "Qwen/Qwen-Image-2512")
+        self.assertEqual(len(FakeQwenImageLayeredPipeline.created), 0)
+        # pipeline_load_kwargs must be forwarded for standard models
+        self.assertIn("device_map", FakeDiffusionPipeline.created[0].load_kwargs)
 
 
 if __name__ == "__main__":
