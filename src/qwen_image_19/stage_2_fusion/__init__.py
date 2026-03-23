@@ -835,7 +835,7 @@ def build_job_command(
             "--model-ref",
             manifest["layered_bridge_recipe"]["output_checkpoint"],
             "--model-id",
-            manifest["layered_bridge_recipe"]["donor_model"],
+            manifest["layered_bridge_recipe"]["foundation_model"],
             "--output",
             stage2_remote_path("stage-2", "evals", "experimental", "smoke-summary.json"),
             "--num-prompts",

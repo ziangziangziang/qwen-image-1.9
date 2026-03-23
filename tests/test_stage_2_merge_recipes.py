@@ -452,6 +452,13 @@ class Stage2Tests(unittest.TestCase):
             self.assertEqual(command[command.index("--true-cfg-scale") + 1], "4")
             self.assertEqual(command[command.index("--guidance-scale") + 1], "1")
             self.assertEqual(command[command.index("--negative-prompt") + 1], "low quality, blurry, distorted text")
+        # experimental_smoke_eval must use the foundation model (Qwen/Qwen-Image-2512), not
+        # the donor model (Qwen/Qwen-Image-Layered), because the Layered model's non-standard
+        # RGBA-VAE + Layer3D-RoPE architecture is incompatible with DiffusionPipeline.from_pretrained.
+        exp_cmd = status_payload["jobs"]["experimental_smoke_eval"]["command"]
+        self.assertIn("--model-id", exp_cmd)
+        self.assertEqual(exp_cmd[exp_cmd.index("--model-id") + 1], "Qwen/Qwen-Image-2512")
+        self.assertNotEqual(exp_cmd[exp_cmd.index("--model-id") + 1], "Qwen/Qwen-Image-Layered")
         bridge_command = status_payload["jobs"]["layered_bridge_train"]["command"]
         self.assertNotIn("--required-gpus", bridge_command)
         self.assertNotIn("--required-total-vram-gb", bridge_command)
