@@ -24,17 +24,6 @@ CORE_CANDIDATE_DEFAULT_WEIGHT = 0.35
 DEFAULT_RUN_PROFILE = "full"
 SUPPORTED_RUN_PROFILES = {"smoke", "full", "quality"}
 
-# Wall-time measurements from a reference smoke run (2× A100-SXM4-80GB, smoke profile).
-# Used by the progress logger to estimate remaining time for full/quality profiles.
-_SMOKE_BASELINE_SECONDS: dict[str, float] = {
-    "core_delta_sweep": 105.3,
-    "core_smoke_eval": 55.1,
-    "teacher_dataset_generation": 224.9,
-    "layered_bridge_train": 7.3,
-    "experimental_smoke_eval": 44.6,
-}
-
-
 def _fmt_duration(seconds: float) -> str:
     s = int(seconds)
     h, rem = divmod(s, 3600)
@@ -46,30 +35,92 @@ def _fmt_duration(seconds: float) -> str:
     return f"{ss}s"
 
 
-def _estimate_job_seconds(job_name: str, manifest: dict[str, Any]) -> float | None:
-    """Return estimated wall-clock seconds for a job based on smoke-run baseline scaled to the active profile limits."""
-    baseline = _SMOKE_BASELINE_SECONDS.get(job_name)
-    if baseline is None:
-        return None
-    profile = manifest.get("run_profile", "smoke")
-    if profile == "smoke":
-        return baseline
+def _describe_job(job_name: str, manifest: dict[str, Any]) -> list[str]:
+    """Return a list of detail lines describing what a job will do, drawn from the manifest."""
     limits = manifest.get("limits", {})
-    steps_ratio = float(limits.get("poc_steps", 6)) / 6.0
-    px_ratio = (float(limits.get("poc_side", 512)) / 512.0) ** 2
+    poc_steps = int(limits.get("poc_steps", 6))
+    poc_side = int(limits.get("poc_side", 512))
+    cfg = float(limits.get("poc_true_cfg_scale", 4.0))
+    guidance = float(limits.get("poc_guidance_scale", 1.0))
+    _d = "  "  # indent prefix for detail lines
+
     if job_name == "core_delta_sweep":
-        candidate_count = max(len(manifest.get("core_delta_candidates", [])), 1)
-        return baseline * steps_ratio * px_ratio * candidate_count
-    if job_name in ("core_smoke_eval", "experimental_smoke_eval"):
-        prompt_ratio = float(limits.get("eval_prompt_count", 6)) / 6.0
-        return baseline * steps_ratio * px_ratio * prompt_ratio
+        recipe = manifest.get("core_delta_recipe", {})
+        candidates = manifest.get("core_delta_candidates", [])
+        lines = [
+            f"{_d}task       : build edit-delta checkpoints via coefficient sweep",
+            f"{_d}foundation : {recipe.get('foundation_model', '?')}",
+            f"{_d}edit src   : {recipe.get('delta_source_model', '?')}",
+            f"{_d}candidates : {len(candidates)}",
+        ]
+        for c in candidates:
+            lines.append(f"{_d}             {c['candidate_id']}  blend={c['blend_weight']}  -> {c['output_checkpoint']}")
+        lines.append(f"{_d}diffusion  : steps={poc_steps}  side={poc_side}  cfg={cfg:g}  guidance={guidance:g}")
+        return lines
+
+    if job_name == "core_smoke_eval":
+        sel = manifest.get("selected_core_candidate", {})
+        recipe = manifest.get("core_delta_recipe", {})
+        n_prompts = int(limits.get("eval_prompt_count", 6))
+        return [
+            f"{_d}task       : smoke quality check on best core delta checkpoint",
+            f"{_d}model      : {recipe.get('foundation_model', '?')}",
+            f"{_d}checkpoint : {sel.get('output_checkpoint', '?')}",
+            f"{_d}prompts    : {n_prompts}",
+            f"{_d}diffusion  : steps={poc_steps}  side={poc_side}  cfg={cfg:g}  guidance={guidance:g}",
+            f"{_d}output     : {sel.get('smoke_report', '?')}",
+        ]
+
     if job_name == "teacher_dataset_generation":
-        sample_ratio = float(limits.get("dataset_samples_per_split", 2)) / 2.0
-        return baseline * steps_ratio * px_ratio * sample_ratio
+        dataset = manifest.get("dataset", {})
+        split_counts: dict[str, int] = dataset.get("split_counts", {})
+        total_samples = sum(split_counts.values())
+        lines = [
+            f"{_d}task       : generate synthetic teacher dataset",
+            f"{_d}manifest   : {dataset.get('manifest_path', '?')}",
+            f"{_d}output dir : {dataset.get('output_root', '?')}",
+            f"{_d}splits     : {len(split_counts)}  ({total_samples} samples total)",
+        ]
+        for split_name, count in split_counts.items():
+            lines.append(f"{_d}             {split_name}  {count} samples")
+        lines.append(f"{_d}diffusion  : steps={poc_steps}  side={poc_side}  cfg={cfg:g}  guidance={guidance:g}")
+        return lines
+
     if job_name == "layered_bridge_train":
-        train_ratio = float(limits.get("bridge_train_steps", 64)) / 64.0
-        return baseline * train_ratio
-    return baseline * steps_ratio * px_ratio
+        recipe = manifest.get("layered_bridge_recipe", {})
+        training = recipe.get("training_limits", {})
+        max_steps = int(training.get("max_steps", 500))
+        batch_size = int(training.get("batch_size", 1))
+        block_window = recipe.get("bridge_block_window", "?")
+        freeze_policy = recipe.get("freeze_policy", "?")
+        trainable = recipe.get("trainable_modules", [])
+        dataset = manifest.get("dataset", {})
+        return [
+            f"{_d}task       : train layered bridge adapter",
+            f"{_d}strategy   : {recipe.get('strategy', '?')}",
+            f"{_d}donor      : {recipe.get('donor_model', '?')}",
+            f"{_d}base ckpt  : {recipe.get('base_core_checkpoint', '?')}",
+            f"{_d}dataset    : {dataset.get('output_root', '?')}",
+            f"{_d}training   : steps={max_steps}  batch={batch_size}",
+            f"{_d}blocks     : {block_window}",
+            f"{_d}freeze     : {freeze_policy}",
+            f"{_d}trainable  : {', '.join(trainable) if trainable else '(none)'}",
+            f"{_d}adapter out: {recipe.get('output_adapter', '?')}",
+            f"{_d}ckpt out   : {recipe.get('output_checkpoint', '?')}",
+        ]
+
+    if job_name == "experimental_smoke_eval":
+        recipe = manifest.get("layered_bridge_recipe", {})
+        n_prompts = int(limits.get("eval_prompt_count", 6))
+        return [
+            f"{_d}task       : smoke eval on layered bridge checkpoint",
+            f"{_d}foundation : {recipe.get('foundation_model', '?')}  (dispatched via QwenImageLayeredPipeline)",
+            f"{_d}bridge ckpt: {recipe.get('output_checkpoint', '?')}",
+            f"{_d}prompts    : {n_prompts}",
+            f"{_d}diffusion  : steps={poc_steps}  side={poc_side}  cfg={cfg:g}  guidance={guidance:g}",
+        ]
+
+    return []
 
 
 def _emit_progress(msg: str) -> None:
@@ -944,11 +995,9 @@ def run_stage2_jobs(
     total_jobs = len(job_names)
     _profile = manifest.get("run_profile", "?")
     _tag = f"[q19|stage2|{_profile}]"
-    _total_est = sum(_estimate_job_seconds(j, manifest) or 0.0 for j in job_names)
     _run_started = time.perf_counter()
     _emit_progress(
         f"{_tag} Starting {total_jobs} jobs  "
-        f"est. ~{_fmt_duration(_total_est)}  "
         f"policy={status_payload['execution_policy']}"
     )
     _emit_progress(f"{_tag} Plan: {' -> '.join(job_names)}")
@@ -976,11 +1025,9 @@ def run_stage2_jobs(
                 cleanup_performed = True
                 status_payload["cleanup_performed"] = True
 
-        _est = _estimate_job_seconds(job_name, manifest)
-        _emit_progress(
-            f"{_tag} [{job_idx + 1}/{total_jobs}] RUNNING   {job_name}"
-            + (f"  est. ~{_fmt_duration(_est)}" if _est is not None else "")
-        )
+        _emit_progress(f"{_tag} [{job_idx + 1}/{total_jobs}] RUNNING   {job_name}")
+        for _detail in _describe_job(job_name, manifest):
+            _emit_progress(f"{_tag}{_detail}")
 
         if job_name == "core_delta_sweep":
             commands = []
