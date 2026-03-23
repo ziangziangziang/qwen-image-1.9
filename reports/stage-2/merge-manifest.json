@@ -11,7 +11,7 @@
     "training_figures_dir": "reports/stage-2/figures",
     "training_report": "reports/stage-2/training-report.md"
   },
-  "cleanup_performed": true,
+  "cleanup_performed": false,
   "compatibility_summary": {
     "adapter_only": 1,
     "delta_merge": 1,
@@ -20,16 +20,40 @@
   },
   "core_delta_candidates": [
     {
+      "blend_weight": 0.2,
+      "candidate_id": "core-delta-w020",
+      "output_checkpoint": "stage-2/artifacts/core-candidates/core-delta-w020/qwen-image-1.9-core-bf16.safetensors",
+      "selection_status": "planned",
+      "smoke_report": "stage-2/evals/core-candidates/core-delta-w020/smoke-summary.json"
+    },
+    {
+      "blend_weight": 0.3,
+      "candidate_id": "core-delta-w030",
+      "output_checkpoint": "stage-2/artifacts/core-candidates/core-delta-w030/qwen-image-1.9-core-bf16.safetensors",
+      "selection_status": "planned",
+      "smoke_report": "stage-2/evals/core-candidates/core-delta-w030/smoke-summary.json"
+    },
+    {
       "blend_weight": 0.35,
       "candidate_id": "core-delta-w035",
       "output_checkpoint": "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
       "selection_status": "planned",
       "smoke_report": "stage-2/evals/core-candidates/core-delta-w035/smoke-summary.json"
+    },
+    {
+      "blend_weight": 0.4,
+      "candidate_id": "core-delta-w040",
+      "output_checkpoint": "stage-2/artifacts/core-candidates/core-delta-w040/qwen-image-1.9-core-bf16.safetensors",
+      "selection_status": "planned",
+      "smoke_report": "stage-2/evals/core-candidates/core-delta-w040/smoke-summary.json"
     }
   ],
   "core_delta_recipe": {
     "coefficient_sweep": [
-      0.35
+      0.2,
+      0.3,
+      0.35,
+      0.4
     ],
     "delta_base_candidate_alias": "qwen-image-base",
     "delta_base_candidate_model": "Qwen/Qwen-Image",
@@ -73,9 +97,9 @@
     "output_root": "stage-2/datasets/teacher-db",
     "relative_paths_only": true,
     "split_counts": {
-      "edit_teacher": 2,
-      "generation_teacher": 2,
-      "layered_teacher": 2
+      "edit_teacher": 8,
+      "generation_teacher": 8,
+      "layered_teacher": 8
     }
   },
   "exclusions": {
@@ -111,7 +135,7 @@
   "execution_enabled": true,
   "execution_policy": "overwrite",
   "foundation_model": "Qwen/Qwen-Image-2512",
-  "generated_at": "2026-03-23T20:24:35.098041+00:00",
+  "generated_at": "2026-03-23T20:43:54.990529+00:00",
   "layered_bridge_recipe": {
     "base_core_candidate_id": "core-delta-w035",
     "base_core_checkpoint": "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
@@ -146,23 +170,18 @@
     "trainable_modules": [
       "bridge_adapter",
       "per_block_gates"
-    ],
-    "training_limits": {
-      "batch_size": 1,
-      "eval_prompt_count": 6,
-      "max_steps": 64
-    }
+    ]
   },
   "limits": {
-    "bridge_batch_size": 1,
-    "bridge_train_steps": 64,
+    "bridge_batch_size": 2,
+    "bridge_train_steps": 500,
     "core_candidate_id": "core-delta-w035",
-    "dataset_samples_per_split": 2,
-    "eval_prompt_count": 6,
+    "dataset_samples_per_split": 8,
+    "eval_prompt_count": 24,
     "poc_guidance_scale": 1.0,
     "poc_negative_prompt": "low resolution, low quality, deformed limbs, deformed fingers, oversaturated image, waxy skin, over-smoothed face, artificial look, chaotic composition, blurry text, distorted text",
-    "poc_side": 512,
-    "poc_steps": 6,
+    "poc_side": 1024,
+    "poc_steps": 30,
     "poc_true_cfg_scale": 4.0
   },
   "path_policy": {
@@ -180,7 +199,10 @@
       "entrypoint": "scripts/stage-2-build-edit-delta.py",
       "log_path": "stage-2/logs/core-delta-sweep.log",
       "outputs": [
-        "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors"
+        "stage-2/artifacts/core-candidates/core-delta-w020/qwen-image-1.9-core-bf16.safetensors",
+        "stage-2/artifacts/core-candidates/core-delta-w030/qwen-image-1.9-core-bf16.safetensors",
+        "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
+        "stage-2/artifacts/core-candidates/core-delta-w040/qwen-image-1.9-core-bf16.safetensors"
       ],
       "status": "planned",
       "workdir": "stage-2/jobs/core-delta-sweep"
@@ -224,17 +246,18 @@
     }
   },
   "resource_profile": {
+    "gpu_type": "A100",
     "num_gpus": 2,
     "vram_target_gb": 160
   },
   "run_mode": "write",
-  "run_profile": "smoke",
+  "run_profile": "full",
   "selected_core_candidate": {
     "blend_weight": 0.35,
     "candidate_id": "core-delta-w035",
     "output_checkpoint": "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
-    "selection_note": "Smoke profile runs one candidate to validate pipeline wiring before the full sweep.",
-    "selection_status": "smoke-only",
+    "selection_note": "Promote this candidate to stable once the remote smoke suite confirms edit retention without visible generation regression.",
+    "selection_status": "provisional-default",
     "smoke_report": "stage-2/evals/core-candidates/core-delta-w035/smoke-summary.json"
   },
   "source_models": {
