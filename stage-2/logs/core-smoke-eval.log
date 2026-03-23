@@ -1,28 +1,0 @@
-Loading pipeline components...:   0%|          | 0/5 [00:00<?, ?it/s]Loading pipeline components...:  20%|██        | 1/5 [00:00<00:02,  1.90it/s]
-Loading checkpoint shards:   0%|          | 0/9 [00:00<?, ?it/s][A
-Loading checkpoint shards:  11%|█         | 1/9 [00:02<00:19,  2.44s/it][A
-Loading checkpoint shards:  22%|██▏       | 2/9 [00:04<00:16,  2.38s/it][A
-Loading checkpoint shards:  33%|███▎      | 3/9 [00:06<00:13,  2.30s/it][A
-Loading checkpoint shards:  44%|████▍     | 4/9 [00:09<00:11,  2.35s/it][A
-Loading checkpoint shards:  56%|█████▌    | 5/9 [00:11<00:09,  2.43s/it][A
-Loading checkpoint shards:  67%|██████▋   | 6/9 [00:14<00:07,  2.62s/it][A
-Loading checkpoint shards:  78%|███████▊  | 7/9 [00:17<00:05,  2.70s/it][A
-Loading checkpoint shards:  89%|████████▉ | 8/9 [00:20<00:02,  2.64s/it][A
-Loading checkpoint shards: 100%|██████████| 9/9 [00:21<00:00,  2.02s/it][ALoading checkpoint shards: 100%|██████████| 9/9 [00:21<00:00,  2.33s/it]
-Loading pipeline components...:  40%|████      | 2/5 [00:22<00:39, 13.02s/it]
-Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s][A
-Loading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:07,  2.49s/it][A
-Loading checkpoint shards:  50%|█████     | 2/4 [00:04<00:04,  2.46s/it][A
-Loading checkpoint shards:  75%|███████▌  | 3/4 [00:07<00:02,  2.46s/it][A
-Loading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  1.79s/it][ALoading checkpoint shards: 100%|██████████| 4/4 [00:08<00:00,  2.04s/it]
-Loading pipeline components...:  60%|██████    | 3/5 [00:30<00:21, 10.88s/it]Loading pipeline components...: 100%|██████████| 5/5 [00:30<00:00,  4.77s/it]Loading pipeline components...: 100%|██████████| 5/5 [00:30<00:00,  6.16s/it]
-guidance_scale is passed as 1.0, but ignored since the model is not guidance-distilled.
-guidance_scale is passed as 1.0, but ignored since the model is not guidance-distilled.
-guidance_scale is passed as 1.0, but ignored since the model is not guidance-distilled.
-guidance_scale is passed as 1.0, but ignored since the model is not guidance-distilled.
-guidance_scale is passed as 1.0, but ignored since the model is not guidance-distilled.
-guidance_scale is passed as 1.0, but ignored since the model is not guidance-distilled.
-{
-  "status": "ok",
-  "output": "stage-2/evals/core-candidates/core-delta-w035/smoke-summary.json"
-}

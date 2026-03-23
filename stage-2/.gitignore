@@ -1,0 +1,12 @@
+# Stage 2 runtime output — ignored by default
+# Subdirectories handled by root .gitignore patterns above.
+# This file explicitly keeps small provenance artifacts tracked.
+
+# Ignore all logs and raw eval output (also covered by root .gitignore)
+evals/
+logs/
+datasets/
+jobs/
+artifacts/
+metrics/
+run-status.json

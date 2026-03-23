@@ -1,0 +1,4 @@
+# Smoke-run images must never be committed — they change on every run and are not
+# representative of production quality. Real-run curated figures are committed.
+smoke-*
+*-smoke-*

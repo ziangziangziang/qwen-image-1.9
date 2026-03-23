@@ -109,14 +109,14 @@ if __name__ == "__main__":
             call_kwargs = {
                 "prompt": prompt,
                 "num_inference_steps": max(1, args.steps),
-                "width": args.width,
-                "height": args.height,
                 "generator": generator,
             }
             add_supported_call_args(
                 pipe,
                 call_kwargs,
                 {
+                    "width": args.width,
+                    "height": args.height,
                     "negative_prompt": args.negative_prompt,
                     "true_cfg_scale": args.true_cfg_scale,
                     "guidance_scale": args.guidance_scale,

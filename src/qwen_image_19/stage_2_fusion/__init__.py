@@ -485,6 +485,8 @@ def build_artifacts_section(
         "report_readme": repo_relative_path(artifact_paths["report_readme"]),
         "merge_manifest": repo_relative_path(artifact_paths["merge_manifest_json"]),
         "dataset_manifest": repo_relative_path(artifact_paths["dataset_manifest_json"]),
+        "training_report": repo_relative_path(target_dir / "training-report.md"),
+        "training_figures_dir": repo_relative_path(target_dir / "figures"),
         "stable_core_checkpoint": selected_core_candidate["output_checkpoint"],
         "experimental_bridge_adapter": layered_bridge_recipe["output_adapter"],
         "experimental_bridge_checkpoint": layered_bridge_recipe["output_checkpoint"],
@@ -1265,6 +1267,36 @@ def fuse(
         manifest["cleanup_performed"] = bool(run_status.get("cleanup_performed"))
         result["execution_policy"] = manifest["execution_policy"]
         result["run_status"] = run_status
+
+        if manifest.get("run_profile") != "smoke":
+            training_report_command = [
+                str(remote_context.get("python") or "python3"),
+                str(repo_root() / "scripts" / "stage-2-write-training-report.py"),
+                "--run-status",
+                repo_relative_path(artifact_paths["run_status_json"]),
+                "--merge-manifest",
+                repo_relative_path(artifact_paths["merge_manifest_json"]),
+                "--dataset-manifest",
+                repo_relative_path(artifact_paths["dataset_manifest_json"]),
+                "--metrics",
+                stage2_remote_path("stage-2", "metrics", "layered-bridge-train.json"),
+                "--output-md",
+                manifest["artifacts"]["training_report"],
+                "--figures-dir",
+                manifest["artifacts"]["training_figures_dir"],
+            ]
+            training_report_log = stage2_remote_path("stage-2", "logs", "training-report.log")
+            exit_code, _ = run_subprocess_job(
+                training_report_command,
+                training_report_log,
+                stage2_remote_path("stage-2", "jobs", "training-report"),
+            )
+            if exit_code != 0:
+                raise Stage2FusionError(
+                    "Stage 2 execution succeeded but training report generation failed. "
+                    f"Check `{training_report_log}`."
+                )
+
         refreshed_report = render_fusion_report(manifest, dataset_manifest)
         write_json(artifact_paths["merge_manifest_json"], manifest)
         write_text(artifact_paths["report_readme"], refreshed_report)

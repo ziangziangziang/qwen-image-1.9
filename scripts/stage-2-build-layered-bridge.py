@@ -4,6 +4,8 @@ from __future__ import annotations
 import argparse
 from datetime import datetime, timezone
 import json
+import os
+import platform
 from pathlib import Path
 import random
 import time
@@ -41,6 +43,50 @@ def write_text_json(path: str, payload: dict[str, object]) -> None:
     out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
+def detect_total_ram_bytes() -> int | None:
+    if hasattr(os, "sysconf"):
+        try:
+            page_size = int(os.sysconf("SC_PAGE_SIZE"))
+            pages = int(os.sysconf("SC_PHYS_PAGES"))
+            total = page_size * pages
+            if total > 0:
+                return total
+        except (TypeError, ValueError, OSError):
+            return None
+    return None
+
+
+def collect_hardware_profile(device: str) -> dict[str, object]:
+    gpu_devices: list[dict[str, object]] = []
+    for index in range(torch.cuda.device_count()):
+        props = torch.cuda.get_device_properties(index)
+        gpu_devices.append(
+            {
+                "index": index,
+                "name": props.name,
+                "total_memory_bytes": int(props.total_memory),
+                "total_memory_gb_decimal": round(float(props.total_memory) / 1_000_000_000, 3),
+                "multiprocessors": int(props.multi_processor_count),
+                "compute_capability": f"{props.major}.{props.minor}",
+            }
+        )
+
+    return {
+        "hostname": platform.node() or "unknown",
+        "platform": platform.platform(),
+        "python": platform.python_version(),
+        "cpu": platform.processor() or "unknown",
+        "logical_cores": os.cpu_count(),
+        "total_ram_bytes": detect_total_ram_bytes(),
+        "cuda": {
+            "available": torch.cuda.is_available(),
+            "device_count": torch.cuda.device_count(),
+            "selected_device": device,
+            "devices": gpu_devices,
+        },
+    }
+
+
 def image_to_tensor(path: Path) -> torch.Tensor:
     image = Image.open(path).convert("RGB")
     width, height = image.size
@@ -75,6 +121,7 @@ if __name__ == "__main__":
         raise SystemExit("GPU is required for true Stage 2 smoke execution.")
     random.seed(args.seed)
     torch.manual_seed(args.seed)
+    started_at = datetime.now(timezone.utc)
 
     dataset_root = Path(args.dataset_root)
     image_paths = sorted(dataset_root.rglob("*.png"))
@@ -83,6 +130,7 @@ if __name__ == "__main__":
 
     tensors = [image_to_tensor(path) for path in image_paths]
     device = "cuda"
+    hardware = collect_hardware_profile(device)
     tensors = [tensor.to(device) for tensor in tensors]
     model = TinyBridge().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
@@ -110,16 +158,44 @@ if __name__ == "__main__":
     torch.cuda.empty_cache()
 
     if args.metrics_output:
+        ended_at = datetime.now(timezone.utc)
+        min_loss = min(loss_curve) if loss_curve else None
+        max_loss = max(loss_curve) if loss_curve else None
         write_text_json(
             args.metrics_output,
             {
                 "generated_at": datetime.now(timezone.utc).isoformat(),
+                "run_started_at": started_at.isoformat(),
+                "run_ended_at": ended_at.isoformat(),
                 "max_steps": args.max_steps,
                 "batch_size": args.batch_size,
+                "learning_rate": args.learning_rate,
+                "seed": args.seed,
                 "dataset_root": args.dataset_root,
                 "dataset_image_count": len(image_paths),
+                "training_method": {
+                    "type": "bridge-distillation-smoke-proxy",
+                    "model": "TinyBridge",
+                    "objective": "MSE reconstruction on RGB teacher set",
+                    "optimizer": "Adam",
+                    "notes": "This is a smoke-stage proxy, not the final bridge training recipe.",
+                },
+                "structure": {
+                    "name": "TinyBridge",
+                    "layers": [
+                        "Conv2d(3,16,k=3,p=1)",
+                        "ReLU",
+                        "Conv2d(16,16,k=3,p=1)",
+                        "ReLU",
+                        "Conv2d(16,3,k=3,p=1)",
+                        "Sigmoid",
+                    ],
+                },
+                "hardware": hardware,
                 "loss_curve": loss_curve,
                 "final_loss": loss_curve[-1] if loss_curve else None,
+                "min_loss": min_loss,
+                "max_loss": max_loss,
                 "elapsed_seconds": round(elapsed, 3),
             },
         )
