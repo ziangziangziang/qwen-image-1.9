@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
 import time
 from typing import Any
 
@@ -22,6 +23,57 @@ DEFAULT_STAGE2_RUN_STATUS = Path("stage-2") / "run-status.json"
 CORE_CANDIDATE_DEFAULT_WEIGHT = 0.35
 DEFAULT_RUN_PROFILE = "full"
 SUPPORTED_RUN_PROFILES = {"smoke", "full", "quality"}
+
+# Wall-time measurements from a reference smoke run (2× A100-SXM4-80GB, smoke profile).
+# Used by the progress logger to estimate remaining time for full/quality profiles.
+_SMOKE_BASELINE_SECONDS: dict[str, float] = {
+    "core_delta_sweep": 105.3,
+    "core_smoke_eval": 55.1,
+    "teacher_dataset_generation": 224.9,
+    "layered_bridge_train": 7.3,
+    "experimental_smoke_eval": 44.6,
+}
+
+
+def _fmt_duration(seconds: float) -> str:
+    s = int(seconds)
+    h, rem = divmod(s, 3600)
+    m, ss = divmod(rem, 60)
+    if h:
+        return f"{h}h {m:02d}m"
+    if m:
+        return f"{m}m {ss:02d}s"
+    return f"{ss}s"
+
+
+def _estimate_job_seconds(job_name: str, manifest: dict[str, Any]) -> float | None:
+    """Return estimated wall-clock seconds for a job based on smoke-run baseline scaled to the active profile limits."""
+    baseline = _SMOKE_BASELINE_SECONDS.get(job_name)
+    if baseline is None:
+        return None
+    profile = manifest.get("run_profile", "smoke")
+    if profile == "smoke":
+        return baseline
+    limits = manifest.get("limits", {})
+    steps_ratio = float(limits.get("poc_steps", 6)) / 6.0
+    px_ratio = (float(limits.get("poc_side", 512)) / 512.0) ** 2
+    if job_name == "core_delta_sweep":
+        candidate_count = max(len(manifest.get("core_delta_candidates", [])), 1)
+        return baseline * steps_ratio * px_ratio * candidate_count
+    if job_name in ("core_smoke_eval", "experimental_smoke_eval"):
+        prompt_ratio = float(limits.get("eval_prompt_count", 6)) / 6.0
+        return baseline * steps_ratio * px_ratio * prompt_ratio
+    if job_name == "teacher_dataset_generation":
+        sample_ratio = float(limits.get("dataset_samples_per_split", 2)) / 2.0
+        return baseline * steps_ratio * px_ratio * sample_ratio
+    if job_name == "layered_bridge_train":
+        train_ratio = float(limits.get("bridge_train_steps", 64)) / 64.0
+        return baseline * train_ratio
+    return baseline * steps_ratio * px_ratio
+
+
+def _emit_progress(msg: str) -> None:
+    print(msg, file=sys.stderr, flush=True)
 
 
 class Stage2FusionError(RuntimeError):
@@ -889,12 +941,27 @@ def run_stage2_jobs(
         status_payload["cleanup_performed"] = cleanup_performed
 
     job_names = list(manifest["remote_jobs"].keys())
-    for job_name in job_names:
+    total_jobs = len(job_names)
+    _profile = manifest.get("run_profile", "?")
+    _tag = f"[q19|stage2|{_profile}]"
+    _total_est = sum(_estimate_job_seconds(j, manifest) or 0.0 for j in job_names)
+    _run_started = time.perf_counter()
+    _emit_progress(
+        f"{_tag} Starting {total_jobs} jobs  "
+        f"est. ~{_fmt_duration(_total_est)}  "
+        f"policy={status_payload['execution_policy']}"
+    )
+    _emit_progress(f"{_tag} Plan: {' -> '.join(job_names)}")
+    for job_idx, job_name in enumerate(job_names):
         payload = manifest["remote_jobs"][job_name]
         existing = status_payload["jobs"].get(job_name, {})
         if resume and existing.get("status") == "succeeded":
             missing = ensure_outputs_exist(payload["outputs"])
             if not missing:
+                _emit_progress(
+                    f"{_tag} [{job_idx + 1}/{total_jobs}] SKIPPED   {job_name}"
+                    f"  (already succeeded)"
+                )
                 status_payload["jobs"][job_name] = {
                     **existing,
                     "status": "skipped",
@@ -908,6 +975,12 @@ def run_stage2_jobs(
             if removed_count > 0:
                 cleanup_performed = True
                 status_payload["cleanup_performed"] = True
+
+        _est = _estimate_job_seconds(job_name, manifest)
+        _emit_progress(
+            f"{_tag} [{job_idx + 1}/{total_jobs}] RUNNING   {job_name}"
+            + (f"  est. ~{_fmt_duration(_est)}" if _est is not None else "")
+        )
 
         if job_name == "core_delta_sweep":
             commands = []
@@ -970,6 +1043,10 @@ def run_stage2_jobs(
                         "failed_job": job_name,
                         "resume_hint": f"Re-run `q19 stage2 fuse --run-profile {manifest['run_profile']} --execute --resume` after fixing `{job_name}`.",
                     }
+                    _emit_progress(
+                        f"{_tag} [{job_idx + 1}/{total_jobs}] FAILED    {job_name}"
+                        f"  {round(duration, 1)}s  exit={exit_code}"
+                    )
                     write_json(artifact_paths["run_status_json"], status_payload)
                     raise Stage2FusionError(
                         f"Stage 2 execution failed at `{job_name}`. "
@@ -992,6 +1069,10 @@ def run_stage2_jobs(
                 "failure_reason": f"Missing expected outputs: {', '.join(missing_outputs)}" if failed else None,
             }
             if failed:
+                _emit_progress(
+                    f"{_tag} [{job_idx + 1}/{total_jobs}] FAILED    {job_name}"
+                    f"  {round(duration, 1)}s  missing outputs"
+                )
                 status_payload["summary"] = {
                     "failed_job": job_name,
                     "resume_hint": f"Re-run `q19 stage2 fuse --run-profile {manifest['run_profile']} --execute --resume` after fixing `{job_name}`.",
@@ -1001,6 +1082,9 @@ def run_stage2_jobs(
                     f"Stage 2 execution failed at `{job_name}`. "
                     f"Check `{repo_relative_path(artifact_paths['run_status_json'])}` for details."
                 )
+            _emit_progress(
+                f"{_tag} [{job_idx + 1}/{total_jobs}] DONE      {job_name}  {round(duration, 1)}s"
+            )
             write_json(artifact_paths["run_status_json"], status_payload)
             continue
 
@@ -1045,6 +1129,12 @@ def run_stage2_jobs(
                 else f"Missing expected outputs: {', '.join(missing_outputs)}"
             )
         status_payload["jobs"][job_name] = job_status
+        _emit_progress(
+            f"{_tag} [{job_idx + 1}/{total_jobs}] "
+            + ("DONE      " if not failed else "FAILED    ")
+            + f"{job_name}  {round(duration, 1)}s"
+            + (f"  !! {job_status.get('failure_reason', '')}" if failed else "")
+        )
         if failed:
             status_payload["summary"] = {
                 "failed_job": job_name,
@@ -1063,6 +1153,10 @@ def run_stage2_jobs(
         "resume_hint": None,
     }
     write_json(artifact_paths["run_status_json"], status_payload)
+    _emit_progress(
+        f"{_tag} All {total_jobs} jobs complete."
+        f"  total {_fmt_duration(time.perf_counter() - _run_started)}"
+    )
     return status_payload
 
 
