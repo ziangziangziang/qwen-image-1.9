@@ -72,6 +72,8 @@ Stage 2 now builds two tracks from the Stage 1 evidence: a stable BF16 core base
 | `report_readme` | `reports/stage-2/README.md` |
 | `merge_manifest` | `reports/stage-2/merge-manifest.json` |
 | `dataset_manifest` | `reports/stage-2/dataset-manifest.json` |
+| `training_report` | `reports/stage-2/training-report.md` |
+| `training_figures_dir` | `reports/stage-2/figures` |
 | `stable_core_checkpoint` | `stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors` |
 | `experimental_bridge_adapter` | `stage-2/artifacts/experimental/layered-bridge-adapter.safetensors` |
 | `experimental_bridge_checkpoint` | `stage-2/artifacts/experimental/qwen-image-1.9-layered-bridge-bf16.safetensors` |
