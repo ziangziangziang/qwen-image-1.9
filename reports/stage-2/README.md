@@ -5,12 +5,12 @@ Stage 2 now builds two tracks from the Stage 1 evidence: a stable BF16 core base
 
 ## Run Mode
 - Run mode: `write`
-- Run profile: `smoke`
+- Run profile: `full`
 - Execution enabled: `True`
 - Execution policy: `overwrite`
-- Cleanup performed: `True`
+- Cleanup performed: `False`
 - Resource profile: `num_gpus=2`, `vram_target_gb=160`
-- Limits: `{"bridge_batch_size": 1, "bridge_train_steps": 64, "core_candidate_id": "core-delta-w035", "dataset_samples_per_split": 2, "eval_prompt_count": 6, "poc_guidance_scale": 1.0, "poc_negative_prompt": "low resolution, low quality, deformed limbs, deformed fingers, oversaturated image, waxy skin, over-smoothed face, artificial look, chaotic composition, blurry text, distorted text", "poc_side": 512, "poc_steps": 6, "poc_true_cfg_scale": 4.0}`
+- Limits: `{"bridge_batch_size": 2, "bridge_train_steps": 500, "core_candidate_id": "core-delta-w035", "dataset_samples_per_split": 8, "eval_prompt_count": 24, "poc_guidance_scale": 1.0, "poc_negative_prompt": "low resolution, low quality, deformed limbs, deformed fingers, oversaturated image, waxy skin, over-smoothed face, artificial look, chaotic composition, blurry text, distorted text", "poc_side": 1024, "poc_steps": 30, "poc_true_cfg_scale": 4.0}`
 
 ## Stage 1 Evidence
 - Foundation vs Edit transformer path is the one clean merge lane: `shared=2856`, `exact=0.3246`, `strategy=delta-merge`.
@@ -32,7 +32,10 @@ Stage 2 now builds two tracks from the Stage 1 evidence: a stable BF16 core base
 
 | Candidate | Blend weight | Status | Planned checkpoint | Planned smoke report |
 | --- | --- | --- | --- | --- |
+| `core-delta-w020` | `0.2` | `candidate` | `stage-2/artifacts/core-candidates/core-delta-w020/qwen-image-1.9-core-bf16.safetensors` | `stage-2/evals/core-candidates/core-delta-w020/smoke-summary.json` |
+| `core-delta-w030` | `0.3` | `candidate` | `stage-2/artifacts/core-candidates/core-delta-w030/qwen-image-1.9-core-bf16.safetensors` | `stage-2/evals/core-candidates/core-delta-w030/smoke-summary.json` |
 | `core-delta-w035` | `0.35` | `selected` | `stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors` | `stage-2/evals/core-candidates/core-delta-w035/smoke-summary.json` |
+| `core-delta-w040` | `0.4` | `candidate` | `stage-2/artifacts/core-candidates/core-delta-w040/qwen-image-1.9-core-bf16.safetensors` | `stage-2/evals/core-candidates/core-delta-w040/smoke-summary.json` |
 
 ## Experimental Layered Bridge Track
 - Donor: `Qwen/Qwen-Image-Layered`
@@ -53,9 +56,9 @@ Stage 2 now builds two tracks from the Stage 1 evidence: a stable BF16 core base
 
 | Split | Teacher model | Task | Planned samples | Asset root |
 | --- | --- | --- | --- | --- |
-| `generation_teacher` | `Qwen/Qwen-Image-2512` | `text-to-image` | `2` | `stage-2/datasets/teacher-db/generation_teacher` |
-| `edit_teacher` | `Qwen/Qwen-Image-Edit-2511` | `generate-then-edit` | `2` | `stage-2/datasets/teacher-db/edit_teacher` |
-| `layered_teacher` | `Qwen/Qwen-Image-Layered` | `layer-aware-generation` | `2` | `stage-2/datasets/teacher-db/layered_teacher` |
+| `generation_teacher` | `Qwen/Qwen-Image-2512` | `text-to-image` | `8` | `stage-2/datasets/teacher-db/generation_teacher` |
+| `edit_teacher` | `Qwen/Qwen-Image-Edit-2511` | `generate-then-edit` | `8` | `stage-2/datasets/teacher-db/edit_teacher` |
+| `layered_teacher` | `Qwen/Qwen-Image-Layered` | `layer-aware-generation` | `8` | `stage-2/datasets/teacher-db/layered_teacher` |
 
 ## Remote Jobs
 | Job | Status | Entry point | Workdir | Log |

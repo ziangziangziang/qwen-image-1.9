@@ -1,6 +1,6 @@
 {
   "flatten_layered_rgba": "alpha-composite-to-rgb",
-  "generated_at": "2026-03-23T20:24:35.097047+00:00",
+  "generated_at": "2026-03-23T20:43:54.989543+00:00",
   "name": "stage-2-synthetic-teacher-dataset",
   "output_root": "stage-2/datasets/teacher-db",
   "planned_records": [
@@ -41,6 +41,126 @@
       "prompt": "studio product photo of a brushed metal camera on cream paper with sharp label text",
       "sample_id": "generation_teacher-0002",
       "seed": 202,
+      "teacher_model": "Qwen/Qwen-Image-2512",
+      "teacher_model_alias": "qwen-image-2512"
+    },
+    {
+      "asset_paths": {
+        "image": "stage-2/datasets/teacher-db/generation_teacher/images/generation_teacher-0003.png",
+        "metadata": "stage-2/datasets/teacher-db/generation_teacher/metadata/generation_teacher-0003.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "text-to-image"
+      },
+      "prompt": "rainy neon street at night with a taxi sign and reflective pavement",
+      "sample_id": "generation_teacher-0003",
+      "seed": 303,
+      "teacher_model": "Qwen/Qwen-Image-2512",
+      "teacher_model_alias": "qwen-image-2512"
+    },
+    {
+      "asset_paths": {
+        "image": "stage-2/datasets/teacher-db/generation_teacher/images/generation_teacher-0004.png",
+        "metadata": "stage-2/datasets/teacher-db/generation_teacher/metadata/generation_teacher-0004.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "text-to-image"
+      },
+      "prompt": "storybook castle on a hill at sunrise with crisp title lettering",
+      "sample_id": "generation_teacher-0004",
+      "seed": 404,
+      "teacher_model": "Qwen/Qwen-Image-2512",
+      "teacher_model_alias": "qwen-image-2512"
+    },
+    {
+      "asset_paths": {
+        "image": "stage-2/datasets/teacher-db/generation_teacher/images/generation_teacher-0005.png",
+        "metadata": "stage-2/datasets/teacher-db/generation_teacher/metadata/generation_teacher-0005.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "text-to-image"
+      },
+      "prompt": "cinematic portrait of a botanist in a glass greenhouse with readable name badge text",
+      "sample_id": "generation_teacher-0005",
+      "seed": 101,
+      "teacher_model": "Qwen/Qwen-Image-2512",
+      "teacher_model_alias": "qwen-image-2512"
+    },
+    {
+      "asset_paths": {
+        "image": "stage-2/datasets/teacher-db/generation_teacher/images/generation_teacher-0006.png",
+        "metadata": "stage-2/datasets/teacher-db/generation_teacher/metadata/generation_teacher-0006.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "text-to-image"
+      },
+      "prompt": "studio product photo of a brushed metal camera on cream paper with sharp label text",
+      "sample_id": "generation_teacher-0006",
+      "seed": 202,
+      "teacher_model": "Qwen/Qwen-Image-2512",
+      "teacher_model_alias": "qwen-image-2512"
+    },
+    {
+      "asset_paths": {
+        "image": "stage-2/datasets/teacher-db/generation_teacher/images/generation_teacher-0007.png",
+        "metadata": "stage-2/datasets/teacher-db/generation_teacher/metadata/generation_teacher-0007.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "text-to-image"
+      },
+      "prompt": "rainy neon street at night with a taxi sign and reflective pavement",
+      "sample_id": "generation_teacher-0007",
+      "seed": 303,
+      "teacher_model": "Qwen/Qwen-Image-2512",
+      "teacher_model_alias": "qwen-image-2512"
+    },
+    {
+      "asset_paths": {
+        "image": "stage-2/datasets/teacher-db/generation_teacher/images/generation_teacher-0008.png",
+        "metadata": "stage-2/datasets/teacher-db/generation_teacher/metadata/generation_teacher-0008.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "text-to-image"
+      },
+      "prompt": "storybook castle on a hill at sunrise with crisp title lettering",
+      "sample_id": "generation_teacher-0008",
+      "seed": 404,
       "teacher_model": "Qwen/Qwen-Image-2512",
       "teacher_model_alias": "qwen-image-2512"
     },
@@ -90,6 +210,138 @@
     },
     {
       "asset_paths": {
+        "edited_image": "stage-2/datasets/teacher-db/edit_teacher/edited/edit_teacher-0003.png",
+        "metadata": "stage-2/datasets/teacher-db/edit_teacher/metadata/edit_teacher-0003.json",
+        "source_image": "stage-2/datasets/teacher-db/edit_teacher/source/edit_teacher-0003.png"
+      },
+      "edit_instruction": "update the poster palette to teal and cream while preserving layout",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "generate-then-edit"
+      },
+      "sample_id": "edit_teacher-0003",
+      "seed": 333,
+      "source_prompt": "retro poster of a rocket launch with bold orange typography",
+      "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+      "teacher_model_alias": "qwen-image-edit-2511"
+    },
+    {
+      "asset_paths": {
+        "edited_image": "stage-2/datasets/teacher-db/edit_teacher/edited/edit_teacher-0004.png",
+        "metadata": "stage-2/datasets/teacher-db/edit_teacher/metadata/edit_teacher-0004.json",
+        "source_image": "stage-2/datasets/teacher-db/edit_teacher/source/edit_teacher-0004.png"
+      },
+      "edit_instruction": "switch the raincoat to forest green and keep the dog expression unchanged",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "generate-then-edit"
+      },
+      "sample_id": "edit_teacher-0004",
+      "seed": 444,
+      "source_prompt": "close portrait of a corgi in a yellow raincoat on wet pavement",
+      "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+      "teacher_model_alias": "qwen-image-edit-2511"
+    },
+    {
+      "asset_paths": {
+        "edited_image": "stage-2/datasets/teacher-db/edit_teacher/edited/edit_teacher-0005.png",
+        "metadata": "stage-2/datasets/teacher-db/edit_teacher/metadata/edit_teacher-0005.json",
+        "source_image": "stage-2/datasets/teacher-db/edit_teacher/source/edit_teacher-0005.png"
+      },
+      "edit_instruction": "change the jacket to white while keeping pose, lighting, and camera angle",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "generate-then-edit"
+      },
+      "sample_id": "edit_teacher-0005",
+      "seed": 111,
+      "source_prompt": "street style portrait of a runner in a red jacket against a subway wall",
+      "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+      "teacher_model_alias": "qwen-image-edit-2511"
+    },
+    {
+      "asset_paths": {
+        "edited_image": "stage-2/datasets/teacher-db/edit_teacher/edited/edit_teacher-0006.png",
+        "metadata": "stage-2/datasets/teacher-db/edit_teacher/metadata/edit_teacher-0006.json",
+        "source_image": "stage-2/datasets/teacher-db/edit_teacher/source/edit_teacher-0006.png"
+      },
+      "edit_instruction": "replace the mug pattern with blue stripes and keep the same composition",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "generate-then-edit"
+      },
+      "sample_id": "edit_teacher-0006",
+      "seed": 222,
+      "source_prompt": "product shot of a ceramic mug on a wooden table in morning light",
+      "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+      "teacher_model_alias": "qwen-image-edit-2511"
+    },
+    {
+      "asset_paths": {
+        "edited_image": "stage-2/datasets/teacher-db/edit_teacher/edited/edit_teacher-0007.png",
+        "metadata": "stage-2/datasets/teacher-db/edit_teacher/metadata/edit_teacher-0007.json",
+        "source_image": "stage-2/datasets/teacher-db/edit_teacher/source/edit_teacher-0007.png"
+      },
+      "edit_instruction": "update the poster palette to teal and cream while preserving layout",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "generate-then-edit"
+      },
+      "sample_id": "edit_teacher-0007",
+      "seed": 333,
+      "source_prompt": "retro poster of a rocket launch with bold orange typography",
+      "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+      "teacher_model_alias": "qwen-image-edit-2511"
+    },
+    {
+      "asset_paths": {
+        "edited_image": "stage-2/datasets/teacher-db/edit_teacher/edited/edit_teacher-0008.png",
+        "metadata": "stage-2/datasets/teacher-db/edit_teacher/metadata/edit_teacher-0008.json",
+        "source_image": "stage-2/datasets/teacher-db/edit_teacher/source/edit_teacher-0008.png"
+      },
+      "edit_instruction": "switch the raincoat to forest green and keep the dog expression unchanged",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "generate-then-edit"
+      },
+      "sample_id": "edit_teacher-0008",
+      "seed": 444,
+      "source_prompt": "close portrait of a corgi in a yellow raincoat on wet pavement",
+      "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+      "teacher_model_alias": "qwen-image-edit-2511"
+    },
+    {
+      "asset_paths": {
         "image": "stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0001.png",
         "metadata": "stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0001.json"
       },
@@ -127,6 +379,126 @@
       "seed": 242,
       "teacher_model": "Qwen/Qwen-Image-Layered",
       "teacher_model_alias": "qwen-image-layered"
+    },
+    {
+      "asset_paths": {
+        "image": "stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0003.png",
+        "metadata": "stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0003.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": true,
+        "task": "layer-aware-generation"
+      },
+      "prompt": "fashion mannequin in a trench coat isolated from a soft gradient background",
+      "sample_id": "layered_teacher-0003",
+      "seed": 363,
+      "teacher_model": "Qwen/Qwen-Image-Layered",
+      "teacher_model_alias": "qwen-image-layered"
+    },
+    {
+      "asset_paths": {
+        "image": "stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0004.png",
+        "metadata": "stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0004.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": true,
+        "task": "layer-aware-generation"
+      },
+      "prompt": "glass perfume bottle with strong silhouette and easy foreground-background separation",
+      "sample_id": "layered_teacher-0004",
+      "seed": 484,
+      "teacher_model": "Qwen/Qwen-Image-Layered",
+      "teacher_model_alias": "qwen-image-layered"
+    },
+    {
+      "asset_paths": {
+        "image": "stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0005.png",
+        "metadata": "stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0005.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": true,
+        "task": "layer-aware-generation"
+      },
+      "prompt": "single toy robot centered on seamless paper backdrop with clean subject separation",
+      "sample_id": "layered_teacher-0005",
+      "seed": 121,
+      "teacher_model": "Qwen/Qwen-Image-Layered",
+      "teacher_model_alias": "qwen-image-layered"
+    },
+    {
+      "asset_paths": {
+        "image": "stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0006.png",
+        "metadata": "stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0006.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": true,
+        "task": "layer-aware-generation"
+      },
+      "prompt": "cutout-style potted plant on a tabletop with simple studio background",
+      "sample_id": "layered_teacher-0006",
+      "seed": 242,
+      "teacher_model": "Qwen/Qwen-Image-Layered",
+      "teacher_model_alias": "qwen-image-layered"
+    },
+    {
+      "asset_paths": {
+        "image": "stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0007.png",
+        "metadata": "stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0007.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": true,
+        "task": "layer-aware-generation"
+      },
+      "prompt": "fashion mannequin in a trench coat isolated from a soft gradient background",
+      "sample_id": "layered_teacher-0007",
+      "seed": 363,
+      "teacher_model": "Qwen/Qwen-Image-Layered",
+      "teacher_model_alias": "qwen-image-layered"
+    },
+    {
+      "asset_paths": {
+        "image": "stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0008.png",
+        "metadata": "stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0008.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "1024x1024",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": true,
+        "task": "layer-aware-generation"
+      },
+      "prompt": "glass perfume bottle with strong silhouette and easy foreground-background separation",
+      "sample_id": "layered_teacher-0008",
+      "seed": 484,
+      "teacher_model": "Qwen/Qwen-Image-Layered",
+      "teacher_model_alias": "qwen-image-layered"
     }
   ],
   "record_schema": [
@@ -150,7 +522,7 @@
         "resolution": "1024x1024",
         "steps": 30
       },
-      "planned_sample_count": 2,
+      "planned_sample_count": 8,
       "prompt_bank": [
         {
           "edit_instruction": "change the jacket to white while keeping pose, lighting, and camera angle",
@@ -159,11 +531,21 @@
         {
           "edit_instruction": "replace the mug pattern with blue stripes and keep the same composition",
           "source_prompt": "product shot of a ceramic mug on a wooden table in morning light"
+        },
+        {
+          "edit_instruction": "update the poster palette to teal and cream while preserving layout",
+          "source_prompt": "retro poster of a rocket launch with bold orange typography"
+        },
+        {
+          "edit_instruction": "switch the raincoat to forest green and keep the dog expression unchanged",
+          "source_prompt": "close portrait of a corgi in a yellow raincoat on wet pavement"
         }
       ],
       "seed_schedule": [
         111,
-        222
+        222,
+        333,
+        444
       ],
       "task": "generate-then-edit",
       "teacher_model": "Qwen/Qwen-Image-Edit-2511",
@@ -176,14 +558,18 @@
         "resolution": "1024x1024",
         "steps": 30
       },
-      "planned_sample_count": 2,
+      "planned_sample_count": 8,
       "prompt_bank": [
         "cinematic portrait of a botanist in a glass greenhouse with readable name badge text",
-        "studio product photo of a brushed metal camera on cream paper with sharp label text"
+        "studio product photo of a brushed metal camera on cream paper with sharp label text",
+        "rainy neon street at night with a taxi sign and reflective pavement",
+        "storybook castle on a hill at sunrise with crisp title lettering"
       ],
       "seed_schedule": [
         101,
-        202
+        202,
+        303,
+        404
       ],
       "task": "text-to-image",
       "teacher_model": "Qwen/Qwen-Image-2512",
@@ -196,14 +582,18 @@
         "resolution": "1024x1024",
         "steps": 30
       },
-      "planned_sample_count": 2,
+      "planned_sample_count": 8,
       "prompt_bank": [
         "single toy robot centered on seamless paper backdrop with clean subject separation",
-        "cutout-style potted plant on a tabletop with simple studio background"
+        "cutout-style potted plant on a tabletop with simple studio background",
+        "fashion mannequin in a trench coat isolated from a soft gradient background",
+        "glass perfume bottle with strong silhouette and easy foreground-background separation"
       ],
       "seed_schedule": [
         121,
-        242
+        242,
+        363,
+        484
       ],
       "task": "layer-aware-generation",
       "teacher_model": "Qwen/Qwen-Image-Layered",
