@@ -70,8 +70,10 @@ def collect_hardware_profile(device: str) -> dict[str, object]:
     }
 
 
-def image_to_tensor(path: Path) -> torch.Tensor:
+def image_to_tensor(path: Path, target_size: tuple[int, int] | None = None) -> torch.Tensor:
     image = Image.open(path).convert("RGB")
+    if target_size is not None and image.size != target_size:
+        image = image.resize(target_size, Image.BILINEAR)
     width, height = image.size
     data = torch.tensor(list(image.getdata()), dtype=torch.float32).view(height, width, 3)
     return data.permute(2, 0, 1).contiguous() / 255.0
@@ -111,7 +113,14 @@ if __name__ == "__main__":
     if not image_paths:
         raise SystemExit(f"No dataset PNG files found under: {args.dataset_root}")
 
-    tensors = [image_to_tensor(path) for path in image_paths]
+    # Determine the most common image size and resize outliers so torch.stack
+    # works when the teacher dataset contains mixed resolutions (e.g. layered
+    # teacher at 640×640 vs generation teacher at 512×512).
+    from collections import Counter as _Counter
+    _sizes = [Image.open(p).size for p in image_paths]
+    target_size = _Counter(_sizes).most_common(1)[0][0]
+
+    tensors = [image_to_tensor(path, target_size=target_size) for path in image_paths]
     device = "cuda"
     hardware = collect_hardware_profile(device)
     tensors = [tensor.to(device) for tensor in tensors]

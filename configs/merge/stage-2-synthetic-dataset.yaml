@@ -19,12 +19,16 @@
     "generation_teacher": {
       "teacher_model": "qwen-image-2512",
       "task": "text-to-image",
-      "planned_sample_count": 8,
+      "planned_sample_count": 16,
       "seed_schedule": [
         101,
         202,
         303,
-        404
+        404,
+        505,
+        606,
+        707,
+        808
       ],
       "generation_settings": {
         "resolution": "512x512",
@@ -39,18 +43,30 @@
         "editorial flat lay of vintage maps and compass on worn leather",
         "macro shot of a mechanical watch face on dark velvet with metallic highlights",
         "wide-angle interior of a mid-century modern living room in golden hour light",
-        "street food vendor at dusk with illuminated sign and steam rising from the grill"
+        "street food vendor at dusk with illuminated sign and steam rising from the grill",
+        "overhead drone shot of a winding river through autumn forest with vivid foliage",
+        "black and white portrait of a jazz musician holding a saxophone under stage light",
+        "fantasy illustration of a dragon perched on a crystal spire at twilight",
+        "underwater photograph of a coral reef with tropical fish and dappled sunlight",
+        "minimalist still life of three pears on a marble countertop with side window light",
+        "cyberpunk alley at night with holographic signs and wet asphalt reflections",
+        "architectural photograph of a spiral staircase from directly above with strong geometry",
+        "oil painting style landscape of rolling hills under dramatic cloud formations"
       ]
     },
     "edit_teacher": {
       "teacher_model": "qwen-image-edit-2511",
       "task": "generate-then-edit",
-      "planned_sample_count": 8,
+      "planned_sample_count": 16,
       "seed_schedule": [
         111,
         222,
         333,
-        444
+        444,
+        555,
+        666,
+        777,
+        888
       ],
       "generation_settings": {
         "resolution": "512x512",
@@ -89,18 +105,54 @@
         {
           "source_prompt": "chef plating a colorful dish in a professional kitchen under strong overhead light",
           "edit_instruction": "swap the dish to a dark chocolate dessert with gold leaf garnish"
+        },
+        {
+          "source_prompt": "vintage car parked on a cobblestone street with old brick buildings behind",
+          "edit_instruction": "change the car color from red to deep metallic blue while preserving reflections"
+        },
+        {
+          "source_prompt": "hiker standing on a mountain ridge overlooking a green valley at sunrise",
+          "edit_instruction": "change the season from summer to snowy winter while keeping the hiker and composition"
+        },
+        {
+          "source_prompt": "tabletop flat lay of art supplies including brushes, paint tubes, and sketchbook",
+          "edit_instruction": "replace all paint tubes with watercolor pans and add a glass of water"
+        },
+        {
+          "source_prompt": "golden retriever sitting in a sunlit meadow with wildflowers",
+          "edit_instruction": "change the dog breed to a border collie while keeping the meadow scene intact"
+        },
+        {
+          "source_prompt": "neon-lit sushi bar interior with a chef preparing rolls behind the counter",
+          "edit_instruction": "change the neon lighting from pink to cool blue and swap sushi for ramen bowls"
+        },
+        {
+          "source_prompt": "child holding a red balloon in front of a carnival Ferris wheel at dusk",
+          "edit_instruction": "replace the red balloon with a cluster of pastel-colored balloons"
+        },
+        {
+          "source_prompt": "sailboat anchored in a calm turquoise bay with palm trees on the shore",
+          "edit_instruction": "change the calm bay to stormy seas with dark clouds while keeping the sailboat"
+        },
+        {
+          "source_prompt": "rustic bakery display with fresh sourdough loaves and croissants on wooden shelves",
+          "edit_instruction": "replace sourdough loaves with decorated cupcakes and keep the rustic shelf style"
         }
       ]
     },
     "layered_teacher": {
       "teacher_model": "qwen-image-layered",
       "task": "layer-aware-generation",
-      "planned_sample_count": 8,
+      "planned_sample_count": 16,
       "seed_schedule": [
         121,
         242,
         363,
-        484
+        484,
+        545,
+        666,
+        727,
+        848
       ],
       "generation_settings": {
         "resolution": "512x512",
@@ -115,7 +167,15 @@
         "ceramic bowl on a plain white surface with hard studio lighting and sharp shadows",
         "sneaker product shot on seamless white with strong overhead light and minimal reflections",
         "single apple on a neutral gray tabletop with clean shadow beneath",
-        "vintage camera on a flat white backdrop with no distracting background elements"
+        "vintage camera on a flat white backdrop with no distracting background elements",
+        "white coffee cup on a dark wooden desk with sharp edge contrast for easy masking",
+        "leather handbag isolated on a pale pink cyclorama with soft diffused lighting",
+        "small cactus in a terracotta pot on a clean white shelf with directional window light",
+        "chess piece king standing alone on a reflective black surface with dark background",
+        "wristwatch laid flat on folded linen with even studio lighting and no reflections",
+        "sunglasses placed on a marble slab with hard overhead light and crisp shadow",
+        "single red rose in a clear glass vase against a neutral gray studio backdrop",
+        "pair of wireless earbuds on a matte white surface with soft overhead lighting"
       ]
     }
   }

@@ -765,6 +765,26 @@ def apply_run_profile(
             profile_manifest["dataset"]["split_counts"][split_name] = smoke_count
         rebuild_dataset_records(profile_dataset_manifest)
 
+    else:
+        # Non-smoke profiles: apply dataset_samples_per_split as a cap so the
+        # profile limit consistently controls how many samples are generated.
+        profile_count = int(limits.get("dataset_samples_per_split", 0))
+        if profile_count > 0:
+            for split_name, split_payload in profile_dataset_manifest["splits"].items():
+                current = int(split_payload.get("planned_sample_count", 0))
+                capped = min(current, profile_count)
+                split_payload["planned_sample_count"] = capped
+                split_payload["seed_schedule"] = split_payload["seed_schedule"][:capped]
+                split_payload["prompt_bank"] = split_payload["prompt_bank"][:capped]
+                profile_manifest["dataset"]["split_counts"][split_name] = capped
+            rebuild_dataset_records(profile_dataset_manifest)
+
+        profile_manifest["layered_bridge_recipe"]["training_limits"] = {
+            "max_steps": int(limits.get("bridge_train_steps", 500)),
+            "batch_size": int(limits.get("bridge_batch_size", 2)),
+            "eval_prompt_count": int(limits.get("eval_prompt_count", 24)),
+        }
+
     profile_manifest["remote_jobs"] = build_remote_jobs(
         profile_manifest["core_delta_candidates"],
         profile_dataset_manifest,
