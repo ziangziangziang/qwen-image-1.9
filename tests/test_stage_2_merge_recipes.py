@@ -278,19 +278,20 @@ class Stage2Tests(unittest.TestCase):
     def test_fuse_requires_canonical_stage1_artifacts(self) -> None:
         self.write_stage2_configs()
         with patch("qwen_image_19.stage_2_fusion.repo_root", return_value=self.root):
-            with patch("qwen_image_19.stage_2_fusion.load_model_inventory", return_value=MODELS):
-                with patch(
-                    "qwen_image_19.stage_2_fusion.default_remote_context",
-                    return_value={
-                        "name": "remote-test",
-                        "python": "python3",
-                        "workdir": "/mnt/private/workdir",
-                        "artifact_dir": "/mnt/private/artifacts",
-                        "cache_dir": "/mnt/private/cache",
-                    },
-                ):
-                    with self.assertRaises(Stage2FusionError):
-                        fuse(dry_run=True)
+            with patch("qwen_image_19.stage_2_fusion._manifest.repo_root", return_value=self.root):
+                with patch("qwen_image_19.stage_2_fusion.load_model_inventory", return_value=MODELS):
+                    with patch(
+                        "qwen_image_19.stage_2_fusion.default_remote_context",
+                        return_value={
+                            "name": "remote-test",
+                            "python": "python3",
+                            "workdir": "/mnt/private/workdir",
+                            "artifact_dir": "/mnt/private/artifacts",
+                            "cache_dir": "/mnt/private/cache",
+                        },
+                    ):
+                        with self.assertRaises(Stage2FusionError):
+                            fuse(dry_run=True)
 
     def test_fuse_dry_run_builds_dual_track_manifest(self) -> None:
         self.write_stage2_configs()
@@ -348,14 +349,15 @@ class Stage2Tests(unittest.TestCase):
         self.write_stage1_artifacts()
         artifact_root = self.root / "reports" / "stage-2"
         with patch("qwen_image_19.stage_2_fusion.repo_root", return_value=self.root):
-            with patch("qwen_image_19.stage_2_fusion.load_model_inventory", return_value=MODELS):
-                with patch(
-                    "qwen_image_19.stage_2_fusion.default_remote_context",
-                    return_value={"name": "remote-test", "python": "python3"},
-                ):
-                    with patch("qwen_image_19.stage_2_fusion.run_subprocess_job", return_value=(0, 0.01)):
-                        with patch("qwen_image_19.stage_2_fusion.ensure_outputs_exist", return_value=[]):
-                            result = fuse(artifact_dir=artifact_root, smoke_run=True)
+            with patch("qwen_image_19.stage_2_fusion._manifest.repo_root", return_value=self.root):
+                with patch("qwen_image_19.stage_2_fusion.load_model_inventory", return_value=MODELS):
+                    with patch(
+                        "qwen_image_19.stage_2_fusion.default_remote_context",
+                        return_value={"name": "remote-test", "python": "python3"},
+                    ):
+                        with patch("qwen_image_19.stage_2_fusion._jobs.run_subprocess_job", return_value=(0, 0.01)):
+                            with patch("qwen_image_19.stage_2_fusion._jobs.ensure_outputs_exist", return_value=[]):
+                                result = fuse(artifact_dir=artifact_root, smoke_run=True)
         manifest = result["manifest"]
         self.assertEqual(result["run_profile"], "smoke")
         self.assertEqual(result["execution_policy"], "overwrite")
@@ -419,11 +421,12 @@ class Stage2Tests(unittest.TestCase):
         self.write_stage1_artifacts()
         artifact_root = self.root / "reports" / "stage-2"
         with patch("qwen_image_19.stage_2_fusion.repo_root", return_value=self.root):
-            with patch("qwen_image_19.stage_2_fusion.load_model_inventory", return_value=MODELS):
-                with patch("qwen_image_19.stage_2_fusion.default_remote_context", return_value={"name": "remote-test", "python": "python3"}):
-                    with patch("qwen_image_19.stage_2_fusion.run_subprocess_job", return_value=(0, 0.01)):
-                        with patch("qwen_image_19.stage_2_fusion.ensure_outputs_exist", return_value=[]):
-                            result = fuse(artifact_dir=artifact_root, smoke_run=True, execute=True)
+            with patch("qwen_image_19.stage_2_fusion._manifest.repo_root", return_value=self.root):
+                with patch("qwen_image_19.stage_2_fusion.load_model_inventory", return_value=MODELS):
+                    with patch("qwen_image_19.stage_2_fusion.default_remote_context", return_value={"name": "remote-test", "python": "python3"}):
+                        with patch("qwen_image_19.stage_2_fusion._jobs.run_subprocess_job", return_value=(0, 0.01)):
+                            with patch("qwen_image_19.stage_2_fusion._jobs.ensure_outputs_exist", return_value=[]):
+                                result = fuse(artifact_dir=artifact_root, smoke_run=True, execute=True)
         run_status = self.root / "stage-2" / "run-status.json"
         self.assertTrue(run_status.exists())
         status_payload = json.loads(run_status.read_text(encoding="utf-8"))
@@ -491,12 +494,13 @@ class Stage2Tests(unittest.TestCase):
         self.write_stage1_artifacts()
         artifact_root = self.root / "reports" / "stage-2"
         with patch("qwen_image_19.stage_2_fusion.repo_root", return_value=self.root):
-            with patch("qwen_image_19.stage_2_fusion.load_model_inventory", return_value=MODELS):
-                with patch("qwen_image_19.stage_2_fusion.default_remote_context", return_value={"name": "remote-test", "python": "python3"}):
-                    with patch("qwen_image_19.stage_2_fusion.ensure_outputs_exist", return_value=[]):
-                        with patch("qwen_image_19.stage_2_fusion.run_subprocess_job", side_effect=[(1, 0.01)]):
-                            with self.assertRaises(Stage2FusionError):
-                                fuse(artifact_dir=artifact_root, smoke_run=True, execute=True)
+            with patch("qwen_image_19.stage_2_fusion._manifest.repo_root", return_value=self.root):
+                with patch("qwen_image_19.stage_2_fusion.load_model_inventory", return_value=MODELS):
+                    with patch("qwen_image_19.stage_2_fusion.default_remote_context", return_value={"name": "remote-test", "python": "python3"}):
+                        with patch("qwen_image_19.stage_2_fusion._jobs.ensure_outputs_exist", return_value=[]):
+                            with patch("qwen_image_19.stage_2_fusion._jobs.run_subprocess_job", side_effect=[(1, 0.01)]):
+                                with self.assertRaises(Stage2FusionError):
+                                    fuse(artifact_dir=artifact_root, smoke_run=True, execute=True)
         run_status = self.root / "stage-2" / "run-status.json"
         status_payload = json.loads(run_status.read_text(encoding="utf-8"))
         self.assertEqual(status_payload["summary"]["failed_job"], "core_delta_sweep")
@@ -528,11 +532,12 @@ class Stage2Tests(unittest.TestCase):
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text("ok\n", encoding="utf-8")
         with patch("qwen_image_19.stage_2_fusion.repo_root", return_value=self.root):
-            with patch("qwen_image_19.stage_2_fusion.load_model_inventory", return_value=MODELS):
-                with patch("qwen_image_19.stage_2_fusion.default_remote_context", return_value={"name": "remote-test", "python": "python3"}):
-                    with patch("qwen_image_19.stage_2_fusion.run_subprocess_job", return_value=(0, 0.01)):
-                        with patch("qwen_image_19.stage_2_fusion.ensure_outputs_exist", return_value=[]):
-                            result = fuse(artifact_dir=artifact_root, smoke_run=True, execute=True, resume=True)
+            with patch("qwen_image_19.stage_2_fusion._manifest.repo_root", return_value=self.root):
+                with patch("qwen_image_19.stage_2_fusion.load_model_inventory", return_value=MODELS):
+                    with patch("qwen_image_19.stage_2_fusion.default_remote_context", return_value={"name": "remote-test", "python": "python3"}):
+                        with patch("qwen_image_19.stage_2_fusion._jobs.run_subprocess_job", return_value=(0, 0.01)):
+                            with patch("qwen_image_19.stage_2_fusion._jobs.ensure_outputs_exist", return_value=[]):
+                                result = fuse(artifact_dir=artifact_root, smoke_run=True, execute=True, resume=True)
         self.assertIn("run_status", result)
         status_payload = json.loads((self.root / "stage-2" / "run-status.json").read_text(encoding="utf-8"))
         self.assertEqual(status_payload["jobs"]["core_delta_sweep"]["status"], "skipped")
@@ -559,11 +564,12 @@ class Stage2Tests(unittest.TestCase):
             encoding="utf-8",
         )
         with patch("qwen_image_19.stage_2_fusion.repo_root", return_value=self.root):
-            with patch("qwen_image_19.stage_2_fusion.load_model_inventory", return_value=MODELS):
-                with patch("qwen_image_19.stage_2_fusion.default_remote_context", return_value={"name": "remote-test", "python": "python3"}):
-                    with patch("qwen_image_19.stage_2_fusion.run_subprocess_job", return_value=(0, 0.01)):
-                        with patch("qwen_image_19.stage_2_fusion.ensure_outputs_exist", return_value=[]):
-                            result = fuse(artifact_dir=artifact_root, smoke_run=True, execute=True)
+            with patch("qwen_image_19.stage_2_fusion._manifest.repo_root", return_value=self.root):
+                with patch("qwen_image_19.stage_2_fusion.load_model_inventory", return_value=MODELS):
+                    with patch("qwen_image_19.stage_2_fusion.default_remote_context", return_value={"name": "remote-test", "python": "python3"}):
+                        with patch("qwen_image_19.stage_2_fusion._jobs.run_subprocess_job", return_value=(0, 0.01)):
+                            with patch("qwen_image_19.stage_2_fusion._jobs.ensure_outputs_exist", return_value=[]):
+                                result = fuse(artifact_dir=artifact_root, smoke_run=True, execute=True)
         status_payload = json.loads(run_status.read_text(encoding="utf-8"))
         self.assertEqual(result["execution_policy"], "overwrite")
         self.assertEqual(status_payload["execution_policy"], "overwrite")

@@ -52,22 +52,29 @@ def evaluate(
     remote_config: str | None = None,
     cache_dir: str | None = None,
     dry_run: bool = False,
+    smoke_run: bool = False,
+    execute: bool = False,
+    resume: bool = False,
 ) -> dict[str, Any]:
     registry = build_eval_registry()
     remote_context = default_remote_context(remote_config)
     if cache_dir:
         remote_context["cache_dir"] = cache_dir
     report = render_eval_report(registry, remote_context)
-    target_dir = Path(artifact_dir) if artifact_dir else repo_root() / "reports"
+    target_dir = Path(artifact_dir) if artifact_dir else repo_root() / "reports" / "stage-3"
     result = {
         "stage": "stage3",
-        "mode": "dry-run" if dry_run else "write",
+        "mode": "dry-run" if dry_run else ("smoke" if smoke_run else "write"),
         "registry": registry,
         "artifact_dir": str(target_dir),
     }
     if dry_run:
         result["report_preview"] = report
         return result
-    write_text(target_dir / "stage-3-eval-report.md", report)
-    result["written"] = [str(target_dir / "stage-3-eval-report.md")]
+    target_dir.mkdir(parents=True, exist_ok=True)
+    write_text(target_dir / "README.md", report)
+    # Compat shim at legacy flat path
+    shim_path = target_dir.parent / "stage-3-eval-report.md"
+    write_text(shim_path, f"# Stage 3 Evaluation Report\n\nCanonical report: [stage-3/README.md](stage-3/README.md)\n")
+    result["written"] = [str(target_dir / "README.md"), str(shim_path)]
     return result

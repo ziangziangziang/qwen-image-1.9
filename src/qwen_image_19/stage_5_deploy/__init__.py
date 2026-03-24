@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
-from qwen_image_19.config_io import load_json_yaml, repo_root, write_text
+from qwen_image_19.config_io import load_json, repo_root, write_text
 from qwen_image_19.remote import default_remote_context
 
 
@@ -13,7 +12,7 @@ REQUIRED_STAGE_CONFIG_KEYS = {"version", "runtime", "stages", "outputs"}
 
 def load_stage_template(template_path: str | Path | None = None) -> dict[str, Any]:
     path = Path(template_path) if template_path else repo_root() / "configs" / "deploy" / "stage-5-vllm-omni-stage-config.yaml"
-    return load_json_yaml(path)
+    return load_json(path)
 
 
 def generate_stage_config(template: dict[str, Any], remote_context: dict[str, Any]) -> dict[str, Any]:
@@ -63,6 +62,9 @@ def deploy(
     remote_config: str | None = None,
     cache_dir: str | None = None,
     dry_run: bool = False,
+    smoke_run: bool = False,
+    execute: bool = False,
+    resume: bool = False,
 ) -> dict[str, Any]:
     template = load_stage_template()
     remote_context = default_remote_context(remote_config)
@@ -73,20 +75,29 @@ def deploy(
     if errors:
         raise ValueError("; ".join(errors))
     report = render_deployment_report(config)
-    target_dir = Path(artifact_dir) if artifact_dir else repo_root() / "reports"
+    target_dir = Path(artifact_dir) if artifact_dir else repo_root() / "reports" / "stage-5"
     result = {
         "stage": "stage5",
-        "mode": "dry-run" if dry_run else "write",
+        "mode": "dry-run" if dry_run else ("smoke" if smoke_run else "write"),
         "config": config,
         "artifact_dir": str(target_dir),
     }
     if dry_run:
         result["report_preview"] = report
         return result
-    write_text(target_dir / "stage-5-generated-stage-config.yaml", json.dumps(config, indent=2))
-    write_text(target_dir / "stage-5-deployment-report.md", report)
+    import json as _json
+    target_dir.mkdir(parents=True, exist_ok=True)
+    write_text(target_dir / "stage-config.yaml", _json.dumps(config, indent=2))
+    write_text(target_dir / "README.md", report)
+    # Compat shims at legacy flat paths
+    shim_config = target_dir.parent / "stage-5-generated-stage-config.yaml"
+    shim_report = target_dir.parent / "stage-5-deployment-report.md"
+    write_text(shim_config, _json.dumps(config, indent=2))
+    write_text(shim_report, f"# Stage 5 Deployment Report\n\nCanonical report: [stage-5/README.md](stage-5/README.md)\n")
     result["written"] = [
-        str(target_dir / "stage-5-generated-stage-config.yaml"),
-        str(target_dir / "stage-5-deployment-report.md"),
+        str(target_dir / "stage-config.yaml"),
+        str(target_dir / "README.md"),
+        str(shim_config),
+        str(shim_report),
     ]
     return result

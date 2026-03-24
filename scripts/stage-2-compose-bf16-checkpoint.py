@@ -185,6 +185,27 @@ def _run_generation_eval(args: argparse.Namespace) -> None:
 # Edit eval  — before/after pairs
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _compute_ssim(img_a: torch.Tensor, img_b: torch.Tensor) -> float:
+    """Compute global SSIM between two [C, H, W] float tensors in [0, 1].
+
+    Uses luminance projection (ITU-R BT.709 weights) then computes the global
+    Structural Similarity Index.  A score of 1.0 means pixel-identical;
+    lower values indicate structural changes in scene, character, or pose.
+    """
+    weights = torch.tensor([0.2126, 0.7152, 0.0722], dtype=img_a.dtype, device=img_a.device)
+    lum_a = (img_a * weights[:, None, None]).sum(0)
+    lum_b = (img_b * weights[:, None, None]).sum(0)
+    C1, C2 = 0.01 ** 2, 0.03 ** 2
+    mu_a = lum_a.mean()
+    mu_b = lum_b.mean()
+    sigma_a_sq = ((lum_a - mu_a) ** 2).mean()
+    sigma_b_sq = ((lum_b - mu_b) ** 2).mean()
+    sigma_ab = ((lum_a - mu_a) * (lum_b - mu_b)).mean()
+    numerator = (2 * mu_a * mu_b + C1) * (2 * sigma_ab + C2)
+    denominator = (mu_a ** 2 + mu_b ** 2 + C1) * (sigma_a_sq + sigma_b_sq + C2)
+    return float((numerator / denominator).item())
+
+
 def _run_edit_eval(args: argparse.Namespace) -> None:
     """Generate before/after image pairs for an edit capability evaluation.
 
@@ -192,7 +213,8 @@ def _run_edit_eval(args: argparse.Namespace) -> None:
       1. Generate the *source* image from the foundation model.
       2. Pass the source image + edit instruction into the *merged* model.
       3. Save both as  edit-NNN-before.png / edit-NNN-after.png.
-    The output JSON lists all pairs with paths, per-pair timing, and luminance delta.
+    The output JSON lists all pairs with paths, per-pair timing, luminance delta,
+    and SSIM score (structure-preservation: scene, character, pose).
     """
     if not args.foundation_model_id:
         raise SystemExit("--foundation-model-id is required for --eval-type edit")
@@ -302,6 +324,7 @@ def _run_edit_eval(args: argparse.Namespace) -> None:
             after_t = _image_to_float_tensor(after_image)
             luminance_delta = float((after_t.mean() - before_t.mean()).item())
             pixel_l2_delta = float(torch.norm(after_t - before_t).item())
+            ssim_score = _compute_ssim(before_t, after_t)
 
             results.append({
                 "idx": idx + 1,
@@ -312,6 +335,7 @@ def _run_edit_eval(args: argparse.Namespace) -> None:
                 "elapsed_seconds": round(pair_elapsed, 3),
                 "luminance_delta": round(luminance_delta, 4),
                 "pixel_l2_delta": round(pixel_l2_delta, 4),
+                "ssim_score": round(ssim_score, 4),
             })
 
         del merged_pipe
@@ -325,6 +349,7 @@ def _run_edit_eval(args: argparse.Namespace) -> None:
 
     total_seconds = time.perf_counter() - total_started
     mean_pixel_l2 = sum(r["pixel_l2_delta"] for r in results) / len(results) if results else None
+    mean_ssim = sum(r["ssim_score"] for r in results) / len(results) if results else None
 
     payload = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -338,8 +363,11 @@ def _run_edit_eval(args: argparse.Namespace) -> None:
         "resolution": f"{args.width}x{args.height}",
         "elapsed_seconds": round(total_seconds, 3),
         "mean_pixel_l2_delta": round(mean_pixel_l2, 4) if mean_pixel_l2 is not None else None,
+        "mean_ssim_score": round(mean_ssim, 4) if mean_ssim is not None else None,
         "pairs": results,
         "metrics": {
+            # SSIM close to 1.0 = scene/character/pose preserved; lower = structural drift
+            "structure_preservation_ssim": round(mean_ssim, 4) if mean_ssim is not None else None,
             "edit_retention_score": None,
         },
         "status": "passed",

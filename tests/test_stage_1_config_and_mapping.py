@@ -219,7 +219,7 @@ class Stage1Tests(unittest.TestCase):
             "layer_sharing_bars": artifact_paths["layer_sharing_bars_png"].name,
         }
 
-    def fake_build_weight_pairwise_analysis(self, manifests: dict[str, dict[str, object]]) -> tuple[dict[str, object], dict[str, object]]:
+    def fake_build_weight_pairwise_analysis(self, manifests: dict[str, dict[str, object]]) -> tuple[dict[str, object], dict[str, object], dict[str, object]]:
         shared_layer = {
             "layer_id": "mmdit_backbone:transformer_blocks:0",
             "subsystem": "mmdit_backbone",
@@ -455,7 +455,8 @@ class Stage1Tests(unittest.TestCase):
             key: {**value, "tensor_metrics": {}}
             for key, value in summary.items()
         }
-        return summary, details
+        runtime_profile = {"pair_value_pass_seconds": {}}
+        return summary, details, runtime_profile
 
     def test_resolves_hf_cache_snapshot(self) -> None:
         self.create_full_mock_cache()
@@ -486,7 +487,7 @@ class Stage1Tests(unittest.TestCase):
         self.assertIn("Layer Sharing Across All Pairs", result["report_preview"])
         self.assertIn("Value-Level Weight Comparison", result["report_preview"])
         self.assertIn("## Abstract", result["report_preview"])
-        self.assertIn("summary.md", result["artifact_paths"]["summary_markdown"])
+        self.assertIn("README.md", result["artifact_paths"]["summary_markdown"])
         self.assertIn("pairs", result["layer_analysis"])
 
     def test_compare_state_dicts_uses_real_manifests(self) -> None:
@@ -749,7 +750,7 @@ class Stage1Tests(unittest.TestCase):
         with patch("qwen_image_19.stage_1_analysis.generate_stage1_figures", side_effect=self.fake_generate_stage1_figures):
             with patch("qwen_image_19.stage_1_analysis.build_weight_pairwise_analysis", side_effect=self.fake_build_weight_pairwise_analysis):
                 result = analyze(hf_home=self.hf_home, artifact_dir=artifact_root)
-        self.assertTrue((artifact_root / "summary.md").exists())
+        self.assertTrue((artifact_root / "README.md").exists())
         self.assertTrue((artifact_root / "compatibility-matrix.json").exists())
         self.assertTrue((artifact_root / "layer-analysis.json").exists())
         self.assertTrue((artifact_root / "weight-analysis.json").exists())
@@ -759,7 +760,7 @@ class Stage1Tests(unittest.TestCase):
         self.assertTrue((artifact_root / "figures" / "layer-sharing-bars.png").exists())
         self.assertTrue((artifact_root.parent / "stage-1-compatibility-matrix.json").exists())
         self.assertTrue((artifact_root.parent / "stage-1-dna-report.md").exists())
-        summary_text = (artifact_root / "summary.md").read_text(encoding="utf-8")
+        summary_text = (artifact_root / "README.md").read_text(encoding="utf-8")
         self.assertIn("figures/component-overview.png", summary_text)
         self.assertIn("figures/pairwise-comparison.png", summary_text)
         self.assertIn("figures/layer-sharing-heatmap.png", summary_text)

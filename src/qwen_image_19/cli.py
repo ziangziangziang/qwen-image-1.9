@@ -19,7 +19,33 @@ def add_common_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--remote-config", help="Path to remote launcher or env config.")
     parser.add_argument("--artifact-dir", help="Directory for generated reports and manifests.")
     parser.add_argument("--cache-dir", help="Optional cache dir override for remote-first dry runs.")
-    parser.add_argument("--dry-run", action="store_true", help="Resolve configs and print outputs without writing.")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Resolve configs and print outputs without reading heavy resources or writing anything. Safe on any machine.",
+    )
+    parser.add_argument(
+        "--smoke-run",
+        action="store_true",
+        help=(
+            "Run a minimal quick pass to prove the pipeline is wired correctly. "
+            "Stage 1: structural analysis only, skip tensor-value comparison. "
+            "Stage 2: smoke profile (1 candidate, reduced steps/samples), auto-executes."
+        ),
+    )
+    parser.add_argument(
+        "--execute",
+        action="store_true",
+        help=(
+            "Execute the full stage workload. Required for Stage 2 full/quality profile runs. "
+            "Can be resource-intensive — allocates GPUs and runs all jobs end-to-end."
+        ),
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume from a previous run-status instead of overwriting. Skips already-succeeded jobs.",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -47,24 +73,9 @@ def build_parser() -> argparse.ArgumentParser:
     stage2_fuse = stage2_sub.add_parser("fuse", help="Build Stage 2 merge artifacts.")
     add_common_args(stage2_fuse)
     stage2_fuse.add_argument(
-        "--smoke-run",
-        action="store_true",
-        help="Run the reduced Stage 2 smoke profile immediately (quick PoC execution on 2x80GB target).",
-    )
-    stage2_fuse.add_argument(
         "--run-profile",
         choices=("smoke", "full", "quality"),
         help="Stage 2 execution profile. Defaults to smoke when --smoke-run is set, otherwise full.",
-    )
-    stage2_fuse.add_argument(
-        "--execute",
-        action="store_true",
-        help="Execute Stage 2 jobs after writing manifests. Required for full profile; optional/no-op for --smoke-run.",
-    )
-    stage2_fuse.add_argument(
-        "--resume",
-        action="store_true",
-        help="Resume Stage 2 execution from previous run-status instead of overwrite mode.",
     )
 
     stage3 = subparsers.add_parser("stage3", help="Stage 3 evaluation.")
@@ -98,6 +109,9 @@ def dispatch(args: argparse.Namespace) -> dict[str, Any]:
         "artifact_dir": args.artifact_dir,
         "remote_config": args.remote_config,
         "dry_run": args.dry_run,
+        "smoke_run": args.smoke_run,
+        "execute": args.execute,
+        "resume": args.resume,
     }
     if hasattr(args, "cache_dir"):
         kwargs["cache_dir"] = args.cache_dir
@@ -105,14 +119,8 @@ def dispatch(args: argparse.Namespace) -> dict[str, Any]:
         kwargs["hf_home"] = args.hf_home
     if hasattr(args, "cache_map_config"):
         kwargs["cache_map_config"] = args.cache_map_config
-    if hasattr(args, "smoke_run"):
-        kwargs["smoke_run"] = args.smoke_run
     if hasattr(args, "run_profile"):
         kwargs["run_profile"] = args.run_profile
-    if hasattr(args, "execute"):
-        kwargs["execute"] = args.execute
-    if hasattr(args, "resume"):
-        kwargs["resume"] = args.resume
     return handler(**kwargs)
 
 

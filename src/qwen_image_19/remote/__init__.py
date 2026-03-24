@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from qwen_image_19.config_io import env_or_default, load_env_file, load_json_yaml, repo_root
+from qwen_image_19.config_io import env_or_default, load_env_file, load_json, repo_root
 
 
 def default_remote_context(remote_config: str | None = None) -> dict[str, Any]:
@@ -28,7 +28,7 @@ def default_remote_context(remote_config: str | None = None) -> dict[str, Any]:
             "python": env_values.get("REMOTE_PYTHON", base["python"]),
         }
 
-    payload = load_json_yaml(config_path)
+    payload = load_json(config_path)
     launcher = payload.get("launcher", {})
     return {
         "name": launcher.get("type", base["name"]),
@@ -38,7 +38,4 @@ def default_remote_context(remote_config: str | None = None) -> dict[str, Any]:
         "python": launcher.get("python", base["python"]),
     }
 
-
-def default_remote_paths_config() -> Path:
-    return repo_root() / "configs" / "remote" / "paths.example.yaml"
 

@@ -3,15 +3,15 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from qwen_image_19.config_io import load_json_yaml, repo_root, write_text
+from qwen_image_19.config_io import load_json, repo_root, write_text
 from qwen_image_19.remote import default_remote_context
 
 
 def load_quant_profiles(config_dir: str | Path | None = None) -> dict[str, dict[str, Any]]:
     root = Path(config_dir) if config_dir else repo_root() / "configs" / "quant"
     return {
-        "gguf": load_json_yaml(root / "stage-4-gguf-imatrix.yaml"),
-        "exl2-gptq": load_json_yaml(root / "stage-4-exl2-gptq.yaml"),
+        "gguf": load_json(root / "stage-4-gguf-imatrix.yaml"),
+        "exl2-gptq": load_json(root / "stage-4-exl2-gptq.yaml"),
     }
 
 
@@ -51,6 +51,9 @@ def quantize(
     remote_config: str | None = None,
     cache_dir: str | None = None,
     dry_run: bool = False,
+    smoke_run: bool = False,
+    execute: bool = False,
+    resume: bool = False,
 ) -> dict[str, Any]:
     profiles = load_quant_profiles()
     validate_quant_profiles(profiles)
@@ -58,16 +61,19 @@ def quantize(
     if cache_dir:
         remote_context["cache_dir"] = cache_dir
     report = render_quantization_report(profiles, remote_context)
-    target_dir = Path(artifact_dir) if artifact_dir else repo_root() / "reports"
+    target_dir = Path(artifact_dir) if artifact_dir else repo_root() / "reports" / "stage-4"
     result = {
         "stage": "stage4",
-        "mode": "dry-run" if dry_run else "write",
+        "mode": "dry-run" if dry_run else ("smoke" if smoke_run else "write"),
         "profiles": profiles,
         "artifact_dir": str(target_dir),
     }
     if dry_run:
         result["report_preview"] = report
         return result
-    write_text(target_dir / "stage-4-quantization-report.md", report)
-    result["written"] = [str(target_dir / "stage-4-quantization-report.md")]
+    target_dir.mkdir(parents=True, exist_ok=True)
+    write_text(target_dir / "README.md", report)
+    shim_path = target_dir.parent / "stage-4-quantization-report.md"
+    write_text(shim_path, f"# Stage 4 Quantization Report\n\nCanonical report: [stage-4/README.md](stage-4/README.md)\n")
+    result["written"] = [str(target_dir / "README.md"), str(shim_path)]
     return result

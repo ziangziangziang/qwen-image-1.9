@@ -15,6 +15,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from qwen_image_19.config_io import write_json
+from qwen_image_19.stage_1_analysis import detect_total_ram_bytes
 from qwen_image_19.stage_2_fusion import fuse
 
 try:
@@ -35,25 +37,6 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--learning-rate", type=float, default=1e-3)
     parser.add_argument("--seed", type=int, default=1234)
     return parser.parse_args()
-
-
-def write_text_json(path: str, payload: dict[str, object]) -> None:
-    out = Path(path)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-
-
-def detect_total_ram_bytes() -> int | None:
-    if hasattr(os, "sysconf"):
-        try:
-            page_size = int(os.sysconf("SC_PAGE_SIZE"))
-            pages = int(os.sysconf("SC_PHYS_PAGES"))
-            total = page_size * pages
-            if total > 0:
-                return total
-        except (TypeError, ValueError, OSError):
-            return None
-    return None
 
 
 def collect_hardware_profile(device: str) -> dict[str, object]:
@@ -161,7 +144,7 @@ if __name__ == "__main__":
         ended_at = datetime.now(timezone.utc)
         min_loss = min(loss_curve) if loss_curve else None
         max_loss = max(loss_curve) if loss_curve else None
-        write_text_json(
+        write_json(
             args.metrics_output,
             {
                 "generated_at": datetime.now(timezone.utc).isoformat(),

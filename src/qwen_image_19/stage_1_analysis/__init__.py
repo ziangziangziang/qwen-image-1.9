@@ -14,7 +14,7 @@ import struct
 import time
 from typing import Any, Iterable
 
-from qwen_image_19.config_io import load_json_yaml, repo_root, write_json, write_text
+from qwen_image_19.config_io import load_json, repo_root, write_json, write_text
 from qwen_image_19.remote import default_remote_context
 
 
@@ -162,7 +162,7 @@ def load_model_inventory(model_dir: str | Path | None = None) -> dict[str, dict[
     root = Path(model_dir) if model_dir else repo_root() / "configs" / "models"
     models: dict[str, dict[str, Any]] = {}
     for filename in MODEL_CONFIGS:
-        payload = load_json_yaml(root / filename)
+        payload = load_json(root / filename)
         models[payload["alias"]] = payload
     return models
 
@@ -170,7 +170,7 @@ def load_model_inventory(model_dir: str | Path | None = None) -> dict[str, dict[
 def load_cache_alias_map(cache_map_config: str | Path | None = None) -> dict[str, str]:
     if not cache_map_config:
         return dict(DEFAULT_CACHE_ALIAS_MAP)
-    payload = load_json_yaml(cache_map_config)
+    payload = load_json(cache_map_config)
     if "models" in payload and isinstance(payload["models"], dict):
         return {key: str(value) for key, value in payload["models"].items()}
     return {key: str(value) for key, value in payload.items()}
@@ -1733,7 +1733,7 @@ def render_similarity_visualization(matrix: dict[str, Any]) -> dict[str, str]:
 def stage1_artifact_paths(target_dir: Path) -> dict[str, Path]:
     return {
         "artifact_dir": target_dir,
-        "summary_markdown": target_dir / "summary.md",
+        "summary_markdown": target_dir / "README.md",
         "matrix_json": target_dir / "compatibility-matrix.json",
         "layer_analysis_json": target_dir / "layer-analysis.json",
         "weight_analysis_json": target_dir / "weight-analysis.json",
@@ -2398,6 +2398,9 @@ def analyze(
     remote_config: str | None = None,
     model_dir: str | Path | None = None,
     dry_run: bool = False,
+    smoke_run: bool = False,
+    execute: bool = False,
+    resume: bool = False,
     cache_dir: str | None = None,
     hf_home: str | Path | None = None,
     cache_map_config: str | Path | None = None,
@@ -2432,15 +2435,20 @@ def analyze(
     phase_seconds["pairwise_structural_layer"] = time.perf_counter() - phase_start
 
     phase_start = time.perf_counter()
-    weight_result = build_weight_pairwise_analysis(manifests)
-    if len(weight_result) == 2:
-        weight_pairwise, weight_analysis = weight_result
-        value_runtime_profile = {"pair_value_pass_seconds": {}}
+    if smoke_run:
+        # Smoke mode: skip expensive tensor-value comparison (no model weights are loaded).
+        # weight-analysis.json will not be written; Stage 2 requires the full run.
+        weight_pairwise: dict[str, Any] = {}
+        weight_analysis: dict[str, Any] = {"smoke_run": True}
+        value_runtime_profile: dict[str, Any] = {}
+        phase_seconds["value_level_weight_comparison"] = time.perf_counter() - phase_start
+        matrix["weight_analysis_available"] = False
     else:
+        weight_result = build_weight_pairwise_analysis(manifests)
         weight_pairwise, weight_analysis, value_runtime_profile = weight_result
-    phase_seconds["value_level_weight_comparison"] = time.perf_counter() - phase_start
+        phase_seconds["value_level_weight_comparison"] = time.perf_counter() - phase_start
+        matrix["weight_analysis_available"] = True
 
-    matrix["weight_analysis_available"] = True
     matrix["weight_thresholds"] = {"relative_l2_delta_low": WEIGHT_DELTA_THRESHOLD}
     matrix["weight_pairwise"] = weight_pairwise
     matrix["block_review_summary"] = build_block_review_summary(weight_pairwise)
@@ -2514,18 +2522,20 @@ def analyze(
     report = render_dna_report(matrix, remote_context, resolved_hf_home, cache_alias_map, figure_refs)
     write_json(artifact_paths["matrix_json"], matrix)
     write_json(artifact_paths["layer_analysis_json"], layer_analysis)
-    write_json(artifact_paths["weight_analysis_json"], weight_analysis)
+    if not smoke_run:
+        write_json(artifact_paths["weight_analysis_json"], weight_analysis)
     write_text(artifact_paths["summary_markdown"], report)
     written = [
         str(artifact_paths["matrix_json"]),
         str(artifact_paths["layer_analysis_json"]),
-        str(artifact_paths["weight_analysis_json"]),
         str(artifact_paths["summary_markdown"]),
         str(artifact_paths["component_overview_png"]),
         str(artifact_paths["pairwise_comparison_png"]),
         str(artifact_paths["layer_sharing_heatmap_png"]),
         str(artifact_paths["layer_sharing_bars_png"]),
     ]
+    if not smoke_run:
+        written.insert(2, str(artifact_paths["weight_analysis_json"]))
     if compatibility_shims:
         write_json(compatibility_shims["legacy_matrix_json"], matrix)
         write_text(compatibility_shims["legacy_report_md"], render_stage1_compatibility_stub(target_dir))
@@ -2545,7 +2555,8 @@ def analyze(
     }
     report = render_dna_report(matrix, remote_context, resolved_hf_home, cache_alias_map, figure_refs)
     write_json(artifact_paths["matrix_json"], matrix)
-    write_json(artifact_paths["weight_analysis_json"], weight_analysis)
+    if not smoke_run:
+        write_json(artifact_paths["weight_analysis_json"], weight_analysis)
     write_text(artifact_paths["summary_markdown"], report)
     if compatibility_shims:
         write_json(compatibility_shims["legacy_matrix_json"], matrix)
