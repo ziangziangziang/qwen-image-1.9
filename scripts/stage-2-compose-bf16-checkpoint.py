@@ -59,7 +59,7 @@ def parse_args() -> argparse.Namespace:
 
 def add_supported_call_args(pipe, call_kwargs: dict[str, object], optional_kwargs: dict[str, object]) -> None:
     try:
-        params = inspect.signature(pipe.__call__).parameters
+        params = inspect.signature(inspect.unwrap(pipe.__call__)).parameters
     except (TypeError, ValueError):  # pragma: no cover
         params = {}
     accepts_var_kwargs = any(parameter.kind == inspect.Parameter.VAR_KEYWORD for parameter in params.values())
@@ -68,25 +68,6 @@ def add_supported_call_args(pipe, call_kwargs: dict[str, object], optional_kwarg
             continue
         if accepts_var_kwargs or key in params:
             call_kwargs[key] = value
-
-
-if __name__ == "__main__":
-    args = parse_args()
-    if not args.execute:
-        print(json.dumps(fuse(dry_run=True), indent=2))
-        raise SystemExit(0)
-    if not args.output:
-        raise SystemExit("--output is required with --execute")
-    if not args.model_id:
-        raise SystemExit("--model-id is required with --execute")
-
-    # ── dispatch to the appropriate eval mode ──────────────────────────────────
-    if args.eval_type == "edit":
-        _run_edit_eval(args)
-    elif args.eval_type == "consistency":
-        _run_consistency_eval(args)
-    else:
-        _run_generation_eval(args)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -532,3 +513,22 @@ def _image_to_float_tensor(image) -> "torch.Tensor":
 def _load_rgb_image(path: Path):
     from PIL import Image
     return Image.open(path).convert("RGB")
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    if not args.execute:
+        print(json.dumps(fuse(dry_run=True), indent=2))
+        raise SystemExit(0)
+    if not args.output:
+        raise SystemExit("--output is required with --execute")
+    if not args.model_id:
+        raise SystemExit("--model-id is required with --execute")
+
+    # ── dispatch to the appropriate eval mode ──────────────────────────────────
+    if args.eval_type == "edit":
+        _run_edit_eval(args)
+    elif args.eval_type == "consistency":
+        _run_consistency_eval(args)
+    else:
+        _run_generation_eval(args)
