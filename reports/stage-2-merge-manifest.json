@@ -11,7 +11,7 @@
     "training_figures_dir": "reports/stage-2/figures",
     "training_report": "reports/stage-2/training-report.md"
   },
-  "cleanup_performed": false,
+  "cleanup_performed": true,
   "compatibility_summary": {
     "adapter_only": 1,
     "delta_merge": 1,
@@ -111,7 +111,7 @@
   "execution_enabled": true,
   "execution_policy": "overwrite",
   "foundation_model": "Qwen/Qwen-Image-2512",
-  "generated_at": "2026-03-24T20:48:29.728594+00:00",
+  "generated_at": "2026-03-24T21:46:01.130615+00:00",
   "layered_bridge_recipe": {
     "base_core_candidate_id": "core-delta-w035",
     "base_core_checkpoint": "reports/stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",

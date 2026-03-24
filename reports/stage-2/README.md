@@ -8,7 +8,7 @@ Stage 2 now builds two tracks from the Stage 1 evidence: a stable BF16 core base
 - Run profile: `smoke`
 - Execution enabled: `True`
 - Execution policy: `overwrite`
-- Cleanup performed: `False`
+- Cleanup performed: `True`
 - Resource profile: `num_gpus=2`, `vram_target_gb=160`
 - Limits: `{"bridge_batch_size": 1, "bridge_train_steps": 64, "consistency_eval_prompt_count": 4, "core_candidate_id": "core-delta-w035", "dataset_samples_per_split": 2, "eval_edit_prompt_count": 3, "eval_prompt_count": 6, "poc_guidance_scale": 1.0, "poc_negative_prompt": "low resolution, low quality, deformed limbs, deformed fingers, oversaturated image, waxy skin, over-smoothed face, artificial look, chaotic composition, blurry text, distorted text", "poc_side": 512, "poc_true_cfg_scale": 4.0}`
 
@@ -86,3 +86,46 @@ Stage 2 now builds two tracks from the Stage 1 evidence: a stable BF16 core base
 - Stage 2 does not attempt true RGBA decomposition support. Layered supervision is flattened back into RGB composites.
 - The stable core winner is provisional until the remote coefficient sweep and smoke suite complete.
 - The Layered branch is experimental and should be treated as a bridge adapter, not a drop-in replacement for the core checkpoint.
+
+---
+
+## Run Results
+
+> Profile: `smoke` · Policy: `overwrite` · Total: `20m 17s`
+
+### Job Execution
+
+| Job | Status | Duration (s) | Exit | Log |
+| --- | --- | --- | --- | --- |
+| `core_delta_sweep` | ✓ `succeeded` | `220.1725` | `0` | `reports/stage-2/logs/core-delta-sweep.log` |
+| `core_smoke_eval` | ✓ `succeeded` | `132.6117` | `0` | `reports/stage-2/logs/core-smoke-eval.log` |
+| `teacher_dataset_generation` | ✓ `succeeded` | `420.0342` | `0` | `reports/stage-2/logs/teacher-dataset.log` |
+| `layered_bridge_train` | ✓ `succeeded` | `7.0931` | `0` | `reports/stage-2/logs/layered-bridge-train.log` |
+| `experimental_smoke_eval` | ✓ `succeeded` | `90.6703` | `0` | `reports/stage-2/logs/experimental-smoke-eval.log` |
+| `core_edit_eval` | ✓ `succeeded` | `152.178` | `0` | `reports/stage-2/logs/core-edit-eval.log` |
+| `consistency_eval` | ✓ `succeeded` | `194.7767` | `0` | `reports/stage-2/logs/consistency-eval.log` |
+
+### Training Report
+
+[training-report.md](reports/stage-2/training-report.md)
+
+### Visual Evaluation
+
+#### Generation (core-delta merged model — text-to-image)
+
+_No samples found at `/lustre_scratch/user_scratch/zziang/qwen-image-1.9/stage-2/evals/core-candidates/core-delta-w035/samples`._
+
+#### Edit (before → after pairs)
+
+_No edit samples found at `/lustre_scratch/user_scratch/zziang/qwen-image-1.9/stage-2/evals/core-edit/edit-samples`._
+
+#### Experimental Layered Bridge (smoke eval)
+
+_No samples found at `/lustre_scratch/user_scratch/zziang/qwen-image-1.9/stage-2/evals/experimental/samples`._
+
+### Consistency Eval
+
+- Prompts evaluated: `16`
+- Mean pixel-L2 drift: `0.0`  _(lower = merged model stays close to foundation)_
+- Min drift: `0.0` / Max drift: `0.0`
+- Status: `passed`
