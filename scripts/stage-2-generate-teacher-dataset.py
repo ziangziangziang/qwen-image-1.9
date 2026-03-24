@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 import inspect
 import json
 from pathlib import Path
+import random
 import time
 from typing import Sequence
 
@@ -27,6 +28,28 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--guidance-scale", type=float, default=1.0)
     parser.add_argument("--required-gpus", type=int, default=2)
     parser.add_argument("--required-total-vram-gb", type=float, default=160.0)
+    parser.add_argument(
+        "--prompt-dataset",
+        default="Kazimir-ai/text-to-image-prompts",
+        help="HuggingFace dataset ID to sample prompts from. Set to empty string to disable.",
+    )
+    parser.add_argument(
+        "--prompt-column",
+        default="prompt",
+        help="Column name in the HuggingFace dataset that contains prompt text.",
+    )
+    parser.add_argument(
+        "--prompt-sample-seed",
+        type=int,
+        default=42,
+        help="Random seed for sampling prompts from the HuggingFace dataset.",
+    )
+    parser.add_argument(
+        "--prompt-sample-limit",
+        type=int,
+        default=1024,
+        help="Maximum number of rows to load from the HuggingFace dataset before shuffling and sampling. 0 = no limit.",
+    )
     return parser.parse_args()
 
 
@@ -308,6 +331,74 @@ def render_layered_pair(
     return source_image, layered_image
 
 
+def _inject_hf_prompts(
+    records: list[dict],
+    dataset_id: str,
+    prompt_column: str,
+    seed: int,
+    limit: int = 1024,
+) -> int:
+    """Replace per-record prompts with samples from a HuggingFace dataset.
+
+    For text-to-image and layer-aware-generation records: replaces ``prompt``.
+    For generate-then-edit records: replaces ``source_prompt`` only; edit
+    instructions are preserved so they remain semantically grounded.
+
+    Returns the number of records whose prompts were replaced, or 0 if the
+    ``datasets`` library is not installed (falls back silently to YAML prompts).
+    """
+    try:
+        from datasets import load_dataset  # type: ignore[import]
+    except ImportError:
+        print(
+            f"[prompt-dataset] `datasets` library not installed — "
+            f"skipping HuggingFace prompt sampling from '{dataset_id}'. "
+            "Falling back to YAML prompt bank.",
+            flush=True,
+        )
+        return 0
+
+    print(f"[prompt-dataset] Loading '{dataset_id}' (column='{prompt_column}', seed={seed}, limit={limit or 'none'}) ...", flush=True)
+    try:
+        if limit and limit > 0:
+            ds = load_dataset(dataset_id, split=f"train[:{limit}]")
+        else:
+            ds = load_dataset(dataset_id, split="train")
+    except Exception as exc:
+        print(f"[prompt-dataset] Failed to load dataset: {exc} — falling back to YAML prompts.", flush=True)
+        return 0
+
+    if prompt_column not in ds.column_names:
+        print(
+            f"[prompt-dataset] Column '{prompt_column}' not found in dataset "
+            f"(available: {ds.column_names}) — falling back to YAML prompts.",
+            flush=True,
+        )
+        return 0
+
+    rng = random.Random(seed)
+    pool: list[str] = [str(p) for p in ds[prompt_column] if p and str(p).strip()]
+    rng.shuffle(pool)
+    prompt_iter = iter(pool)
+
+    replaced = 0
+    for record in records:
+        task = record.get("output_metadata", {}).get("task", "")
+        if task in ("text-to-image", "layer-aware-generation"):
+            next_prompt = next(prompt_iter, None)
+            if next_prompt:
+                record["prompt"] = next_prompt
+                replaced += 1
+        elif task == "generate-then-edit":
+            next_prompt = next(prompt_iter, None)
+            if next_prompt:
+                record["source_prompt"] = next_prompt
+                replaced += 1
+
+    print(f"[prompt-dataset] Replaced prompts in {replaced}/{len(records)} records.", flush=True)
+    return replaced
+
+
 if __name__ == "__main__":
     args = parse_args()
     manifest_path = Path(args.manifest)
@@ -329,6 +420,16 @@ if __name__ == "__main__":
     started = time.perf_counter()
     records = payload.get("planned_records", [])
     splits = payload.get("splits", {})
+
+    if args.prompt_dataset:
+        _inject_hf_prompts(
+            records,
+            dataset_id=args.prompt_dataset,
+            prompt_column=args.prompt_column,
+            seed=args.prompt_sample_seed,
+            limit=args.prompt_sample_limit,
+        )
+
     try:
         for split_name, split in splits.items():
             split_records = [record for record in records if str(record["sample_id"]).startswith(f"{split_name}-")]

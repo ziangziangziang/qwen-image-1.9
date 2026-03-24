@@ -17,7 +17,7 @@ tmp/
 # Stage 2 runtime output — raw logs, eval dumps, datasets, and weight artifacts.
 # Curated figures for REAL (non-smoke) runs live in reports/stage-2/figures/ and ARE committed.
 # Smoke-run images are excluded inside that directory via reports/stage-2/figures/.gitignore.
-stage-2/evals/
+# stage-2/evals/ is managed by stage-2/.gitignore to allow sample PNG re-inclusion.
 stage-2/logs/
 stage-2/datasets/
 stage-2/jobs/

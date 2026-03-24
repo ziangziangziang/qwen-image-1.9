@@ -4,6 +4,7 @@ import copy
 from datetime import datetime, timezone
 import json
 import math
+import os
 from pathlib import Path
 import re
 import shutil
@@ -1463,7 +1464,12 @@ def render_artifact_rows(artifacts: dict[str, str]) -> str:
     )
 
 
-def _render_eval_gallery(eval_dir: Path, task_label: str, sample_subdir: str = "samples") -> str:
+def _render_eval_gallery(
+    eval_dir: Path,
+    task_label: str,
+    sample_subdir: str = "samples",
+    readme_dir: Path | None = None,
+) -> str:
     """Return a Markdown image gallery block for up to 3 sample images in an eval directory."""
     samples_path = eval_dir / sample_subdir
     if not samples_path.is_dir():
@@ -1471,18 +1477,18 @@ def _render_eval_gallery(eval_dir: Path, task_label: str, sample_subdir: str = "
     pngs = sorted(samples_path.glob("*.png"))[:3]
     if not pngs:
         return f"_No `.png` samples found in `{samples_path.as_posix()}`._"
+    base = readme_dir if readme_dir is not None else repo_root()
     lines = []
     for png in pngs:
-        # Use a repo-relative path for the Markdown image link
         try:
-            rel = png.relative_to(repo_root()).as_posix()
+            rel = Path(os.path.relpath(png, base)).as_posix()
         except ValueError:
             rel = png.as_posix()
         lines.append(f"![{task_label} sample]({rel})")
     return "  ".join(lines)
 
 
-def _render_edit_gallery(eval_dir: Path) -> str:
+def _render_edit_gallery(eval_dir: Path, readme_dir: Path | None = None) -> str:
     """Return a Markdown before/after table for edit eval pairs (up to 3 pairs)."""
     sample_dir = eval_dir / "edit-samples"
     if not sample_dir.is_dir():
@@ -1490,17 +1496,18 @@ def _render_edit_gallery(eval_dir: Path) -> str:
     before_images = sorted(sample_dir.glob("edit-*-before.png"))[:3]
     if not before_images:
         return f"_No before/after pairs found in `{sample_dir.as_posix()}`._"
+    base = readme_dir if readme_dir is not None else repo_root()
     rows = ["| Before | After |", "|--------|-------|"]
     for before_png in before_images:
         after_png = Path(str(before_png).replace("-before.png", "-after.png"))
         try:
-            before_rel = before_png.relative_to(repo_root()).as_posix()
+            before_rel = Path(os.path.relpath(before_png, base)).as_posix()
         except ValueError:
             before_rel = before_png.as_posix()
         after_cell = ""
         if after_png.exists():
             try:
-                after_rel = after_png.relative_to(repo_root()).as_posix()
+                after_rel = Path(os.path.relpath(after_png, base)).as_posix()
             except ValueError:
                 after_rel = after_png.as_posix()
             after_cell = f"![after]({after_rel})"
@@ -1566,13 +1573,15 @@ def _render_run_results_section(
 
     # --- eval galleries ---
     evals_root = repo_root() / "stage-2" / "evals"
+    readme_dir = repo_root() / "reports" / "stage-2"
 
     generation_gallery = _render_eval_gallery(
         evals_root / "core-candidates" / manifest.get("selected_core_candidate", {}).get("candidate_id", "core-delta-w035"),
         "generation",
+        readme_dir=readme_dir,
     )
-    edit_gallery = _render_edit_gallery(evals_root / "core-edit")
-    experimental_gallery = _render_eval_gallery(evals_root / "experimental", "experimental", "samples")
+    edit_gallery = _render_edit_gallery(evals_root / "core-edit", readme_dir=readme_dir)
+    experimental_gallery = _render_eval_gallery(evals_root / "experimental", "experimental", "samples", readme_dir=readme_dir)
     consistency_block = _render_consistency_summary(
         evals_root / "consistency" / "consistency-summary.json"
     )

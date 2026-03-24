@@ -3,7 +3,27 @@
 # This file explicitly keeps small provenance artifacts tracked.
 
 # Ignore all logs and raw eval output (also covered by root .gitignore)
-evals/
+# Sample PNGs used in reports/stage-2/README.md are selectively un-ignored below
+# using the cascade pattern (dir/* + !dir/subdir/) which is the only reliable
+# way to re-include files inside an otherwise-ignored tree in git.
+evals/*
+!evals/core-candidates/
+evals/core-candidates/*
+!evals/core-candidates/core-delta-w035/
+evals/core-candidates/core-delta-w035/*
+!evals/core-candidates/core-delta-w035/samples/
+evals/core-candidates/core-delta-w035/samples/*
+!evals/core-candidates/core-delta-w035/samples/*.png
+!evals/core-edit/
+evals/core-edit/*
+!evals/core-edit/edit-samples/
+evals/core-edit/edit-samples/*
+!evals/core-edit/edit-samples/*.png
+!evals/experimental/
+evals/experimental/*
+!evals/experimental/samples/
+evals/experimental/samples/*
+!evals/experimental/samples/*.png
 logs/
 datasets/
 jobs/

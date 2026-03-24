@@ -2,6 +2,7 @@
   "recipe_name": "stage-2-synthetic-teacher-dataset",
   "output_root": "stage-2/datasets/teacher-db",
   "flatten_layered_rgba": "alpha-composite-to-rgb",
+  "prompt_source": "Kazimir-ai/text-to-image-prompts",
   "record_schema": [
     "sample_id",
     "teacher_model_alias",
@@ -26,7 +27,7 @@
         404
       ],
       "generation_settings": {
-        "resolution": "1024x1024",
+        "resolution": "512x512",
         "steps": 30,
         "guidance_scale": 4.0
       },
@@ -34,7 +35,11 @@
         "cinematic portrait of a botanist in a glass greenhouse with readable name badge text",
         "studio product photo of a brushed metal camera on cream paper with sharp label text",
         "rainy neon street at night with a taxi sign and reflective pavement",
-        "storybook castle on a hill at sunrise with crisp title lettering"
+        "storybook castle on a hill at sunrise with crisp title lettering",
+        "editorial flat lay of vintage maps and compass on worn leather",
+        "macro shot of a mechanical watch face on dark velvet with metallic highlights",
+        "wide-angle interior of a mid-century modern living room in golden hour light",
+        "street food vendor at dusk with illuminated sign and steam rising from the grill"
       ]
     },
     "edit_teacher": {
@@ -48,7 +53,7 @@
         444
       ],
       "generation_settings": {
-        "resolution": "1024x1024",
+        "resolution": "512x512",
         "steps": 30,
         "guidance_scale": 4.0
       },
@@ -68,6 +73,22 @@
         {
           "source_prompt": "close portrait of a corgi in a yellow raincoat on wet pavement",
           "edit_instruction": "switch the raincoat to forest green and keep the dog expression unchanged"
+        },
+        {
+          "source_prompt": "aerial view of a colorful tulip field in early morning fog",
+          "edit_instruction": "shift the flower color from red to deep purple while keeping the field composition"
+        },
+        {
+          "source_prompt": "wooden cabin interior with warm fireplace light and plaid blanket on sofa",
+          "edit_instruction": "change the lighting from warm amber to cool moonlight and add snow outside the window"
+        },
+        {
+          "source_prompt": "minimalist desk setup with a laptop, coffee cup, and notebook in soft office light",
+          "edit_instruction": "replace the coffee cup with a succulent plant and keep everything else unchanged"
+        },
+        {
+          "source_prompt": "chef plating a colorful dish in a professional kitchen under strong overhead light",
+          "edit_instruction": "swap the dish to a dark chocolate dessert with gold leaf garnish"
         }
       ]
     },
@@ -82,7 +103,7 @@
         484
       ],
       "generation_settings": {
-        "resolution": "1024x1024",
+        "resolution": "512x512",
         "steps": 30,
         "guidance_scale": 4.0
       },
@@ -90,7 +111,11 @@
         "single toy robot centered on seamless paper backdrop with clean subject separation",
         "cutout-style potted plant on a tabletop with simple studio background",
         "fashion mannequin in a trench coat isolated from a soft gradient background",
-        "glass perfume bottle with strong silhouette and easy foreground-background separation"
+        "glass perfume bottle with strong silhouette and easy foreground-background separation",
+        "ceramic bowl on a plain white surface with hard studio lighting and sharp shadows",
+        "sneaker product shot on seamless white with strong overhead light and minimal reflections",
+        "single apple on a neutral gray tabletop with clean shadow beneath",
+        "vintage camera on a flat white backdrop with no distracting background elements"
       ]
     }
   }
