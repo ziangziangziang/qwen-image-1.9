@@ -97,6 +97,7 @@
     "output_root": "stage-2/datasets/teacher-db",
     "relative_paths_only": true,
     "split_counts": {
+      "consistency_eval": 16,
       "edit_teacher": 8,
       "generation_teacher": 8,
       "layered_teacher": 8
@@ -135,7 +136,7 @@
   "execution_enabled": true,
   "execution_policy": "overwrite",
   "foundation_model": "Qwen/Qwen-Image-2512",
-  "generated_at": "2026-03-23T20:43:54.990529+00:00",
+  "generated_at": "2026-03-24T04:39:31.693882+00:00",
   "layered_bridge_recipe": {
     "base_core_candidate_id": "core-delta-w035",
     "base_core_checkpoint": "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
@@ -175,8 +176,10 @@
   "limits": {
     "bridge_batch_size": 2,
     "bridge_train_steps": 500,
+    "consistency_eval_prompt_count": 16,
     "core_candidate_id": "core-delta-w035",
     "dataset_samples_per_split": 8,
+    "eval_edit_prompt_count": 8,
     "eval_prompt_count": 24,
     "poc_guidance_scale": 1.0,
     "poc_negative_prompt": "low resolution, low quality, deformed limbs, deformed fingers, oversaturated image, waxy skin, over-smoothed face, artificial look, chaotic composition, blurry text, distorted text",
@@ -195,6 +198,15 @@
     "python": "python3"
   },
   "remote_jobs": {
+    "consistency_eval": {
+      "entrypoint": "scripts/stage-2-compose-bf16-checkpoint.py",
+      "log_path": "stage-2/logs/consistency-eval.log",
+      "outputs": [
+        "stage-2/evals/consistency/consistency-summary.json"
+      ],
+      "status": "planned",
+      "workdir": "stage-2/jobs/consistency-eval"
+    },
     "core_delta_sweep": {
       "entrypoint": "scripts/stage-2-build-edit-delta.py",
       "log_path": "stage-2/logs/core-delta-sweep.log",
@@ -206,6 +218,15 @@
       ],
       "status": "planned",
       "workdir": "stage-2/jobs/core-delta-sweep"
+    },
+    "core_edit_eval": {
+      "entrypoint": "scripts/stage-2-compose-bf16-checkpoint.py",
+      "log_path": "stage-2/logs/core-edit-eval.log",
+      "outputs": [
+        "stage-2/evals/core-edit/edit-summary.json"
+      ],
+      "status": "planned",
+      "workdir": "stage-2/jobs/core-edit-eval"
     },
     "core_smoke_eval": {
       "entrypoint": "scripts/stage-2-compose-bf16-checkpoint.py",

@@ -10,7 +10,7 @@ Stage 2 now builds two tracks from the Stage 1 evidence: a stable BF16 core base
 - Execution policy: `overwrite`
 - Cleanup performed: `False`
 - Resource profile: `num_gpus=2`, `vram_target_gb=160`
-- Limits: `{"bridge_batch_size": 2, "bridge_train_steps": 500, "core_candidate_id": "core-delta-w035", "dataset_samples_per_split": 8, "eval_prompt_count": 24, "poc_guidance_scale": 1.0, "poc_negative_prompt": "low resolution, low quality, deformed limbs, deformed fingers, oversaturated image, waxy skin, over-smoothed face, artificial look, chaotic composition, blurry text, distorted text", "poc_side": 1024, "poc_steps": 30, "poc_true_cfg_scale": 4.0}`
+- Limits: `{"bridge_batch_size": 2, "bridge_train_steps": 500, "consistency_eval_prompt_count": 16, "core_candidate_id": "core-delta-w035", "dataset_samples_per_split": 8, "eval_edit_prompt_count": 8, "eval_prompt_count": 24, "poc_guidance_scale": 1.0, "poc_negative_prompt": "low resolution, low quality, deformed limbs, deformed fingers, oversaturated image, waxy skin, over-smoothed face, artificial look, chaotic composition, blurry text, distorted text", "poc_side": 1024, "poc_steps": 30, "poc_true_cfg_scale": 4.0}`
 
 ## Stage 1 Evidence
 - Foundation vs Edit transformer path is the one clean merge lane: `shared=2856`, `exact=0.3246`, `strategy=delta-merge`.
@@ -59,6 +59,7 @@ Stage 2 now builds two tracks from the Stage 1 evidence: a stable BF16 core base
 | `generation_teacher` | `Qwen/Qwen-Image-2512` | `text-to-image` | `8` | `stage-2/datasets/teacher-db/generation_teacher` |
 | `edit_teacher` | `Qwen/Qwen-Image-Edit-2511` | `generate-then-edit` | `8` | `stage-2/datasets/teacher-db/edit_teacher` |
 | `layered_teacher` | `Qwen/Qwen-Image-Layered` | `layer-aware-generation` | `8` | `stage-2/datasets/teacher-db/layered_teacher` |
+| `consistency_eval` | `Qwen/Qwen-Image-2512` | `consistency-check` | `16` | `stage-2/datasets/teacher-db/consistency_eval` |
 
 ## Remote Jobs
 | Job | Status | Entry point | Workdir | Log |
@@ -68,6 +69,8 @@ Stage 2 now builds two tracks from the Stage 1 evidence: a stable BF16 core base
 | `teacher_dataset_generation` | `planned` | `scripts/stage-2-generate-teacher-dataset.py` | `stage-2/jobs/teacher-dataset` | `stage-2/logs/teacher-dataset.log` |
 | `layered_bridge_train` | `planned` | `scripts/stage-2-build-layered-bridge.py` | `stage-2/jobs/layered-bridge-train` | `stage-2/logs/layered-bridge-train.log` |
 | `experimental_smoke_eval` | `planned` | `scripts/stage-2-compose-bf16-checkpoint.py` | `stage-2/jobs/experimental-smoke-eval` | `stage-2/logs/experimental-smoke-eval.log` |
+| `core_edit_eval` | `planned` | `scripts/stage-2-compose-bf16-checkpoint.py` | `stage-2/jobs/core-edit-eval` | `stage-2/logs/core-edit-eval.log` |
+| `consistency_eval` | `planned` | `scripts/stage-2-compose-bf16-checkpoint.py` | `stage-2/jobs/consistency-eval` | `stage-2/logs/consistency-eval.log` |
 
 ## Artifacts
 | Artifact | Path |
