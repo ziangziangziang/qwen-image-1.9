@@ -1,0 +1,44 @@
+{
+  "generated_at": "2026-03-24T17:12:25.929470+00:00",
+  "eval_type": "generation",
+  "task": "core-smoke",
+  "model_ref": "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
+  "model_id": "Qwen/Qwen-Image-2512",
+  "num_prompts": 24,
+  "generated_images": 8,
+  "steps": 30,
+  "resolution": "1024x1024",
+  "elapsed_seconds": 225.641,
+  "per_prompt_seconds": [
+    31.301,
+    27.83,
+    27.648,
+    27.431,
+    27.773,
+    27.738,
+    28.016,
+    27.904
+  ],
+  "mean_luminance": 111.90488624572754,
+  "model_ref_meta": {
+    "generated_at": "2026-03-24T17:03:20.335759+00:00",
+    "candidate_id": "core-delta-w035",
+    "artifact_type": "bf16-core-smoke-poc",
+    "foundation_model": "Qwen/Qwen-Image-2512",
+    "edit_model": "Qwen/Qwen-Image-Edit-2511",
+    "blend_weight": 0.35,
+    "prompt": "studio product photo of a camera on a clean table",
+    "seed": 1234,
+    "steps": 30,
+    "width": 1024,
+    "height": 1024,
+    "delta_l2_norm": 21.68769073486328,
+    "delta_mean_abs": 0.007852931506931782
+  },
+  "metrics": {
+    "edit_retention_score": null,
+    "generation_regression_score": null
+  },
+  "status": "passed",
+  "sample_dir": "stage-2/evals/core-candidates/core-delta-w035/samples"
+}

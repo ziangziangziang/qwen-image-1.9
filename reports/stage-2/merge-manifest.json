@@ -2,12 +2,12 @@
   "artifacts": {
     "artifact_dir": "reports/stage-2",
     "dataset_manifest": "reports/stage-2/dataset-manifest.json",
-    "experimental_bridge_adapter": "stage-2/artifacts/experimental/layered-bridge-adapter.safetensors",
-    "experimental_bridge_checkpoint": "stage-2/artifacts/experimental/qwen-image-1.9-layered-bridge-bf16.safetensors",
+    "experimental_bridge_adapter": "reports/stage-2/artifacts/experimental/layered-bridge-adapter.safetensors",
+    "experimental_bridge_checkpoint": "reports/stage-2/artifacts/experimental/qwen-image-1.9-layered-bridge-bf16.safetensors",
     "merge_manifest": "reports/stage-2/merge-manifest.json",
     "report_readme": "reports/stage-2/README.md",
-    "run_status": "stage-2/run-status.json",
-    "stable_core_checkpoint": "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
+    "run_status": "reports/stage-2/run-status.json",
+    "stable_core_checkpoint": "reports/stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
     "training_figures_dir": "reports/stage-2/figures",
     "training_report": "reports/stage-2/training-report.md"
   },
@@ -20,40 +20,16 @@
   },
   "core_delta_candidates": [
     {
-      "blend_weight": 0.2,
-      "candidate_id": "core-delta-w020",
-      "output_checkpoint": "stage-2/artifacts/core-candidates/core-delta-w020/qwen-image-1.9-core-bf16.safetensors",
-      "selection_status": "planned",
-      "smoke_report": "stage-2/evals/core-candidates/core-delta-w020/smoke-summary.json"
-    },
-    {
-      "blend_weight": 0.3,
-      "candidate_id": "core-delta-w030",
-      "output_checkpoint": "stage-2/artifacts/core-candidates/core-delta-w030/qwen-image-1.9-core-bf16.safetensors",
-      "selection_status": "planned",
-      "smoke_report": "stage-2/evals/core-candidates/core-delta-w030/smoke-summary.json"
-    },
-    {
       "blend_weight": 0.35,
       "candidate_id": "core-delta-w035",
-      "output_checkpoint": "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
+      "output_checkpoint": "reports/stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
       "selection_status": "planned",
-      "smoke_report": "stage-2/evals/core-candidates/core-delta-w035/smoke-summary.json"
-    },
-    {
-      "blend_weight": 0.4,
-      "candidate_id": "core-delta-w040",
-      "output_checkpoint": "stage-2/artifacts/core-candidates/core-delta-w040/qwen-image-1.9-core-bf16.safetensors",
-      "selection_status": "planned",
-      "smoke_report": "stage-2/evals/core-candidates/core-delta-w040/smoke-summary.json"
+      "smoke_report": "reports/stage-2/evals/core-candidates/core-delta-w035/smoke-summary.json"
     }
   ],
   "core_delta_recipe": {
     "coefficient_sweep": [
-      0.2,
-      0.3,
-      0.35,
-      0.4
+      0.35
     ],
     "delta_base_candidate_alias": "qwen-image-base",
     "delta_base_candidate_model": "Qwen/Qwen-Image",
@@ -94,12 +70,12 @@
   },
   "dataset": {
     "manifest_path": "reports/stage-2/dataset-manifest.json",
-    "output_root": "stage-2/datasets/teacher-db",
+    "output_root": "reports/stage-2/datasets/teacher-db",
     "relative_paths_only": true,
     "split_counts": {
-      "edit_teacher": 8,
-      "generation_teacher": 8,
-      "layered_teacher": 8
+      "edit_teacher": 2,
+      "generation_teacher": 2,
+      "layered_teacher": 2
     }
   },
   "exclusions": {
@@ -135,10 +111,10 @@
   "execution_enabled": true,
   "execution_policy": "overwrite",
   "foundation_model": "Qwen/Qwen-Image-2512",
-  "generated_at": "2026-03-24T16:48:56.873069+00:00",
+  "generated_at": "2026-03-24T20:48:29.728594+00:00",
   "layered_bridge_recipe": {
     "base_core_candidate_id": "core-delta-w035",
-    "base_core_checkpoint": "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
+    "base_core_checkpoint": "reports/stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
     "bridge_block_window": {
       "end": 60,
       "start": 40
@@ -160,8 +136,8 @@
     ],
     "layered_output_adapter": "alpha-composite-to-rgb",
     "name": "stage-2-layered-bridge",
-    "output_adapter": "stage-2/artifacts/experimental/layered-bridge-adapter.safetensors",
-    "output_checkpoint": "stage-2/artifacts/experimental/qwen-image-1.9-layered-bridge-bf16.safetensors",
+    "output_adapter": "reports/stage-2/artifacts/experimental/layered-bridge-adapter.safetensors",
+    "output_checkpoint": "reports/stage-2/artifacts/experimental/qwen-image-1.9-layered-bridge-bf16.safetensors",
     "strategy": "learnable-bridge",
     "target_component": "transformer",
     "target_subsystems": [
@@ -170,20 +146,24 @@
     "trainable_modules": [
       "bridge_adapter",
       "per_block_gates"
-    ]
+    ],
+    "training_limits": {
+      "batch_size": 1,
+      "eval_prompt_count": 6,
+      "max_steps": 64
+    }
   },
   "limits": {
-    "bridge_batch_size": 2,
-    "bridge_train_steps": 500,
-    "consistency_eval_prompt_count": 16,
+    "bridge_batch_size": 1,
+    "bridge_train_steps": 64,
+    "consistency_eval_prompt_count": 4,
     "core_candidate_id": "core-delta-w035",
-    "dataset_samples_per_split": 8,
-    "eval_edit_prompt_count": 8,
-    "eval_prompt_count": 24,
+    "dataset_samples_per_split": 2,
+    "eval_edit_prompt_count": 3,
+    "eval_prompt_count": 6,
     "poc_guidance_scale": 1.0,
     "poc_negative_prompt": "low resolution, low quality, deformed limbs, deformed fingers, oversaturated image, waxy skin, over-smoothed face, artificial look, chaotic composition, blurry text, distorted text",
-    "poc_side": 1024,
-    "poc_steps": 30,
+    "poc_side": 512,
     "poc_true_cfg_scale": 4.0
   },
   "path_policy": {
@@ -198,87 +178,83 @@
   },
   "remote_jobs": {
     "consistency_eval": {
-      "entrypoint": "scripts/stage-2-compose-bf16-checkpoint.py",
-      "log_path": "stage-2/logs/consistency-eval.log",
+      "entrypoint": "qwen_image_19.stage_2_fusion._worker_bf16_compose",
+      "log_path": "reports/stage-2/logs/consistency-eval.log",
       "outputs": [
-        "stage-2/evals/consistency/consistency-summary.json"
+        "reports/stage-2/evals/consistency/consistency-summary.json"
       ],
       "status": "planned",
-      "workdir": "stage-2/jobs/consistency-eval"
+      "workdir": "reports/stage-2/jobs/consistency-eval"
     },
     "core_delta_sweep": {
-      "entrypoint": "scripts/stage-2-build-edit-delta.py",
-      "log_path": "stage-2/logs/core-delta-sweep.log",
+      "entrypoint": "qwen_image_19.stage_2_fusion._worker_edit_delta",
+      "log_path": "reports/stage-2/logs/core-delta-sweep.log",
       "outputs": [
-        "stage-2/artifacts/core-candidates/core-delta-w020/qwen-image-1.9-core-bf16.safetensors",
-        "stage-2/artifacts/core-candidates/core-delta-w030/qwen-image-1.9-core-bf16.safetensors",
-        "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
-        "stage-2/artifacts/core-candidates/core-delta-w040/qwen-image-1.9-core-bf16.safetensors"
+        "reports/stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors"
       ],
       "status": "planned",
-      "workdir": "stage-2/jobs/core-delta-sweep"
+      "workdir": "reports/stage-2/jobs/core-delta-sweep"
     },
     "core_edit_eval": {
-      "entrypoint": "scripts/stage-2-compose-bf16-checkpoint.py",
-      "log_path": "stage-2/logs/core-edit-eval.log",
+      "entrypoint": "qwen_image_19.stage_2_fusion._worker_bf16_compose",
+      "log_path": "reports/stage-2/logs/core-edit-eval.log",
       "outputs": [
-        "stage-2/evals/core-edit/edit-summary.json"
+        "reports/stage-2/evals/core-edit/edit-summary.json"
       ],
       "status": "planned",
-      "workdir": "stage-2/jobs/core-edit-eval"
+      "workdir": "reports/stage-2/jobs/core-edit-eval"
     },
     "core_smoke_eval": {
-      "entrypoint": "scripts/stage-2-compose-bf16-checkpoint.py",
-      "log_path": "stage-2/logs/core-smoke-eval.log",
+      "entrypoint": "qwen_image_19.stage_2_fusion._worker_bf16_compose",
+      "log_path": "reports/stage-2/logs/core-smoke-eval.log",
       "outputs": [
-        "stage-2/evals/core-candidates/core-delta-w035/smoke-summary.json"
+        "reports/stage-2/evals/core-candidates/core-delta-w035/smoke-summary.json"
       ],
       "status": "planned",
-      "workdir": "stage-2/jobs/core-smoke-eval"
+      "workdir": "reports/stage-2/jobs/core-smoke-eval"
     },
     "experimental_smoke_eval": {
-      "entrypoint": "scripts/stage-2-compose-bf16-checkpoint.py",
-      "log_path": "stage-2/logs/experimental-smoke-eval.log",
+      "entrypoint": "qwen_image_19.stage_2_fusion._worker_bf16_compose",
+      "log_path": "reports/stage-2/logs/experimental-smoke-eval.log",
       "outputs": [
-        "stage-2/evals/experimental/smoke-summary.json"
+        "reports/stage-2/evals/experimental/smoke-summary.json"
       ],
       "status": "planned",
-      "workdir": "stage-2/jobs/experimental-smoke-eval"
+      "workdir": "reports/stage-2/jobs/experimental-smoke-eval"
     },
     "layered_bridge_train": {
-      "entrypoint": "scripts/stage-2-build-layered-bridge.py",
-      "log_path": "stage-2/logs/layered-bridge-train.log",
+      "entrypoint": "qwen_image_19.stage_2_fusion._worker_layered_bridge",
+      "log_path": "reports/stage-2/logs/layered-bridge-train.log",
       "outputs": [
-        "stage-2/artifacts/experimental/layered-bridge-adapter.safetensors",
-        "stage-2/artifacts/experimental/qwen-image-1.9-layered-bridge-bf16.safetensors"
+        "reports/stage-2/artifacts/experimental/layered-bridge-adapter.safetensors",
+        "reports/stage-2/artifacts/experimental/qwen-image-1.9-layered-bridge-bf16.safetensors"
       ],
       "status": "planned",
-      "workdir": "stage-2/jobs/layered-bridge-train"
+      "workdir": "reports/stage-2/jobs/layered-bridge-train"
     },
     "teacher_dataset_generation": {
-      "entrypoint": "scripts/stage-2-generate-teacher-dataset.py",
-      "log_path": "stage-2/logs/teacher-dataset.log",
+      "entrypoint": "qwen_image_19.stage_2_fusion._worker_teacher_dataset",
+      "log_path": "reports/stage-2/logs/teacher-dataset.log",
       "outputs": [
-        "stage-2/datasets/teacher-db"
+        "reports/stage-2/datasets/teacher-db"
       ],
       "status": "planned",
-      "workdir": "stage-2/jobs/teacher-dataset"
+      "workdir": "reports/stage-2/jobs/teacher-dataset"
     }
   },
   "resource_profile": {
-    "gpu_type": "A100",
     "num_gpus": 2,
     "vram_target_gb": 160
   },
   "run_mode": "write",
-  "run_profile": "full",
+  "run_profile": "smoke",
   "selected_core_candidate": {
     "blend_weight": 0.35,
     "candidate_id": "core-delta-w035",
-    "output_checkpoint": "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
-    "selection_note": "Promote this candidate to stable once the remote smoke suite confirms edit retention without visible generation regression.",
-    "selection_status": "provisional-default",
-    "smoke_report": "stage-2/evals/core-candidates/core-delta-w035/smoke-summary.json"
+    "output_checkpoint": "reports/stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
+    "selection_note": "Smoke profile runs one candidate to validate pipeline wiring before the full sweep.",
+    "selection_status": "smoke-only",
+    "smoke_report": "reports/stage-2/evals/core-candidates/core-delta-w035/smoke-summary.json"
   },
   "source_models": {
     "qwen-image-2512": "Qwen/Qwen-Image-2512",

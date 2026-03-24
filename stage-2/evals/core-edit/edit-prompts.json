@@ -1,0 +1,34 @@
+[
+  {
+    "source_prompt": "street style portrait of a runner in a red jacket against a subway wall",
+    "edit_instruction": "change the jacket to white while keeping pose, lighting, and camera angle"
+  },
+  {
+    "source_prompt": "product shot of a ceramic mug on a wooden table in morning light",
+    "edit_instruction": "replace the mug pattern with blue stripes and keep the same composition"
+  },
+  {
+    "source_prompt": "retro poster of a rocket launch with bold orange typography",
+    "edit_instruction": "update the poster palette to teal and cream while preserving layout"
+  },
+  {
+    "source_prompt": "close portrait of a corgi in a yellow raincoat on wet pavement",
+    "edit_instruction": "switch the raincoat to forest green and keep the dog expression unchanged"
+  },
+  {
+    "source_prompt": "street style portrait of a runner in a red jacket against a subway wall",
+    "edit_instruction": "change the jacket to white while keeping pose, lighting, and camera angle"
+  },
+  {
+    "source_prompt": "product shot of a ceramic mug on a wooden table in morning light",
+    "edit_instruction": "replace the mug pattern with blue stripes and keep the same composition"
+  },
+  {
+    "source_prompt": "retro poster of a rocket launch with bold orange typography",
+    "edit_instruction": "update the poster palette to teal and cream while preserving layout"
+  },
+  {
+    "source_prompt": "close portrait of a corgi in a yellow raincoat on wet pavement",
+    "edit_instruction": "switch the raincoat to forest green and keep the dog expression unchanged"
+  }
+]

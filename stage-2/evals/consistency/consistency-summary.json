@@ -1,0 +1,164 @@
+{
+  "generated_at": "2026-03-24T12:38:23.094068+00:00",
+  "eval_type": "consistency",
+  "task": "consistency",
+  "merged_model_id": "Qwen/Qwen-Image-2512",
+  "baseline_model_id": "Qwen/Qwen-Image-2512",
+  "num_prompts": 16,
+  "steps": 30,
+  "resolution": "1024x1024",
+  "elapsed_seconds": 1077.067,
+  "consistency": {
+    "mean_pixel_l2_drift": 0.0,
+    "max_pixel_l2_drift": 0.0,
+    "min_pixel_l2_drift": 0.0,
+    "interpretation": "pixel_l2_drift measures per-image tensor distance between merged and baseline outputs for identical prompts and seeds. Lower values indicate the merge preserved generation behavior."
+  },
+  "pairs": [
+    {
+      "idx": 1,
+      "prompt": "studio product photo of a brushed metal camera on cream paper with sharp label text",
+      "baseline_path": "stage-2/evals/consistency/consistency-baseline/baseline-001.png",
+      "merged_path": "stage-2/evals/consistency/consistency-merged/merged-001.png",
+      "baseline_luminance": 0.4898,
+      "merged_luminance": 0.4898,
+      "pixel_l2_drift": 0.0
+    },
+    {
+      "idx": 2,
+      "prompt": "cinematic portrait of a botanist in a glass greenhouse with readable name badge text",
+      "baseline_path": "stage-2/evals/consistency/consistency-baseline/baseline-002.png",
+      "merged_path": "stage-2/evals/consistency/consistency-merged/merged-002.png",
+      "baseline_luminance": 0.5036,
+      "merged_luminance": 0.5036,
+      "pixel_l2_drift": 0.0
+    },
+    {
+      "idx": 3,
+      "prompt": "rainy neon street at night with a taxi sign and reflective pavement",
+      "baseline_path": "stage-2/evals/consistency/consistency-baseline/baseline-003.png",
+      "merged_path": "stage-2/evals/consistency/consistency-merged/merged-003.png",
+      "baseline_luminance": 0.2652,
+      "merged_luminance": 0.2652,
+      "pixel_l2_drift": 0.0
+    },
+    {
+      "idx": 4,
+      "prompt": "storybook castle on a hill at sunrise with crisp title lettering",
+      "baseline_path": "stage-2/evals/consistency/consistency-baseline/baseline-004.png",
+      "merged_path": "stage-2/evals/consistency/consistency-merged/merged-004.png",
+      "baseline_luminance": 0.4223,
+      "merged_luminance": 0.4223,
+      "pixel_l2_drift": 0.0
+    },
+    {
+      "idx": 5,
+      "prompt": "macro shot of a mechanical watch on dark velvet with metallic highlights",
+      "baseline_path": "stage-2/evals/consistency/consistency-baseline/baseline-005.png",
+      "merged_path": "stage-2/evals/consistency/consistency-merged/merged-005.png",
+      "baseline_luminance": 0.2048,
+      "merged_luminance": 0.2048,
+      "pixel_l2_drift": 0.0
+    },
+    {
+      "idx": 6,
+      "prompt": "editorial portrait of a chef plating food under dramatic overhead light",
+      "baseline_path": "stage-2/evals/consistency/consistency-baseline/baseline-006.png",
+      "merged_path": "stage-2/evals/consistency/consistency-merged/merged-006.png",
+      "baseline_luminance": 0.3017,
+      "merged_luminance": 0.3017,
+      "pixel_l2_drift": 0.0
+    },
+    {
+      "idx": 7,
+      "prompt": "wide landscape of a red-rock desert canyon at golden hour",
+      "baseline_path": "stage-2/evals/consistency/consistency-baseline/baseline-007.png",
+      "merged_path": "stage-2/evals/consistency/consistency-merged/merged-007.png",
+      "baseline_luminance": 0.432,
+      "merged_luminance": 0.432,
+      "pixel_l2_drift": 0.0
+    },
+    {
+      "idx": 8,
+      "prompt": "clean cutout of a retro speaker on a neutral gradient background",
+      "baseline_path": "stage-2/evals/consistency/consistency-baseline/baseline-008.png",
+      "merged_path": "stage-2/evals/consistency/consistency-merged/merged-008.png",
+      "baseline_luminance": 0.4823,
+      "merged_luminance": 0.4823,
+      "pixel_l2_drift": 0.0
+    },
+    {
+      "idx": 9,
+      "prompt": "low-angle photo of skyscrapers against a cloudy blue sky",
+      "baseline_path": "stage-2/evals/consistency/consistency-baseline/baseline-009.png",
+      "merged_path": "stage-2/evals/consistency/consistency-merged/merged-009.png",
+      "baseline_luminance": 0.5074,
+      "merged_luminance": 0.5074,
+      "pixel_l2_drift": 0.0
+    },
+    {
+      "idx": 10,
+      "prompt": "illustration of a cozy reading nook with warm lamplight and bookshelf",
+      "baseline_path": "stage-2/evals/consistency/consistency-baseline/baseline-010.png",
+      "merged_path": "stage-2/evals/consistency/consistency-merged/merged-010.png",
+      "baseline_luminance": 0.2646,
+      "merged_luminance": 0.2646,
+      "pixel_l2_drift": 0.0
+    },
+    {
+      "idx": 11,
+      "prompt": "street photo of a cyclist in motion with shallow depth of field",
+      "baseline_path": "stage-2/evals/consistency/consistency-baseline/baseline-011.png",
+      "merged_path": "stage-2/evals/consistency/consistency-merged/merged-011.png",
+      "baseline_luminance": 0.4806,
+      "merged_luminance": 0.4806,
+      "pixel_l2_drift": 0.0
+    },
+    {
+      "idx": 12,
+      "prompt": "bold minimal poster: single large sans-serif word centered on solid color",
+      "baseline_path": "stage-2/evals/consistency/consistency-baseline/baseline-012.png",
+      "merged_path": "stage-2/evals/consistency/consistency-merged/merged-012.png",
+      "baseline_luminance": 0.3214,
+      "merged_luminance": 0.3214,
+      "pixel_l2_drift": 0.0
+    },
+    {
+      "idx": 13,
+      "prompt": "nature macro of a dewy spider web in early morning light",
+      "baseline_path": "stage-2/evals/consistency/consistency-baseline/baseline-013.png",
+      "merged_path": "stage-2/evals/consistency/consistency-merged/merged-013.png",
+      "baseline_luminance": 0.3918,
+      "merged_luminance": 0.3918,
+      "pixel_l2_drift": 0.0
+    },
+    {
+      "idx": 14,
+      "prompt": "underwater photo of a sea turtle among colorful coral reefs",
+      "baseline_path": "stage-2/evals/consistency/consistency-baseline/baseline-014.png",
+      "merged_path": "stage-2/evals/consistency/consistency-merged/merged-014.png",
+      "baseline_luminance": 0.3325,
+      "merged_luminance": 0.3325,
+      "pixel_l2_drift": 0.0
+    },
+    {
+      "idx": 15,
+      "prompt": "product flat lay of coffee accessories on white marble surface",
+      "baseline_path": "stage-2/evals/consistency/consistency-baseline/baseline-015.png",
+      "merged_path": "stage-2/evals/consistency/consistency-merged/merged-015.png",
+      "baseline_luminance": 0.8211,
+      "merged_luminance": 0.8211,
+      "pixel_l2_drift": 0.0
+    },
+    {
+      "idx": 16,
+      "prompt": "nighttime city skyline reflection in still water",
+      "baseline_path": "stage-2/evals/consistency/consistency-baseline/baseline-016.png",
+      "merged_path": "stage-2/evals/consistency/consistency-merged/merged-016.png",
+      "baseline_luminance": 0.2498,
+      "merged_luminance": 0.2498,
+      "pixel_l2_drift": 0.0
+    }
+  ],
+  "status": "passed"
+}

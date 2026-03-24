@@ -1,0 +1,8 @@
+{
+  "sample_id": "edit_teacher-0002",
+  "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+  "seed": 222,
+  "steps": 30,
+  "resolution": "512x512",
+  "generated_at": "2026-03-24T17:18:18.681093+00:00"
+}
