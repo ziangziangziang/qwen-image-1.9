@@ -999,7 +999,10 @@ def build_job_command(
             *diffusion_resource_args(manifest),
         ]
     if job_name == "layered_bridge_train":
-        limits = manifest["layered_bridge_recipe"].get("training_limits", {})
+        recipe_limits = manifest["layered_bridge_recipe"].get("training_limits", {})
+        profile_limits = manifest.get("limits", {})
+        max_steps = int(recipe_limits.get("max_steps") or profile_limits.get("bridge_train_steps", 500))
+        batch_size = int(recipe_limits.get("batch_size") or profile_limits.get("bridge_batch_size", 1))
         return [
             python_cmd,
             str(repo_root() / "scripts" / "stage-2-build-layered-bridge.py"),
@@ -1013,9 +1016,9 @@ def build_job_command(
             "--dataset-root",
             manifest["dataset"]["output_root"],
             "--max-steps",
-            str(int(limits.get("max_steps", 500))),
+            str(max_steps),
             "--batch-size",
-            str(int(limits.get("batch_size", 1))),
+            str(batch_size),
         ]
     if job_name == "experimental_smoke_eval":
         return [

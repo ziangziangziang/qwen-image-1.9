@@ -296,7 +296,6 @@ def _run_edit_eval(args: argparse.Namespace) -> None:
             generator = torch.Generator(device=runtime.primary_device).manual_seed(args.seed + idx)
             after_kwargs: dict = {
                 "prompt": edit_instruction,
-                "image": before_image,
                 "num_inference_steps": max(1, args.steps),
                 "generator": generator,
             }
@@ -304,6 +303,7 @@ def _run_edit_eval(args: argparse.Namespace) -> None:
                 merged_pipe,
                 after_kwargs,
                 {
+                    "image": before_image,
                     "width": args.width,
                     "height": args.height,
                     "negative_prompt": args.negative_prompt,
