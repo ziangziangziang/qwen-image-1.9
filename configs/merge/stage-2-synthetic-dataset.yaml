@@ -92,6 +92,40 @@
         "fashion mannequin in a trench coat isolated from a soft gradient background",
         "glass perfume bottle with strong silhouette and easy foreground-background separation"
       ]
+    },
+    "consistency_eval": {
+      "teacher_model": "qwen-image-2512",
+      "task": "consistency-check",
+      "planned_sample_count": 16,
+      "seed_schedule": [
+        1001, 1002, 1003, 1004,
+        2001, 2002, 2003, 2004,
+        3001, 3002, 3003, 3004,
+        4001, 4002, 4003, 4004
+      ],
+      "generation_settings": {
+        "resolution": "1024x1024",
+        "steps": 30,
+        "guidance_scale": 4.0
+      },
+      "prompt_bank": [
+        "cinematic portrait of a botanist in a glass greenhouse with readable name badge text",
+        "studio product photo of a brushed metal camera on cream paper with sharp label text",
+        "rainy neon street at night with a taxi sign and reflective pavement",
+        "storybook castle on a hill at sunrise with crisp title lettering",
+        "macro shot of a mechanical watch on dark velvet with metallic highlights",
+        "editorial portrait of a chef plating food under dramatic overhead light",
+        "wide landscape of a red-rock desert canyon at golden hour",
+        "clean cutout of a retro speaker on a neutral gradient background",
+        "low-angle photo of skyscrapers against a cloudy blue sky",
+        "illustration of a cozy reading nook with warm lamplight and bookshelf",
+        "street photo of a cyclist in motion with shallow depth of field",
+        "bold minimal poster: single large sans-serif word centered on solid color",
+        "nature macro of a dewy spider web in early morning light",
+        "underwater photo of a sea turtle among colorful coral reefs",
+        "product flat lay of coffee accessories on white marble surface",
+        "nighttime city skyline reflection in still water"
+      ]
     }
   }
 }

@@ -410,6 +410,17 @@ def main() -> int:
             f"| `{metrics_path.as_posix()}` | `{duration_val}` |"
         )
 
+    # Authoritative aggregate: sum all job durations from run-status (covers every job,
+    # not only the three workflows that have a metrics file).
+    jobs_total = sum(
+        float(payload.get("duration_seconds", 0) or 0)
+        for payload in jobs.values()
+        if isinstance(payload, dict)
+    )
+    if jobs_total > total_elapsed:
+        total_elapsed = jobs_total
+        has_elapsed = True
+
     # Aggregate hardware: first available hw block (all workflows share the same node)
     hw_data: dict[str, Any] = all_hw[0] if all_hw else {}
 

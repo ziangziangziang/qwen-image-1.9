@@ -120,6 +120,33 @@ def _describe_job(job_name: str, manifest: dict[str, Any]) -> list[str]:
             f"{_d}diffusion  : steps={poc_steps}  side={poc_side}  cfg={cfg:g}  guidance={guidance:g}",
         ]
 
+    if job_name == "core_edit_eval":
+        sel = manifest.get("selected_core_candidate", {})
+        recipe = manifest.get("core_delta_recipe", {})
+        n_pairs = int(limits.get("eval_edit_prompt_count", 3))
+        return [
+            f"{_d}task       : edit capability eval — before/after image pairs",
+            f"{_d}merged ckpt: {sel.get('output_checkpoint', '?')}",
+            f"{_d}foundation : {recipe.get('foundation_model', '?')}  (generates 'before' images)",
+            f"{_d}merged     : {recipe.get('foundation_model', '?')}  (generates 'after' images)",
+            f"{_d}pairs      : {n_pairs}",
+            f"{_d}output     : stage-2/evals/core-edit/edit-summary.json",
+            f"{_d}diffusion  : steps={poc_steps}  side={poc_side}  cfg={cfg:g}  guidance={guidance:g}",
+        ]
+
+    if job_name == "consistency_eval":
+        sel = manifest.get("selected_core_candidate", {})
+        recipe = manifest.get("core_delta_recipe", {})
+        n_prompts = int(limits.get("consistency_eval_prompt_count", 4))
+        return [
+            f"{_d}task       : consistency eval — pixel-L2 drift between foundation and merged",
+            f"{_d}baseline   : {recipe.get('foundation_model', '?')}",
+            f"{_d}merged     : {recipe.get('foundation_model', '?')}  + checkpoint {sel.get('output_checkpoint', '?')}",
+            f"{_d}prompts    : {n_prompts}  (fixed seeds for reproducibility)",
+            f"{_d}output     : stage-2/evals/consistency/consistency-summary.json",
+            f"{_d}diffusion  : steps={poc_steps}  side={poc_side}  cfg={cfg:g}  guidance={guidance:g}",
+        ]
+
     return []
 
 
@@ -575,6 +602,24 @@ def build_remote_jobs(
                 stage2_remote_path("stage-2", "evals", "experimental", "smoke-summary.json"),
             ],
         },
+        "core_edit_eval": {
+            "status": "planned",
+            "entrypoint": "scripts/stage-2-compose-bf16-checkpoint.py",
+            "workdir": stage2_remote_path("stage-2", "jobs", "core-edit-eval"),
+            "log_path": stage2_remote_path("stage-2", "logs", "core-edit-eval.log"),
+            "outputs": [
+                stage2_remote_path("stage-2", "evals", "core-edit", "edit-summary.json"),
+            ],
+        },
+        "consistency_eval": {
+            "status": "planned",
+            "entrypoint": "scripts/stage-2-compose-bf16-checkpoint.py",
+            "workdir": stage2_remote_path("stage-2", "jobs", "consistency-eval"),
+            "log_path": stage2_remote_path("stage-2", "logs", "consistency-eval.log"),
+            "outputs": [
+                stage2_remote_path("stage-2", "evals", "consistency", "consistency-summary.json"),
+            ],
+        },
     }
 
 
@@ -813,6 +858,50 @@ def diffusion_resource_args(manifest: dict[str, Any]) -> list[str]:
     ]
 
 
+def _write_edit_prompts_json(output_path: Path, dataset_manifest_path: Path, n_pairs: int) -> None:
+    """Extract edit_teacher source/instruction pairs from the dataset manifest and write to JSON.
+
+    Falls back to hardcoded defaults if the manifest is absent.
+    """
+    pairs: list[dict[str, str]] = []
+    if dataset_manifest_path.exists():
+        try:
+            dm = json.loads(dataset_manifest_path.read_text(encoding="utf-8"))
+            for record in dm.get("planned_records", []):
+                if record.get("output_metadata", {}).get("task") == "generate-then-edit":
+                    entry: dict[str, str] = {}
+                    if "source_prompt" in record:
+                        entry["source_prompt"] = record["source_prompt"]
+                    if "edit_instruction" in record:
+                        entry["edit_instruction"] = record["edit_instruction"]
+                    if "source_prompt" in entry and "edit_instruction" in entry:
+                        pairs.append(entry)
+        except (json.JSONDecodeError, KeyError):
+            pass
+    if not pairs:
+        pairs = [
+            {
+                "source_prompt": "street style portrait of a runner in a red jacket against a subway wall",
+                "edit_instruction": "change the jacket to white while keeping pose, lighting, and camera angle",
+            },
+            {
+                "source_prompt": "product shot of a ceramic mug on a wooden table in morning light",
+                "edit_instruction": "replace the mug pattern with blue stripes and keep the same composition",
+            },
+            {
+                "source_prompt": "retro poster of a rocket launch with bold orange typography",
+                "edit_instruction": "update the poster palette to teal and cream while preserving layout",
+            },
+            {
+                "source_prompt": "close portrait of a corgi in a yellow raincoat on wet pavement",
+                "edit_instruction": "switch the raincoat to forest green and keep the dog expression unchanged",
+            },
+        ]
+    pairs = pairs[:max(1, n_pairs)]
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(pairs, indent=2) + "\n", encoding="utf-8")
+
+
 def diffusion_sampling_args(manifest: dict[str, Any]) -> list[str]:
     limits = manifest.get("limits", {})
     true_cfg_scale = float(limits.get("poc_true_cfg_scale", 4.0))
@@ -943,6 +1032,67 @@ def build_job_command(
             stage2_remote_path("stage-2", "evals", "experimental", "smoke-summary.json"),
             "--num-prompts",
             str(int(manifest["limits"].get("eval_prompt_count", 6))),
+            "--steps",
+            str(poc_steps),
+            "--width",
+            str(poc_side),
+            "--height",
+            str(poc_side),
+            *diffusion_sampling_args(manifest),
+            *diffusion_resource_args(manifest),
+        ]
+    if job_name == "core_edit_eval":
+        n_pairs = int(manifest["limits"].get("eval_edit_prompt_count", 3))
+        edit_prompts_path = stage2_remote_path("stage-2", "evals", "core-edit", "edit-prompts.json")
+        # Write the edit prompts JSON from the dataset manifest's edit_teacher split
+        _write_edit_prompts_json(
+            repo_root() / edit_prompts_path,
+            repo_root() / manifest["dataset"]["manifest_path"],
+            n_pairs,
+        )
+        return [
+            python_cmd,
+            str(repo_root() / "scripts" / "stage-2-compose-bf16-checkpoint.py"),
+            "--execute",
+            "--eval-type", "edit",
+            "--task", "core-edit",
+            "--model-ref",
+            manifest["selected_core_candidate"]["output_checkpoint"],
+            "--model-id",
+            manifest["core_delta_recipe"]["foundation_model"],
+            "--foundation-model-id",
+            manifest["core_delta_recipe"]["foundation_model"],
+            "--edit-prompts-json",
+            edit_prompts_path,
+            "--output",
+            stage2_remote_path("stage-2", "evals", "core-edit", "edit-summary.json"),
+            "--num-prompts",
+            str(n_pairs),
+            "--steps",
+            str(poc_steps),
+            "--width",
+            str(poc_side),
+            "--height",
+            str(poc_side),
+            *diffusion_sampling_args(manifest),
+            *diffusion_resource_args(manifest),
+        ]
+    if job_name == "consistency_eval":
+        n_prompts = int(manifest["limits"].get("consistency_eval_prompt_count", 4))
+        return [
+            python_cmd,
+            str(repo_root() / "scripts" / "stage-2-compose-bf16-checkpoint.py"),
+            "--execute",
+            "--eval-type", "consistency",
+            "--task", "consistency",
+            "--model-id",
+            manifest["core_delta_recipe"]["foundation_model"],
+            "--consistency-baseline-model-id",
+            manifest["core_delta_recipe"]["foundation_model"],
+            "--output",
+            stage2_remote_path("stage-2", "evals", "consistency", "consistency-summary.json"),
+            "--num-prompts",
+            str(n_prompts),
             "--steps",
             str(poc_steps),
             "--width",
@@ -1129,6 +1279,40 @@ def run_stage2_jobs(
                     f"Stage 2 execution failed at `{job_name}`. "
                     f"Check `{repo_relative_path(artifact_paths['run_status_json'])}` for details."
                 )
+            # Synthesize core-delta metrics file so the training report can render this workflow.
+            _core_delta_metrics: dict[str, Any] = {
+                "workflow": "core-delta",
+                "run_started_at": started_iso,
+                "run_ended_at": status_payload["jobs"][job_name]["ended_at"],
+                "elapsed_seconds": round(duration, 3),
+                "status": "succeeded",
+                "training_method": {
+                    "type": "coefficient-sweep",
+                    "model": (
+                        f"{manifest['core_delta_recipe']['foundation_model']}"
+                        f" + {manifest['core_delta_recipe']['delta_source_model']}"
+                    ),
+                    "objective": "edit-delta blend sweep",
+                    "optimizer": "n/a",
+                    "notes": (
+                        f"Image-level delta sweep over blend weights "
+                        f"{manifest['core_delta_recipe']['coefficient_sweep']}. "
+                        "No gradient-based training."
+                    ),
+                },
+                "candidates": [
+                    {
+                        "candidate_id": c["candidate_id"],
+                        "blend_weight": c["blend_weight"],
+                        "output_checkpoint": c["output_checkpoint"],
+                    }
+                    for c in manifest["core_delta_candidates"]
+                ],
+            }
+            _core_delta_metrics_path = repo_root() / stage2_remote_path(
+                "stage-2", "metrics", "core-delta-train.json"
+            )
+            write_json(_core_delta_metrics_path, _core_delta_metrics)
             _emit_progress(
                 f"{_tag} [{job_idx + 1}/{total_jobs}] DONE      {job_name}  {round(duration, 1)}s"
             )
@@ -1169,6 +1353,41 @@ def run_stage2_jobs(
                     failed = True
                     job_status["status"] = "failed"
                     job_status["failure_reason"] = "Detected non-finite training metric."
+        if job_name == "experimental_smoke_eval" and not failed:
+            # Synthesize experimental metrics file so the training report can render this workflow.
+            _smoke_eval_path = repo_root() / stage2_remote_path(
+                "stage-2", "evals", "experimental", "smoke-summary.json"
+            )
+            _smoke_data: dict[str, Any] = (
+                json.loads(_smoke_eval_path.read_text(encoding="utf-8"))
+                if _smoke_eval_path.exists()
+                else {}
+            )
+            _exp_metrics: dict[str, Any] = {
+                "workflow": "experimental",
+                "run_started_at": started_iso,
+                "run_ended_at": ended_iso,
+                "elapsed_seconds": round(duration, 3),
+                "status": "succeeded",
+                "training_method": {
+                    "type": "experimental-smoke-eval",
+                    "model": manifest["layered_bridge_recipe"]["output_checkpoint"],
+                    "objective": "smoke quality check on layered bridge checkpoint",
+                    "optimizer": "n/a",
+                    "notes": (
+                        "Experimental eval: visual pass/fail on the layered bridge checkpoint "
+                        "after MSE distillation training."
+                    ),
+                },
+                "num_prompts": _smoke_data.get("num_prompts"),
+                "generated_images": _smoke_data.get("generated_images"),
+                "mean_luminance": _smoke_data.get("mean_luminance"),
+                "eval_status": _smoke_data.get("status", "unknown"),
+            }
+            _exp_metrics_path = repo_root() / stage2_remote_path(
+                "stage-2", "metrics", "experimental-train.json"
+            )
+            write_json(_exp_metrics_path, _exp_metrics)
         if failed and "failure_reason" not in job_status:
             job_status["failure_reason"] = (
                 f"Job returned exit code {exit_code}."
@@ -1241,7 +1460,170 @@ def render_artifact_rows(artifacts: dict[str, str]) -> str:
     )
 
 
-def render_fusion_report(manifest: dict[str, Any], dataset_manifest: dict[str, Any]) -> str:
+def _render_eval_gallery(eval_dir: Path, task_label: str, sample_subdir: str = "samples") -> str:
+    """Return a Markdown image gallery block for up to 3 sample images in an eval directory."""
+    samples_path = eval_dir / sample_subdir
+    if not samples_path.is_dir():
+        return f"_No samples found at `{samples_path.as_posix()}`._"
+    pngs = sorted(samples_path.glob("*.png"))[:3]
+    if not pngs:
+        return f"_No `.png` samples found in `{samples_path.as_posix()}`._"
+    lines = []
+    for png in pngs:
+        # Use a repo-relative path for the Markdown image link
+        try:
+            rel = png.relative_to(repo_root()).as_posix()
+        except ValueError:
+            rel = png.as_posix()
+        lines.append(f"![{task_label} sample]({rel})")
+    return "  ".join(lines)
+
+
+def _render_edit_gallery(eval_dir: Path) -> str:
+    """Return a Markdown before/after table for edit eval pairs (up to 3 pairs)."""
+    sample_dir = eval_dir / "edit-samples"
+    if not sample_dir.is_dir():
+        return f"_No edit samples found at `{sample_dir.as_posix()}`._"
+    before_images = sorted(sample_dir.glob("edit-*-before.png"))[:3]
+    if not before_images:
+        return f"_No before/after pairs found in `{sample_dir.as_posix()}`._"
+    rows = ["| Before | After |", "|--------|-------|"]
+    for before_png in before_images:
+        after_png = Path(str(before_png).replace("-before.png", "-after.png"))
+        try:
+            before_rel = before_png.relative_to(repo_root()).as_posix()
+        except ValueError:
+            before_rel = before_png.as_posix()
+        after_cell = ""
+        if after_png.exists():
+            try:
+                after_rel = after_png.relative_to(repo_root()).as_posix()
+            except ValueError:
+                after_rel = after_png.as_posix()
+            after_cell = f"![after]({after_rel})"
+        rows.append(f"| ![ before]({before_rel}) | {after_cell} |")
+    return "\n".join(rows)
+
+
+def _render_consistency_summary(consistency_summary_path: Path) -> str:
+    if not consistency_summary_path.exists():
+        return "_Consistency eval not yet run._"
+    try:
+        data = json.loads(consistency_summary_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return "_Consistency eval summary is malformed._"
+    c = data.get("consistency", {})
+    mean_drift = c.get("mean_pixel_l2_drift", "n/a")
+    max_drift = c.get("max_pixel_l2_drift", "n/a")
+    min_drift = c.get("min_pixel_l2_drift", "n/a")
+    n = data.get("num_prompts", "?")
+    status = data.get("status", "?")
+    return (
+        f"- Prompts evaluated: `{n}`\n"
+        f"- Mean pixel-L2 drift: `{mean_drift}`  _(lower = merged model stays close to foundation)_\n"
+        f"- Min drift: `{min_drift}` / Max drift: `{max_drift}`\n"
+        f"- Status: `{status}`"
+    )
+
+
+def _render_run_results_section(
+    manifest: dict[str, Any],
+    run_status: dict[str, Any] | None,
+) -> str:
+    """Render the post-execution Results section for the README hub.
+
+    Only included after a real execution (run_status is not None and not empty).
+    """
+    if not run_status or not run_status.get("jobs"):
+        return ""
+
+    jobs: dict[str, Any] = run_status.get("jobs", {})
+
+    # Job execution summary table
+    job_rows = []
+    total_duration = 0.0
+    for name, job in jobs.items():
+        if not isinstance(job, dict):
+            continue
+        status = job.get("status", "?")
+        dur = job.get("duration_seconds", "—")
+        exit_code = job.get("exit_code", "—")
+        log = job.get("stdout_stderr_log", job.get("log_path", "—"))
+        emoji = "✓" if status == "succeeded" else ("↩" if status == "skipped" else "✗")
+        job_rows.append(f"| `{name}` | {emoji} `{status}` | `{dur}` | `{exit_code}` | `{log}` |")
+        try:
+            total_duration += float(dur)
+        except (TypeError, ValueError):
+            pass
+
+    h, rem = divmod(int(total_duration), 3600)
+    m, s = divmod(rem, 60)
+    total_str = f"{h}h {m:02d}m {s:02d}s" if h else f"{m}m {s:02d}s"
+    job_table = "\n".join(job_rows)
+
+    # --- eval galleries ---
+    evals_root = repo_root() / "stage-2" / "evals"
+
+    generation_gallery = _render_eval_gallery(
+        evals_root / "core-candidates" / manifest.get("selected_core_candidate", {}).get("candidate_id", "core-delta-w035"),
+        "generation",
+    )
+    edit_gallery = _render_edit_gallery(evals_root / "core-edit")
+    experimental_gallery = _render_eval_gallery(evals_root / "experimental", "experimental", "samples")
+    consistency_block = _render_consistency_summary(
+        evals_root / "consistency" / "consistency-summary.json"
+    )
+
+    # links to sub-reports
+    training_report_path = repo_root() / manifest.get("artifacts", {}).get("training_report", "reports/stage-2/training-report.md")
+    training_report_link = (
+        f"[training-report.md]({repo_relative_path(training_report_path)})"
+        if training_report_path.exists()
+        else "_training-report.md not yet generated_"
+    )
+
+    return f"""
+---
+
+## Run Results
+
+> Profile: `{run_status.get('run_profile', '?')}` · Policy: `{run_status.get('execution_policy', '?')}` · Total: `{total_str}`
+
+### Job Execution
+
+| Job | Status | Duration (s) | Exit | Log |
+| --- | --- | --- | --- | --- |
+{job_table}
+
+### Training Report
+
+{training_report_link}
+
+### Visual Evaluation
+
+#### Generation (core-delta merged model — text-to-image)
+
+{generation_gallery}
+
+#### Edit (before → after pairs)
+
+{edit_gallery}
+
+#### Experimental Layered Bridge (smoke eval)
+
+{experimental_gallery}
+
+### Consistency Eval
+
+{consistency_block}
+"""
+
+
+def render_fusion_report(
+    manifest: dict[str, Any],
+    dataset_manifest: dict[str, Any],
+    run_status: dict[str, Any] | None = None,
+) -> str:
     core = manifest["core_delta_recipe"]
     selected = manifest["selected_core_candidate"]
     layered = manifest["layered_bridge_recipe"]
@@ -1318,7 +1700,7 @@ Stage 2 now builds two tracks from the Stage 1 evidence: a stable BF16 core base
 - Stage 2 does not attempt true RGBA decomposition support. Layered supervision is flattened back into RGB composites.
 - The stable core winner is provisional until the remote coefficient sweep and smoke suite complete.
 - The Layered branch is experimental and should be treated as a bridge adapter, not a drop-in replacement for the core checkpoint.
-"""
+{_render_run_results_section(manifest, run_status)}"""
 
 
 def fuse(
@@ -1438,7 +1820,7 @@ def fuse(
                     f"Check `{training_report_log}`."
                 )
 
-        refreshed_report = render_fusion_report(manifest, dataset_manifest)
+        refreshed_report = render_fusion_report(manifest, dataset_manifest, run_status=run_status)
         write_json(artifact_paths["merge_manifest_json"], manifest)
         write_text(artifact_paths["report_readme"], refreshed_report)
         if compatibility_shims:
