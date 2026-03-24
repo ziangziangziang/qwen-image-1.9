@@ -31,7 +31,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--output-adapter", help="Relative adapter output path.")
     parser.add_argument("--output-checkpoint", help="Relative checkpoint output path.")
     parser.add_argument("--metrics-output", help="Relative metrics output JSON path.")
-    parser.add_argument("--dataset-root", default="stage-2/datasets/teacher-db")
+    parser.add_argument("--dataset-root", default="reports/stage-2/datasets/teacher-db")
     parser.add_argument("--max-steps", type=int, default=64)
     parser.add_argument("--batch-size", type=int, default=1)
     parser.add_argument("--learning-rate", type=float, default=1e-3)

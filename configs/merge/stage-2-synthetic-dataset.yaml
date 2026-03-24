@@ -1,6 +1,6 @@
 {
   "recipe_name": "stage-2-synthetic-teacher-dataset",
-  "output_root": "stage-2/datasets/teacher-db",
+  "output_root": "reports/stage-2/datasets/teacher-db",
   "flatten_layered_rgba": "alpha-composite-to-rgb",
   "prompt_source": "Kazimir-ai/text-to-image-prompts",
   "record_schema": [

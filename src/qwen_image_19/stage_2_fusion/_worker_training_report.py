@@ -19,7 +19,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Generate a curated Stage 2 training report (real runs only)."
     )
-    parser.add_argument("--run-status", default="stage-2/run-status.json")
+    parser.add_argument("--run-status", default="reports/stage-2/run-status.json")
     parser.add_argument(
         "--merge-manifest",
         default="reports/stage-2-merge-manifest.json",
@@ -35,7 +35,7 @@ def parse_args() -> argparse.Namespace:
         "--workflows",
         default=_WORKFLOW_DEFAULTS,
         help="Comma-separated workflow names. Each resolves to "
-             "stage-2/metrics/{name}-train.json and stage-2/evals/{name}/.",
+             "reports/stage-2/metrics/{name}-train.json and reports/stage-2/evals/{name}/.",
     )
     parser.add_argument(
         "--metrics",
@@ -224,8 +224,8 @@ def render_workflow_section(
     loss_png = render_loss_curve(metrics, figures_dir / f"{safe}-loss.png", workflow)
 
     # Before: baseline eval sample; After: real-samples subdir (dedicated post-merge run)
-    before_src = first_file_in(Path(f"stage-2/evals/{workflow}/samples"))
-    after_src = first_file_in(Path(f"stage-2/evals/{workflow}/real-samples"))
+    before_src = first_file_in(Path(f"reports/stage-2/evals/{workflow}/samples"))
+    after_src = first_file_in(Path(f"reports/stage-2/evals/{workflow}/real-samples"))
 
     before_dst = (
         copy_if_exists(before_src, figures_dir / f"{safe}-before-001.png")
@@ -303,24 +303,24 @@ def render_workflow_section(
 
     if before_dst:
         lines.append(
-            f"**Before** (baseline eval sample — `stage-2/evals/{workflow}/samples/`):"
+            f"**Before** (baseline eval sample — `reports/stage-2/evals/{workflow}/samples/`):"
         )
         lines.append(f"![{workflow} before merge](figures/{safe}-before-001.png)")
     else:
         lines.append(
-            f"_Before sample not available at `stage-2/evals/{workflow}/samples/`._"
+            f"_Before sample not available at `reports/stage-2/evals/{workflow}/samples/`._"
         )
 
     lines.append("")
 
     if after_dst:
         lines.append(
-            f"**After** (real eval sample — `stage-2/evals/{workflow}/real-samples/`):"
+            f"**After** (real eval sample — `reports/stage-2/evals/{workflow}/real-samples/`):"
         )
         lines.append(f"![{workflow} after merge](figures/{safe}-after-001.png)")
     else:
         lines.append(
-            f"_After sample not yet available at `stage-2/evals/{workflow}/real-samples/`._"
+            f"_After sample not yet available at `reports/stage-2/evals/{workflow}/real-samples/`._"
         )
 
     lines.append("")
@@ -372,7 +372,7 @@ def main() -> int:
     has_elapsed = False
 
     for wf in workflows:
-        metrics_path = Path(f"stage-2/metrics/{wf}-train.json")
+        metrics_path = Path(f"reports/stage-2/metrics/{wf}-train.json")
         metrics = read_json(metrics_path)
 
         if not metrics and not metrics_path.exists():

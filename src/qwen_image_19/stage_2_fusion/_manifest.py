@@ -13,7 +13,7 @@ from qwen_image_19.config_io import load_json, repo_root
 
 STAGE1_ARTIFACT_DIR = Path("reports") / "stage-1"
 DEFAULT_STAGE2_ARTIFACT_DIR = Path("reports") / "stage-2"
-DEFAULT_STAGE2_RUN_STATUS = Path("stage-2") / "run-status.json"
+DEFAULT_STAGE2_RUN_STATUS = Path("reports/stage-2") / "run-status.json"
 CORE_CANDIDATE_DEFAULT_WEIGHT = 0.35
 DEFAULT_RUN_PROFILE = "full"
 SUPPORTED_RUN_PROFILES = {"smoke", "full", "quality"}
@@ -124,7 +124,7 @@ def _describe_job(job_name: str, manifest: dict[str, Any]) -> list[str]:
             f"{_d}foundation : {recipe.get('foundation_model', '?')}  (generates 'before' images)",
             f"{_d}merged     : {recipe.get('foundation_model', '?')}  (generates 'after' images)",
             f"{_d}pairs      : {n_pairs}",
-            f"{_d}output     : stage-2/evals/core-edit/edit-summary.json",
+            f"{_d}output     : reports/stage-2/evals/core-edit/edit-summary.json",
             f"{_d}diffusion  : steps={poc_steps}  side={poc_side}  cfg={cfg:g}  guidance={guidance:g}",
         ]
 
@@ -137,7 +137,7 @@ def _describe_job(job_name: str, manifest: dict[str, Any]) -> list[str]:
             f"{_d}baseline   : {recipe.get('foundation_model', '?')}",
             f"{_d}merged     : {recipe.get('foundation_model', '?')}  + checkpoint {sel.get('output_checkpoint', '?')}",
             f"{_d}prompts    : {n_prompts}  (fixed seeds for reproducibility)",
-            f"{_d}output     : stage-2/evals/consistency/consistency-summary.json",
+            f"{_d}output     : reports/stage-2/evals/consistency/consistency-summary.json",
             f"{_d}diffusion  : steps={poc_steps}  side={poc_side}  cfg={cfg:g}  guidance={guidance:g}",
         ]
 
@@ -216,7 +216,7 @@ def build_stage2_compatibility_shims(target_dir: Path) -> dict[str, Path]:
 def render_stage2_compatibility_stub(target_dir: Path) -> str:
     return f"""# Stage 2 Fusion Report
 
-Canonical Stage 2 report: [stage-2/README.md](stage-2/README.md)
+Canonical Stage 2 report: [reports/stage-2/README.md](reports/stage-2/README.md)
 
 This file is kept as a compatibility shim. Open `{target_dir / 'README.md'}` for the full Stage 2 report.
 """
@@ -401,14 +401,14 @@ def build_core_delta_candidates(core_delta_recipe: dict[str, Any]) -> list[dict[
                 "blend_weight": weight,
                 "selection_status": "planned",
                 "output_checkpoint": stage2_remote_path(
-                    "stage-2",
+                    "reports/stage-2",
                     "artifacts",
                     "core-candidates",
                     suffix,
                     "qwen-image-1.9-core-bf16.safetensors",
                 ),
                 "smoke_report": stage2_remote_path(
-                    "stage-2",
+                    "reports/stage-2",
                     "evals",
                     "core-candidates",
                     suffix,
@@ -456,9 +456,9 @@ def build_layered_bridge_recipe(
         "trainable_modules": recipe["trainable_modules"],
         "distillation_target": recipe["distillation_target"],
         "layered_output_adapter": recipe["layered_output_adapter"],
-        "output_adapter": stage2_remote_path("stage-2", "artifacts", "experimental", "layered-bridge-adapter.safetensors"),
+        "output_adapter": stage2_remote_path("reports/stage-2", "artifacts", "experimental", "layered-bridge-adapter.safetensors"),
         "output_checkpoint": stage2_remote_path(
-            "stage-2",
+            "reports/stage-2",
             "artifacts",
             "experimental",
             "qwen-image-1.9-layered-bridge-bf16.safetensors",
@@ -553,57 +553,57 @@ def build_remote_jobs(
     return {
         "core_delta_sweep": {
             "status": "planned",
-            "entrypoint": "scripts/stage-2-build-edit-delta.py",
-            "workdir": stage2_remote_path("stage-2", "jobs", "core-delta-sweep"),
-            "log_path": stage2_remote_path("stage-2", "logs", "core-delta-sweep.log"),
+            "entrypoint": "qwen_image_19.stage_2_fusion._worker_edit_delta",
+            "workdir": stage2_remote_path("reports/stage-2", "jobs", "core-delta-sweep"),
+            "log_path": stage2_remote_path("reports/stage-2", "logs", "core-delta-sweep.log"),
             "outputs": [candidate["output_checkpoint"] for candidate in core_delta_candidates],
         },
         "core_smoke_eval": {
             "status": "planned",
-            "entrypoint": "scripts/stage-2-compose-bf16-checkpoint.py",
-            "workdir": stage2_remote_path("stage-2", "jobs", "core-smoke-eval"),
-            "log_path": stage2_remote_path("stage-2", "logs", "core-smoke-eval.log"),
+            "entrypoint": "qwen_image_19.stage_2_fusion._worker_bf16_compose",
+            "workdir": stage2_remote_path("reports/stage-2", "jobs", "core-smoke-eval"),
+            "log_path": stage2_remote_path("reports/stage-2", "logs", "core-smoke-eval.log"),
             "outputs": [selected_core_candidate["smoke_report"]],
         },
         "teacher_dataset_generation": {
             "status": "planned",
-            "entrypoint": "scripts/stage-2-generate-teacher-dataset.py",
-            "workdir": stage2_remote_path("stage-2", "jobs", "teacher-dataset"),
-            "log_path": stage2_remote_path("stage-2", "logs", "teacher-dataset.log"),
+            "entrypoint": "qwen_image_19.stage_2_fusion._worker_teacher_dataset",
+            "workdir": stage2_remote_path("reports/stage-2", "jobs", "teacher-dataset"),
+            "log_path": stage2_remote_path("reports/stage-2", "logs", "teacher-dataset.log"),
             "outputs": [dataset_manifest["output_root"]],
         },
         "layered_bridge_train": {
             "status": "planned",
-            "entrypoint": "scripts/stage-2-build-layered-bridge.py",
-            "workdir": stage2_remote_path("stage-2", "jobs", "layered-bridge-train"),
-            "log_path": stage2_remote_path("stage-2", "logs", "layered-bridge-train.log"),
+            "entrypoint": "qwen_image_19.stage_2_fusion._worker_layered_bridge",
+            "workdir": stage2_remote_path("reports/stage-2", "jobs", "layered-bridge-train"),
+            "log_path": stage2_remote_path("reports/stage-2", "logs", "layered-bridge-train.log"),
             "outputs": [layered_bridge_recipe["output_adapter"], layered_bridge_recipe["output_checkpoint"]],
         },
         "experimental_smoke_eval": {
             "status": "planned",
-            "entrypoint": "scripts/stage-2-compose-bf16-checkpoint.py",
-            "workdir": stage2_remote_path("stage-2", "jobs", "experimental-smoke-eval"),
-            "log_path": stage2_remote_path("stage-2", "logs", "experimental-smoke-eval.log"),
+            "entrypoint": "qwen_image_19.stage_2_fusion._worker_bf16_compose",
+            "workdir": stage2_remote_path("reports/stage-2", "jobs", "experimental-smoke-eval"),
+            "log_path": stage2_remote_path("reports/stage-2", "logs", "experimental-smoke-eval.log"),
             "outputs": [
-                stage2_remote_path("stage-2", "evals", "experimental", "smoke-summary.json"),
+                stage2_remote_path("reports/stage-2", "evals", "experimental", "smoke-summary.json"),
             ],
         },
         "core_edit_eval": {
             "status": "planned",
-            "entrypoint": "scripts/stage-2-compose-bf16-checkpoint.py",
-            "workdir": stage2_remote_path("stage-2", "jobs", "core-edit-eval"),
-            "log_path": stage2_remote_path("stage-2", "logs", "core-edit-eval.log"),
+            "entrypoint": "qwen_image_19.stage_2_fusion._worker_bf16_compose",
+            "workdir": stage2_remote_path("reports/stage-2", "jobs", "core-edit-eval"),
+            "log_path": stage2_remote_path("reports/stage-2", "logs", "core-edit-eval.log"),
             "outputs": [
-                stage2_remote_path("stage-2", "evals", "core-edit", "edit-summary.json"),
+                stage2_remote_path("reports/stage-2", "evals", "core-edit", "edit-summary.json"),
             ],
         },
         "consistency_eval": {
             "status": "planned",
-            "entrypoint": "scripts/stage-2-compose-bf16-checkpoint.py",
-            "workdir": stage2_remote_path("stage-2", "jobs", "consistency-eval"),
-            "log_path": stage2_remote_path("stage-2", "logs", "consistency-eval.log"),
+            "entrypoint": "qwen_image_19.stage_2_fusion._worker_bf16_compose",
+            "workdir": stage2_remote_path("reports/stage-2", "jobs", "consistency-eval"),
+            "log_path": stage2_remote_path("reports/stage-2", "logs", "consistency-eval.log"),
             "outputs": [
-                stage2_remote_path("stage-2", "evals", "consistency", "consistency-summary.json"),
+                stage2_remote_path("reports/stage-2", "evals", "consistency", "consistency-summary.json"),
             ],
         },
     }

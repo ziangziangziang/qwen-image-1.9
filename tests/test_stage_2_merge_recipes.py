@@ -170,7 +170,7 @@ class Stage2Tests(unittest.TestCase):
             config_dir / "stage-2-synthetic-dataset.yaml",
             {
                 "recipe_name": "stage-2-synthetic-teacher-dataset",
-                "output_root": "stage-2/datasets/teacher-db",
+                "output_root": "reports/stage-2/datasets/teacher-db",
                 "flatten_layered_rgba": "alpha-composite-to-rgb",
                 "record_schema": [
                     "sample_id",
@@ -427,7 +427,7 @@ class Stage2Tests(unittest.TestCase):
                         with patch("qwen_image_19.stage_2_fusion._jobs.run_subprocess_job", return_value=(0, 0.01)):
                             with patch("qwen_image_19.stage_2_fusion._jobs.ensure_outputs_exist", return_value=[]):
                                 result = fuse(artifact_dir=artifact_root, smoke_run=True, execute=True)
-        run_status = self.root / "stage-2" / "run-status.json"
+        run_status = self.root / "reports" / "stage-2" / "run-status.json"
         self.assertTrue(run_status.exists())
         status_payload = json.loads(run_status.read_text(encoding="utf-8"))
         self.assertEqual(status_payload["execution_policy"], "overwrite")
@@ -501,7 +501,7 @@ class Stage2Tests(unittest.TestCase):
                             with patch("qwen_image_19.stage_2_fusion._jobs.run_subprocess_job", side_effect=[(1, 0.01)]):
                                 with self.assertRaises(Stage2FusionError):
                                     fuse(artifact_dir=artifact_root, smoke_run=True, execute=True)
-        run_status = self.root / "stage-2" / "run-status.json"
+        run_status = self.root / "reports" / "stage-2" / "run-status.json"
         status_payload = json.loads(run_status.read_text(encoding="utf-8"))
         self.assertEqual(status_payload["summary"]["failed_job"], "core_delta_sweep")
 
@@ -509,7 +509,7 @@ class Stage2Tests(unittest.TestCase):
         self.write_stage2_configs()
         self.write_stage1_artifacts()
         artifact_root = self.root / "reports" / "stage-2"
-        run_status = self.root / "stage-2" / "run-status.json"
+        run_status = self.root / "reports" / "stage-2" / "run-status.json"
         run_status.parent.mkdir(parents=True, exist_ok=True)
         run_status.write_text(
             json.dumps(
@@ -519,7 +519,7 @@ class Stage2Tests(unittest.TestCase):
                     "jobs": {
                         "core_delta_sweep": {
                             "status": "succeeded",
-                            "outputs": ["stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors"],
+                            "outputs": ["reports/stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors"],
                         }
                     },
                     "summary": {"failed_job": None, "resume_hint": None},
@@ -528,7 +528,7 @@ class Stage2Tests(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        output = self.root / "stage-2" / "artifacts" / "core-candidates" / "core-delta-w035" / "qwen-image-1.9-core-bf16.safetensors"
+        output = self.root / "reports" / "stage-2" / "artifacts" / "core-candidates" / "core-delta-w035" / "qwen-image-1.9-core-bf16.safetensors"
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text("ok\n", encoding="utf-8")
         with patch("qwen_image_19.stage_2_fusion.repo_root", return_value=self.root):
@@ -539,7 +539,7 @@ class Stage2Tests(unittest.TestCase):
                             with patch("qwen_image_19.stage_2_fusion._jobs.ensure_outputs_exist", return_value=[]):
                                 result = fuse(artifact_dir=artifact_root, smoke_run=True, execute=True, resume=True)
         self.assertIn("run_status", result)
-        status_payload = json.loads((self.root / "stage-2" / "run-status.json").read_text(encoding="utf-8"))
+        status_payload = json.loads((self.root / "reports" / "stage-2" / "run-status.json").read_text(encoding="utf-8"))
         self.assertEqual(status_payload["jobs"]["core_delta_sweep"]["status"], "skipped")
         self.assertEqual(status_payload["execution_policy"], "resume")
 
@@ -547,7 +547,7 @@ class Stage2Tests(unittest.TestCase):
         self.write_stage2_configs()
         self.write_stage1_artifacts()
         artifact_root = self.root / "reports" / "stage-2"
-        run_status = self.root / "stage-2" / "run-status.json"
+        run_status = self.root / "reports" / "stage-2" / "run-status.json"
         run_status.parent.mkdir(parents=True, exist_ok=True)
         run_status.write_text(
             json.dumps(

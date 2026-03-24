@@ -166,7 +166,8 @@ def build_job_command(
         candidate = manifest["selected_core_candidate"] if manifest["run_profile"] == "smoke" else manifest["core_delta_candidates"][0]
         return [
             python_cmd,
-            str(repo_root() / "scripts" / "stage-2-build-edit-delta.py"),
+            "-m",
+            "qwen_image_19.stage_2_fusion._worker_edit_delta",
             "--execute",
             "--candidate-id",
             candidate["candidate_id"],
@@ -192,7 +193,8 @@ def build_job_command(
     if job_name == "core_smoke_eval":
         return [
             python_cmd,
-            str(repo_root() / "scripts" / "stage-2-compose-bf16-checkpoint.py"),
+            "-m",
+            "qwen_image_19.stage_2_fusion._worker_bf16_compose",
             "--execute",
             "--task",
             "core-smoke",
@@ -216,7 +218,8 @@ def build_job_command(
     if job_name == "teacher_dataset_generation":
         return [
             python_cmd,
-            str(repo_root() / "scripts" / "stage-2-generate-teacher-dataset.py"),
+            "-m",
+            "qwen_image_19.stage_2_fusion._worker_teacher_dataset",
             "--execute",
             "--manifest",
             manifest["dataset"]["manifest_path"],
@@ -234,14 +237,15 @@ def build_job_command(
         batch_size = int(recipe_limits.get("batch_size") or profile_limits.get("bridge_batch_size", 1))
         return [
             python_cmd,
-            str(repo_root() / "scripts" / "stage-2-build-layered-bridge.py"),
+            "-m",
+            "qwen_image_19.stage_2_fusion._worker_layered_bridge",
             "--execute",
             "--output-adapter",
             manifest["layered_bridge_recipe"]["output_adapter"],
             "--output-checkpoint",
             manifest["layered_bridge_recipe"]["output_checkpoint"],
             "--metrics-output",
-            stage2_remote_path("stage-2", "metrics", "layered-bridge-train.json"),
+            stage2_remote_path("reports/stage-2", "metrics", "layered-bridge-train.json"),
             "--dataset-root",
             manifest["dataset"]["output_root"],
             "--max-steps",
@@ -252,7 +256,8 @@ def build_job_command(
     if job_name == "experimental_smoke_eval":
         return [
             python_cmd,
-            str(repo_root() / "scripts" / "stage-2-compose-bf16-checkpoint.py"),
+            "-m",
+            "qwen_image_19.stage_2_fusion._worker_bf16_compose",
             "--execute",
             "--task",
             "experimental-smoke",
@@ -261,7 +266,7 @@ def build_job_command(
             "--model-id",
             manifest["layered_bridge_recipe"]["foundation_model"],
             "--output",
-            stage2_remote_path("stage-2", "evals", "experimental", "smoke-summary.json"),
+            stage2_remote_path("reports/stage-2", "evals", "experimental", "smoke-summary.json"),
             "--num-prompts",
             str(int(manifest["limits"].get("eval_prompt_count", 6))),
             "--steps",
@@ -275,7 +280,7 @@ def build_job_command(
         ]
     if job_name == "core_edit_eval":
         n_pairs = int(manifest["limits"].get("eval_edit_prompt_count", 3))
-        edit_prompts_path = stage2_remote_path("stage-2", "evals", "core-edit", "edit-prompts.json")
+        edit_prompts_path = stage2_remote_path("reports/stage-2", "evals", "core-edit", "edit-prompts.json")
         # Write the edit prompts JSON from the dataset manifest's edit_teacher split
         _write_edit_prompts_json(
             repo_root() / edit_prompts_path,
@@ -284,7 +289,8 @@ def build_job_command(
         )
         return [
             python_cmd,
-            str(repo_root() / "scripts" / "stage-2-compose-bf16-checkpoint.py"),
+            "-m",
+            "qwen_image_19.stage_2_fusion._worker_bf16_compose",
             "--execute",
             "--eval-type", "edit",
             "--task", "core-edit",
@@ -297,7 +303,7 @@ def build_job_command(
             "--edit-prompts-json",
             edit_prompts_path,
             "--output",
-            stage2_remote_path("stage-2", "evals", "core-edit", "edit-summary.json"),
+            stage2_remote_path("reports/stage-2", "evals", "core-edit", "edit-summary.json"),
             "--num-prompts",
             str(n_pairs),
             "--steps",
@@ -313,7 +319,8 @@ def build_job_command(
         n_prompts = int(manifest["limits"].get("consistency_eval_prompt_count", 4))
         return [
             python_cmd,
-            str(repo_root() / "scripts" / "stage-2-compose-bf16-checkpoint.py"),
+            "-m",
+            "qwen_image_19.stage_2_fusion._worker_bf16_compose",
             "--execute",
             "--eval-type", "consistency",
             "--task", "consistency",
@@ -322,7 +329,7 @@ def build_job_command(
             "--consistency-baseline-model-id",
             manifest["core_delta_recipe"]["foundation_model"],
             "--output",
-            stage2_remote_path("stage-2", "evals", "consistency", "consistency-summary.json"),
+            stage2_remote_path("reports/stage-2", "evals", "consistency", "consistency-summary.json"),
             "--num-prompts",
             str(n_prompts),
             "--steps",
@@ -428,7 +435,8 @@ def run_stage2_jobs(
                 poc_side = int(manifest["limits"].get("poc_side", 512))
                 command = [
                     str(remote_context.get("python") or "python3"),
-                    str(repo_root() / "scripts" / "stage-2-build-edit-delta.py"),
+                    "-m",
+                    "qwen_image_19.stage_2_fusion._worker_edit_delta",
                     "--execute",
                     "--candidate-id",
                     candidate["candidate_id"],
@@ -542,7 +550,7 @@ def run_stage2_jobs(
                 ],
             }
             _core_delta_metrics_path = repo_root() / stage2_remote_path(
-                "stage-2", "metrics", "core-delta-train.json"
+                "reports/stage-2", "metrics", "core-delta-train.json"
             )
             write_json(_core_delta_metrics_path, _core_delta_metrics)
             _emit_progress(
@@ -578,7 +586,7 @@ def run_stage2_jobs(
             "missing_outputs": missing_outputs,
         }
         if job_name == "layered_bridge_train":
-            metrics_path = repo_root() / stage2_remote_path("stage-2", "metrics", "layered-bridge-train.json")
+            metrics_path = repo_root() / stage2_remote_path("reports/stage-2", "metrics", "layered-bridge-train.json")
             if metrics_path.exists():
                 metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
                 if any(not math.isfinite(float(value)) for value in metrics.get("loss_curve", [])):
@@ -588,7 +596,7 @@ def run_stage2_jobs(
         if job_name == "experimental_smoke_eval" and not failed:
             # Synthesize experimental metrics file so the training report can render this workflow.
             _smoke_eval_path = repo_root() / stage2_remote_path(
-                "stage-2", "evals", "experimental", "smoke-summary.json"
+                "reports/stage-2", "evals", "experimental", "smoke-summary.json"
             )
             _smoke_data: dict[str, Any] = (
                 json.loads(_smoke_eval_path.read_text(encoding="utf-8"))
@@ -617,7 +625,7 @@ def run_stage2_jobs(
                 "eval_status": _smoke_data.get("status", "unknown"),
             }
             _exp_metrics_path = repo_root() / stage2_remote_path(
-                "stage-2", "metrics", "experimental-train.json"
+                "reports/stage-2", "metrics", "experimental-train.json"
             )
             write_json(_exp_metrics_path, _exp_metrics)
         if failed and "failure_reason" not in job_status:

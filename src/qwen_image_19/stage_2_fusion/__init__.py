@@ -155,7 +155,8 @@ def fuse(
         if manifest.get("run_profile") != "smoke":
             training_report_command = [
                 str(remote_context.get("python") or "python3"),
-                str(repo_root() / "scripts" / "stage-2-write-training-report.py"),
+                "-m",
+                "qwen_image_19.stage_2_fusion._worker_training_report",
                 "--run-status",
                 repo_relative_path(artifact_paths["run_status_json"]),
                 "--merge-manifest",

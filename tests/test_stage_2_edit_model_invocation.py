@@ -105,7 +105,8 @@ def build_fake_pil_modules() -> tuple[ModuleType, ModuleType]:
 
 def load_script_module(script_filename: str, module_name: str):
     root = Path(__file__).resolve().parent.parent
-    script_path = root / "scripts" / script_filename
+    # Worker modules now live in src/qwen_image_19/stage_2_fusion/
+    script_path = root / "src" / "qwen_image_19" / "stage_2_fusion" / script_filename
     fake_torch = build_fake_torch_module()
     fake_diffusers = ModuleType("diffusers")
     fake_diffusers.DiffusionPipeline = FakeDiffusionPipeline  # type: ignore[attr-defined]
@@ -140,7 +141,7 @@ def load_script_module(script_filename: str, module_name: str):
 
 class Stage2EditInvocationTests(unittest.TestCase):
     def test_core_flow_passes_source_image_into_edit_call(self) -> None:
-        module = load_script_module("stage-2-build-edit-delta.py", "stage2_build_edit_delta_test")
+        module = load_script_module("_worker_edit_delta.py", "stage2_build_edit_delta_test")
         runtime = SimpleNamespace(
             pipeline_load_kwargs={"device_map": "balanced", "max_memory": {0: "76000MiB", 1: "76000MiB"}},
             primary_device="cuda:0",
@@ -172,7 +173,7 @@ class Stage2EditInvocationTests(unittest.TestCase):
         self.assertIsNot(source_image, edited_image)
 
     def test_dataset_edit_pair_uses_edit_instruction_with_image(self) -> None:
-        module = load_script_module("stage-2-generate-teacher-dataset.py", "stage2_dataset_generation_test")
+        module = load_script_module("_worker_teacher_dataset.py", "stage2_dataset_generation_test")
         runtime = SimpleNamespace(primary_device="cuda:0")
         source_pipe = FakePipe("Qwen/Qwen-Image-2512", load_kwargs={})
         edit_pipe = FakePipe("Qwen/Qwen-Image-Edit-2511", load_kwargs={})
@@ -198,7 +199,7 @@ class Stage2EditInvocationTests(unittest.TestCase):
         self.assertIsNot(source_image, edited_image)
 
     def test_dataset_non_edit_render_is_text_only(self) -> None:
-        module = load_script_module("stage-2-generate-teacher-dataset.py", "stage2_dataset_non_edit_test")
+        module = load_script_module("_worker_teacher_dataset.py", "stage2_dataset_non_edit_test")
         runtime = SimpleNamespace(primary_device="cuda:0")
         pipe = FakePipe("Qwen/Qwen-Image-2512", load_kwargs={})
 
@@ -217,7 +218,7 @@ class Stage2EditInvocationTests(unittest.TestCase):
         self.assertNotIn("image", pipe.calls[0])
 
     def test_layered_pair_uses_image_conditioned_call_and_defaults(self) -> None:
-        module = load_script_module("stage-2-generate-teacher-dataset.py", "stage2_dataset_layered_pair_test")
+        module = load_script_module("_worker_teacher_dataset.py", "stage2_dataset_layered_pair_test")
         runtime = SimpleNamespace(primary_device="cuda:0")
         source_pipe = FakePipe(
             "Qwen/Qwen-Image-2512",
@@ -265,7 +266,7 @@ class Stage2EditInvocationTests(unittest.TestCase):
         self.assertNotIn("height", layered_kwargs)
 
     def test_flatten_layered_output_to_rgb(self) -> None:
-        module = load_script_module("stage-2-generate-teacher-dataset.py", "stage2_dataset_layered_flatten_test")
+        module = load_script_module("_worker_teacher_dataset.py", "stage2_dataset_layered_flatten_test")
         flattened = module.flatten_layered_output_to_rgb(
             [
                 module.Image.new("RGBA", (4, 4), (255, 0, 0, 128)),
@@ -277,7 +278,7 @@ class Stage2EditInvocationTests(unittest.TestCase):
         self.assertEqual(flattened.size, (4, 4))
 
     def test_layered_resolution_bucket_policy(self) -> None:
-        module = load_script_module("stage-2-generate-teacher-dataset.py", "stage2_layered_resolution_bucket_test")
+        module = load_script_module("_worker_teacher_dataset.py", "stage2_dataset_layered_resolution_bucket_test")
         self.assertEqual(module.resolve_layered_resolution_bucket(512, 512), 640)
         self.assertEqual(module.resolve_layered_resolution_bucket(928, 640), 1024)
 
@@ -286,7 +287,7 @@ class Stage2EditInvocationTests(unittest.TestCase):
         # because the Layered model's RGBA-VAE + Layer3D-RoPE architecture is incompatible with
         # the generic DiffusionPipeline loader.
         module = load_script_module(
-            "stage-2-generate-teacher-dataset.py", "stage2_load_pipeline_branch_test"
+            "_worker_teacher_dataset.py", "stage2_load_pipeline_branch_test"
         )
         runtime = SimpleNamespace(
             primary_device="cuda:0",
@@ -306,7 +307,7 @@ class Stage2EditInvocationTests(unittest.TestCase):
 
     def test_load_pipeline_uses_diffusion_pipeline_for_standard_models(self) -> None:
         module = load_script_module(
-            "stage-2-generate-teacher-dataset.py", "stage2_load_pipeline_standard_test"
+            "_worker_teacher_dataset.py", "stage2_load_pipeline_standard_test"
         )
         runtime = SimpleNamespace(
             primary_device="cuda:0",

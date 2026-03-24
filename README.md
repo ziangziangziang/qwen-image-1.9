@@ -79,31 +79,38 @@ flowchart LR
 
 Primary CLI:
 ```bash
-q19 stage1 analyze
+q19 stage1 analyze --dry-run
+q19 stage1 analyze --smoke-run
+q19 stage1 analyze --execute
 q19 stage2 fuse --dry-run
 q19 stage2 fuse --smoke-run
 q19 stage2 fuse --run-profile full --execute
-q19 stage3 eval --dry-run
-q19 stage4 quantize --dry-run
-q19 stage5 deploy --dry-run
+q19 stage3 eval --smoke-run
+q19 stage3 eval --execute
+q19 stage4 quantize --smoke-run
+q19 stage4 quantize --execute
+q19 stage5 deploy --smoke-run
+q19 stage5 deploy --execute
 ```
 
-Common flags:
+Common flags (all stages):
 - `--remote-config`
 - `--artifact-dir`
 - `--cache-dir`
-- `--dry-run`
-- `--smoke-run` for Stage 2 quick PoC (auto-executes smoke jobs)
-- `--run-profile {smoke,full,quality}` for Stage 2
-- `--execute` for Stage 2 full-profile job execution after manifest generation
-- `--hf-home` for Stage 1 cache inspection override
-- `--cache-map-config` for custom HF cache alias mapping
+- `--dry-run` — validate config and print plan, no side effects
+- `--smoke-run` — minimal task set to prove the pipeline runs end-to-end
+- `--execute` — full run; can be time- and resource-intensive
+- `--resume` — skip already-completed artifacts
+
+Stage-specific flags:
+- `--run-profile {smoke,full,quality}` — Stage 2 job selection
+- `--hf-home` — Stage 1 cache inspection override
+- `--cache-map-config` — custom HF cache alias mapping
 
 ## Repo Map
 ```text
 configs/   remote launch config, model metadata, merge and quant recipes
-src/       CLI and stage orchestration code
-scripts/   stage-numbered entrypoints mirroring the roadmap
+src/       CLI, stage orchestration, and GPU worker modules
 reports/   Markdown and JSON deliverables for each stage
 docs/      deeper notes on architecture, remote execution, and release policy
 tests/     dry-run and schema validation coverage
@@ -113,11 +120,11 @@ examples/  starter prompts and notebook placeholders
 ## Deliverables By Stage
 | Stage | Primary deliverable | Secondary output |
 | --- | --- | --- |
-| 1 | `reports/stage-1/summary.md` | `reports/stage-1/compatibility-matrix.json` plus `reports/stage-1/figures/*.png` |
+| 1 | `reports/stage-1/README.md` | `reports/stage-1/compatibility-matrix.json` plus `reports/stage-1/figures/*.png` |
 | 2 | `reports/stage-2/README.md` | `reports/stage-2/merge-manifest.json` plus `reports/stage-2/dataset-manifest.json` |
-| 3 | `reports/stage-3-eval-report.md` | eval registry in CLI output |
-| 4 | `reports/stage-4-quantization-report.md` | validated GGUF and EXL2 recipes |
-| 5 | `reports/stage-5-deployment-report.md` | generated stage config |
+| 3 | `reports/stage-3/README.md` | eval registry in CLI output |
+| 4 | `reports/stage-4/README.md` | validated GGUF and EXL2 recipes |
+| 5 | `reports/stage-5/README.md` | generated stage config |
 
 ## Safety Policy
 This repo does not implement safeguard bypass or refusal-vector removal. Stage 3 exists to evaluate capability, misuse risk, and release constraints so the project can document what it is doing without acting like governance is optional.
