@@ -97,7 +97,6 @@
     "output_root": "stage-2/datasets/teacher-db",
     "relative_paths_only": true,
     "split_counts": {
-      "consistency_eval": 16,
       "edit_teacher": 8,
       "generation_teacher": 8,
       "layered_teacher": 8
@@ -136,7 +135,7 @@
   "execution_enabled": true,
   "execution_policy": "overwrite",
   "foundation_model": "Qwen/Qwen-Image-2512",
-  "generated_at": "2026-03-24T04:39:31.693882+00:00",
+  "generated_at": "2026-03-24T09:49:09.187387+00:00",
   "layered_bridge_recipe": {
     "base_core_candidate_id": "core-delta-w035",
     "base_core_checkpoint": "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",

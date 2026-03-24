@@ -59,7 +59,6 @@ Stage 2 now builds two tracks from the Stage 1 evidence: a stable BF16 core base
 | `generation_teacher` | `Qwen/Qwen-Image-2512` | `text-to-image` | `8` | `stage-2/datasets/teacher-db/generation_teacher` |
 | `edit_teacher` | `Qwen/Qwen-Image-Edit-2511` | `generate-then-edit` | `8` | `stage-2/datasets/teacher-db/edit_teacher` |
 | `layered_teacher` | `Qwen/Qwen-Image-Layered` | `layer-aware-generation` | `8` | `stage-2/datasets/teacher-db/layered_teacher` |
-| `consistency_eval` | `Qwen/Qwen-Image-2512` | `consistency-check` | `16` | `stage-2/datasets/teacher-db/consistency_eval` |
 
 ## Remote Jobs
 | Job | Status | Entry point | Workdir | Log |
