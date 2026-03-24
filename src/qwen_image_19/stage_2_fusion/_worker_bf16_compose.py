@@ -535,7 +535,7 @@ def _image_to_float_tensor(image) -> "torch.Tensor":
     rgb = image.convert("RGB")
     w, h = rgb.size
     data = torch.tensor(list(rgb.getdata()), dtype=torch.float32).view(h, w, 3)
-    return data / 255.0
+    return (data / 255.0).permute(2, 0, 1).contiguous()  # (C, H, W) for SSIM and pixel metrics
 
 
 def _load_rgb_image(path: Path):

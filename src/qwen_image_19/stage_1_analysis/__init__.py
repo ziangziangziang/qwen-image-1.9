@@ -1971,7 +1971,10 @@ def render_layer_inventory_rows(matrix: dict[str, Any]) -> str:
 def render_weight_pair_summary_rows(weight_pairwise: dict[str, Any]) -> str:
     rows = []
     for pair_name in WEIGHT_ANALYSIS_PAIRWISE:
-        pair = weight_pairwise[pair_name]
+        pair = weight_pairwise.get(pair_name)
+        if pair is None:
+            rows.append(f"| `{pretty_pair_label(WEIGHT_ANALYSIS_PAIRWISE[pair_name])}` | `—` | `—` | `—` | `—` | `—` | `—` | `—` | `—` | `—` |")
+            continue
         rows.append(
             f"| `{pretty_pair_label(pair['models'])}` | `{pair['comparable_tensor_count']}` | `{pair['exact_equal_tensor_count']}` | `{pair['exact_equal_tensor_ratio']}` | `{pair['low_delta_tensor_ratio']}` | `{pair['mean_relative_l2_delta']}` | `{pair['max_relative_l2_delta']}` | `{pair['exclusion_accounting']['missing_keys']}` | `{pair['exclusion_accounting']['shape_mismatch']}` | `{pair['exclusion_accounting']['dtype_mismatch']}` |"
         )
@@ -1981,7 +1984,11 @@ def render_weight_pair_summary_rows(weight_pairwise: dict[str, Any]) -> str:
 def render_weight_layer_tables(weight_pairwise: dict[str, Any]) -> str:
     sections: list[str] = []
     for pair_name in WEIGHT_ANALYSIS_PAIRWISE:
-        pair = weight_pairwise[pair_name]
+        pair = weight_pairwise.get(pair_name)
+        if pair is None:
+            label = pretty_pair_label(WEIGHT_ANALYSIS_PAIRWISE[pair_name])
+            sections.append(f"### {label}\n\n_Weight layer data not available (smoke mode)._")
+            continue
         subsystem_sections = [f"### {pretty_pair_label(pair['models'])}"]
         for subsystem in SUBSYSTEM_ORDER:
             rows = []
@@ -2011,7 +2018,11 @@ def render_weight_layer_tables(weight_pairwise: dict[str, Any]) -> str:
 def render_weight_top_divergences(weight_pairwise: dict[str, Any]) -> str:
     sections: list[str] = []
     for pair_name in WEIGHT_ANALYSIS_PAIRWISE:
-        pair = weight_pairwise[pair_name]
+        pair = weight_pairwise.get(pair_name)
+        if pair is None:
+            label = pretty_pair_label(WEIGHT_ANALYSIS_PAIRWISE[pair_name])
+            sections.append(f"### {label}\n\n_Weight divergence data not available (smoke mode)._")
+            continue
         layer_rows = []
         for layer in pair["top_divergent_blocks"][:5]:
             layer_rows.append(
@@ -2041,9 +2052,13 @@ def render_weight_top_divergences(weight_pairwise: dict[str, Any]) -> str:
 
 
 def render_block_review_summary_rows(matrix: dict[str, Any]) -> str:
+    pairs = matrix.get("block_review_summary", {}).get("pairs", {})
     rows = []
     for pair_name in WEIGHT_ANALYSIS_PAIRWISE:
-        pair = matrix["block_review_summary"]["pairs"][pair_name]
+        pair = pairs.get(pair_name)
+        if pair is None:
+            rows.append(f"| `{pretty_pair_label(WEIGHT_ANALYSIS_PAIRWISE[pair_name])}` | `—` | `—` | `—` | `—` | `—` |")
+            continue
         rows.append(
             f"| `{pretty_pair_label(pair['models'])}` | `{pair['comparable_tensor_count']}` | `{pair['exact_equal_tensor_ratio']}` | `{pair['low_delta_tensor_ratio']}` | `{pair['mean_relative_l2_delta']}` | `{pair['mean_block_similarity_score']}` |"
         )
