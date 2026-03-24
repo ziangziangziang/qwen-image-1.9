@@ -1,0 +1,9 @@
+{
+  "sample_id": "layered_teacher-0008",
+  "teacher_model": "Qwen/Qwen-Image-Layered",
+  "seed": 484,
+  "steps": 30,
+  "resolution": "512x512",
+  "layered_resolution_bucket": 640,
+  "generated_at": "2026-03-24T17:38:23.375896+00:00"
+}

@@ -1,0 +1,11 @@
+{
+  "status": "ok",
+  "output_md": "reports/stage-2/training-report.md",
+  "figures_dir": "reports/stage-2/figures",
+  "workflows": [
+    "core-delta",
+    "layered-bridge",
+    "experimental"
+  ],
+  "total_elapsed_seconds": 7089.8023
+}

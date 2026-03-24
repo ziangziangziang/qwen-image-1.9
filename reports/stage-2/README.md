@@ -5,12 +5,12 @@ Stage 2 now builds two tracks from the Stage 1 evidence: a stable BF16 core base
 
 ## Run Mode
 - Run mode: `write`
-- Run profile: `full`
+- Run profile: `smoke`
 - Execution enabled: `True`
 - Execution policy: `overwrite`
 - Cleanup performed: `False`
 - Resource profile: `num_gpus=2`, `vram_target_gb=160`
-- Limits: `{"bridge_batch_size": 2, "bridge_train_steps": 500, "consistency_eval_prompt_count": 16, "core_candidate_id": "core-delta-w035", "dataset_samples_per_split": 8, "eval_edit_prompt_count": 8, "eval_prompt_count": 24, "poc_guidance_scale": 1.0, "poc_negative_prompt": "low resolution, low quality, deformed limbs, deformed fingers, oversaturated image, waxy skin, over-smoothed face, artificial look, chaotic composition, blurry text, distorted text", "poc_side": 1024, "poc_steps": 30, "poc_true_cfg_scale": 4.0}`
+- Limits: `{"bridge_batch_size": 1, "bridge_train_steps": 64, "consistency_eval_prompt_count": 4, "core_candidate_id": "core-delta-w035", "dataset_samples_per_split": 2, "eval_edit_prompt_count": 3, "eval_prompt_count": 6, "poc_guidance_scale": 1.0, "poc_negative_prompt": "low resolution, low quality, deformed limbs, deformed fingers, oversaturated image, waxy skin, over-smoothed face, artificial look, chaotic composition, blurry text, distorted text", "poc_side": 512, "poc_true_cfg_scale": 4.0}`
 
 ## Stage 1 Evidence
 - Foundation vs Edit transformer path is the one clean merge lane: `shared=2856`, `exact=0.3246`, `strategy=delta-merge`.
@@ -32,10 +32,7 @@ Stage 2 now builds two tracks from the Stage 1 evidence: a stable BF16 core base
 
 | Candidate | Blend weight | Status | Planned checkpoint | Planned smoke report |
 | --- | --- | --- | --- | --- |
-| `core-delta-w020` | `0.2` | `candidate` | `stage-2/artifacts/core-candidates/core-delta-w020/qwen-image-1.9-core-bf16.safetensors` | `stage-2/evals/core-candidates/core-delta-w020/smoke-summary.json` |
-| `core-delta-w030` | `0.3` | `candidate` | `stage-2/artifacts/core-candidates/core-delta-w030/qwen-image-1.9-core-bf16.safetensors` | `stage-2/evals/core-candidates/core-delta-w030/smoke-summary.json` |
-| `core-delta-w035` | `0.35` | `selected` | `stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors` | `stage-2/evals/core-candidates/core-delta-w035/smoke-summary.json` |
-| `core-delta-w040` | `0.4` | `candidate` | `stage-2/artifacts/core-candidates/core-delta-w040/qwen-image-1.9-core-bf16.safetensors` | `stage-2/evals/core-candidates/core-delta-w040/smoke-summary.json` |
+| `core-delta-w035` | `0.35` | `selected` | `reports/stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors` | `reports/stage-2/evals/core-candidates/core-delta-w035/smoke-summary.json` |
 
 ## Experimental Layered Bridge Track
 - Donor: `Qwen/Qwen-Image-Layered`
@@ -46,30 +43,30 @@ Stage 2 now builds two tracks from the Stage 1 evidence: a stable BF16 core base
 - Trainable modules: bridge_adapter, per_block_gates
 - Freeze policy: text_encoder, vae, rope, transformer_blocks.0-39
 - Distillation target: `rgb-output`
-- Output adapter: `stage-2/artifacts/experimental/layered-bridge-adapter.safetensors`
-- Output checkpoint: `stage-2/artifacts/experimental/qwen-image-1.9-layered-bridge-bf16.safetensors`
+- Output adapter: `reports/stage-2/artifacts/experimental/layered-bridge-adapter.safetensors`
+- Output checkpoint: `reports/stage-2/artifacts/experimental/qwen-image-1.9-layered-bridge-bf16.safetensors`
 
 ## Teacher Dataset
 - Dataset manifest: `reports/stage-2/dataset-manifest.json`
-- Output root: `stage-2/datasets/teacher-db`
+- Output root: `reports/stage-2/datasets/teacher-db`
 - Layered flattening: `alpha-composite-to-rgb`
 
 | Split | Teacher model | Task | Planned samples | Asset root |
 | --- | --- | --- | --- | --- |
-| `generation_teacher` | `Qwen/Qwen-Image-2512` | `text-to-image` | `8` | `stage-2/datasets/teacher-db/generation_teacher` |
-| `edit_teacher` | `Qwen/Qwen-Image-Edit-2511` | `generate-then-edit` | `8` | `stage-2/datasets/teacher-db/edit_teacher` |
-| `layered_teacher` | `Qwen/Qwen-Image-Layered` | `layer-aware-generation` | `8` | `stage-2/datasets/teacher-db/layered_teacher` |
+| `generation_teacher` | `Qwen/Qwen-Image-2512` | `text-to-image` | `2` | `reports/stage-2/datasets/teacher-db/generation_teacher` |
+| `edit_teacher` | `Qwen/Qwen-Image-Edit-2511` | `generate-then-edit` | `2` | `reports/stage-2/datasets/teacher-db/edit_teacher` |
+| `layered_teacher` | `Qwen/Qwen-Image-Layered` | `layer-aware-generation` | `2` | `reports/stage-2/datasets/teacher-db/layered_teacher` |
 
 ## Remote Jobs
 | Job | Status | Entry point | Workdir | Log |
 | --- | --- | --- | --- | --- |
-| `core_delta_sweep` | `planned` | `scripts/stage-2-build-edit-delta.py` | `stage-2/jobs/core-delta-sweep` | `stage-2/logs/core-delta-sweep.log` |
-| `core_smoke_eval` | `planned` | `scripts/stage-2-compose-bf16-checkpoint.py` | `stage-2/jobs/core-smoke-eval` | `stage-2/logs/core-smoke-eval.log` |
-| `teacher_dataset_generation` | `planned` | `scripts/stage-2-generate-teacher-dataset.py` | `stage-2/jobs/teacher-dataset` | `stage-2/logs/teacher-dataset.log` |
-| `layered_bridge_train` | `planned` | `scripts/stage-2-build-layered-bridge.py` | `stage-2/jobs/layered-bridge-train` | `stage-2/logs/layered-bridge-train.log` |
-| `experimental_smoke_eval` | `planned` | `scripts/stage-2-compose-bf16-checkpoint.py` | `stage-2/jobs/experimental-smoke-eval` | `stage-2/logs/experimental-smoke-eval.log` |
-| `core_edit_eval` | `planned` | `scripts/stage-2-compose-bf16-checkpoint.py` | `stage-2/jobs/core-edit-eval` | `stage-2/logs/core-edit-eval.log` |
-| `consistency_eval` | `planned` | `scripts/stage-2-compose-bf16-checkpoint.py` | `stage-2/jobs/consistency-eval` | `stage-2/logs/consistency-eval.log` |
+| `core_delta_sweep` | `planned` | `qwen_image_19.stage_2_fusion._worker_edit_delta` | `reports/stage-2/jobs/core-delta-sweep` | `reports/stage-2/logs/core-delta-sweep.log` |
+| `core_smoke_eval` | `planned` | `qwen_image_19.stage_2_fusion._worker_bf16_compose` | `reports/stage-2/jobs/core-smoke-eval` | `reports/stage-2/logs/core-smoke-eval.log` |
+| `teacher_dataset_generation` | `planned` | `qwen_image_19.stage_2_fusion._worker_teacher_dataset` | `reports/stage-2/jobs/teacher-dataset` | `reports/stage-2/logs/teacher-dataset.log` |
+| `layered_bridge_train` | `planned` | `qwen_image_19.stage_2_fusion._worker_layered_bridge` | `reports/stage-2/jobs/layered-bridge-train` | `reports/stage-2/logs/layered-bridge-train.log` |
+| `experimental_smoke_eval` | `planned` | `qwen_image_19.stage_2_fusion._worker_bf16_compose` | `reports/stage-2/jobs/experimental-smoke-eval` | `reports/stage-2/logs/experimental-smoke-eval.log` |
+| `core_edit_eval` | `planned` | `qwen_image_19.stage_2_fusion._worker_bf16_compose` | `reports/stage-2/jobs/core-edit-eval` | `reports/stage-2/logs/core-edit-eval.log` |
+| `consistency_eval` | `planned` | `qwen_image_19.stage_2_fusion._worker_bf16_compose` | `reports/stage-2/jobs/consistency-eval` | `reports/stage-2/logs/consistency-eval.log` |
 
 ## Artifacts
 | Artifact | Path |
@@ -79,11 +76,11 @@ Stage 2 now builds two tracks from the Stage 1 evidence: a stable BF16 core base
 | `dataset_manifest` | `reports/stage-2/dataset-manifest.json` |
 | `training_report` | `reports/stage-2/training-report.md` |
 | `training_figures_dir` | `reports/stage-2/figures` |
-| `stable_core_checkpoint` | `stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors` |
-| `experimental_bridge_adapter` | `stage-2/artifacts/experimental/layered-bridge-adapter.safetensors` |
-| `experimental_bridge_checkpoint` | `stage-2/artifacts/experimental/qwen-image-1.9-layered-bridge-bf16.safetensors` |
+| `stable_core_checkpoint` | `reports/stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors` |
+| `experimental_bridge_adapter` | `reports/stage-2/artifacts/experimental/layered-bridge-adapter.safetensors` |
+| `experimental_bridge_checkpoint` | `reports/stage-2/artifacts/experimental/qwen-image-1.9-layered-bridge-bf16.safetensors` |
 | `artifact_dir` | `reports/stage-2` |
-| `run_status` | `stage-2/run-status.json` |
+| `run_status` | `reports/stage-2/run-status.json` |
 
 ## Limitations
 - Stage 2 does not attempt true RGBA decomposition support. Layered supervision is flattened back into RGB composites.

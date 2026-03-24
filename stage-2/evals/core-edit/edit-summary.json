@@ -1,0 +1,100 @@
+{
+  "generated_at": "2026-03-24T12:19:54.167163+00:00",
+  "eval_type": "edit",
+  "task": "core-edit",
+  "model_ref": "stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
+  "merged_model_id": "Qwen/Qwen-Image-2512",
+  "foundation_model_id": "Qwen/Qwen-Image-2512",
+  "num_pairs": 8,
+  "steps": 30,
+  "resolution": "1024x1024",
+  "elapsed_seconds": 619.528,
+  "mean_pixel_l2_delta": 758.4375,
+  "pairs": [
+    {
+      "idx": 1,
+      "source_prompt": "street style portrait of a runner in a red jacket against a subway wall",
+      "edit_instruction": "change the jacket to white while keeping pose, lighting, and camera angle",
+      "before_path": "stage-2/evals/core-edit/edit-samples/edit-001-before.png",
+      "after_path": "stage-2/evals/core-edit/edit-samples/edit-001-after.png",
+      "elapsed_seconds": 28.049,
+      "luminance_delta": 0.047,
+      "pixel_l2_delta": 840.7499
+    },
+    {
+      "idx": 2,
+      "source_prompt": "product shot of a ceramic mug on a wooden table in morning light",
+      "edit_instruction": "replace the mug pattern with blue stripes and keep the same composition",
+      "before_path": "stage-2/evals/core-edit/edit-samples/edit-002-before.png",
+      "after_path": "stage-2/evals/core-edit/edit-samples/edit-002-after.png",
+      "elapsed_seconds": 27.342,
+      "luminance_delta": 0.2126,
+      "pixel_l2_delta": 723.1829
+    },
+    {
+      "idx": 3,
+      "source_prompt": "retro poster of a rocket launch with bold orange typography",
+      "edit_instruction": "update the poster palette to teal and cream while preserving layout",
+      "before_path": "stage-2/evals/core-edit/edit-samples/edit-003-before.png",
+      "after_path": "stage-2/evals/core-edit/edit-samples/edit-003-after.png",
+      "elapsed_seconds": 27.34,
+      "luminance_delta": 0.2803,
+      "pixel_l2_delta": 937.0684
+    },
+    {
+      "idx": 4,
+      "source_prompt": "close portrait of a corgi in a yellow raincoat on wet pavement",
+      "edit_instruction": "switch the raincoat to forest green and keep the dog expression unchanged",
+      "before_path": "stage-2/evals/core-edit/edit-samples/edit-004-before.png",
+      "after_path": "stage-2/evals/core-edit/edit-samples/edit-004-after.png",
+      "elapsed_seconds": 27.497,
+      "luminance_delta": -0.1401,
+      "pixel_l2_delta": 545.8381
+    },
+    {
+      "idx": 5,
+      "source_prompt": "street style portrait of a runner in a red jacket against a subway wall",
+      "edit_instruction": "change the jacket to white while keeping pose, lighting, and camera angle",
+      "before_path": "stage-2/evals/core-edit/edit-samples/edit-005-before.png",
+      "after_path": "stage-2/evals/core-edit/edit-samples/edit-005-after.png",
+      "elapsed_seconds": 27.534,
+      "luminance_delta": 0.188,
+      "pixel_l2_delta": 775.0367
+    },
+    {
+      "idx": 6,
+      "source_prompt": "product shot of a ceramic mug on a wooden table in morning light",
+      "edit_instruction": "replace the mug pattern with blue stripes and keep the same composition",
+      "before_path": "stage-2/evals/core-edit/edit-samples/edit-006-before.png",
+      "after_path": "stage-2/evals/core-edit/edit-samples/edit-006-after.png",
+      "elapsed_seconds": 27.407,
+      "luminance_delta": 0.2477,
+      "pixel_l2_delta": 815.6505
+    },
+    {
+      "idx": 7,
+      "source_prompt": "retro poster of a rocket launch with bold orange typography",
+      "edit_instruction": "update the poster palette to teal and cream while preserving layout",
+      "before_path": "stage-2/evals/core-edit/edit-samples/edit-007-before.png",
+      "after_path": "stage-2/evals/core-edit/edit-samples/edit-007-after.png",
+      "elapsed_seconds": 27.367,
+      "luminance_delta": 0.3004,
+      "pixel_l2_delta": 860.7827
+    },
+    {
+      "idx": 8,
+      "source_prompt": "close portrait of a corgi in a yellow raincoat on wet pavement",
+      "edit_instruction": "switch the raincoat to forest green and keep the dog expression unchanged",
+      "before_path": "stage-2/evals/core-edit/edit-samples/edit-008-before.png",
+      "after_path": "stage-2/evals/core-edit/edit-samples/edit-008-after.png",
+      "elapsed_seconds": 27.795,
+      "luminance_delta": -0.1672,
+      "pixel_l2_delta": 569.1907
+    }
+  ],
+  "metrics": {
+    "edit_retention_score": null
+  },
+  "status": "passed",
+  "sample_dir": "stage-2/evals/core-edit/edit-samples"
+}
