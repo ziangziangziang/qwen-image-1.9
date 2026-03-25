@@ -6,7 +6,7 @@
 - Git commit: `n/a`
 - Stage: `stage-2`
 - Workflows documented: `core-delta`, `layered-bridge`, `experimental`
-- Report generated from: `stage-2/run-status.json`, `reports/stage-2/merge-manifest.json`
+- Report generated from: `reports/stage-2/run-status.json`, `reports/stage-2/merge-manifest.json`
 
 ## Hardware
 
@@ -23,19 +23,19 @@
 
 ## Aggregate Timing
 
-- Total elapsed across all workflows: `7089.8s (01h 58m 09s)`
+- Total elapsed across all workflows: `6146.6s (01h 42m 26s)`
 
 ## Runtime / Job Summary
 
 | Job | Status | Duration (s) | Exit code | Log |
 | --- | --- | --- | --- | --- |
-| `consistency_eval` | `succeeded` | `1109.2909` | `0` | `stage-2/logs/consistency-eval.log` |
-| `core_delta_sweep` | `succeeded` | `1065.4573` | `0` | `stage-2/logs/core-delta-sweep.log` |
-| `core_edit_eval` | `succeeded` | `649.1934` | `0` | `stage-2/logs/core-edit-eval.log` |
-| `core_smoke_eval` | `succeeded` | `305.1985` | `0` | `stage-2/logs/core-smoke-eval.log` |
-| `experimental_smoke_eval` | `succeeded` | `331.2621` | `0` | `stage-2/logs/experimental-smoke-eval.log` |
-| `layered_bridge_train` | `succeeded` | `31.3337` | `0` | `stage-2/logs/layered-bridge-train.log` |
-| `teacher_dataset_generation` | `succeeded` | `3598.0664` | `0` | `stage-2/logs/teacher-dataset.log` |
+| `consistency_eval` | `succeeded` | `1033.6228` | `0` | `reports/stage-2/logs/consistency-eval.log` |
+| `core_delta_sweep` | `succeeded` | `1184.1361` | `0` | `reports/stage-2/logs/core-delta-sweep.log` |
+| `core_edit_eval` | `succeeded` | `617.5378` | `0` | `reports/stage-2/logs/core-edit-eval.log` |
+| `core_smoke_eval` | `succeeded` | `338.6642` | `0` | `reports/stage-2/logs/core-smoke-eval.log` |
+| `experimental_smoke_eval` | `succeeded` | `334.4732` | `0` | `reports/stage-2/logs/experimental-smoke-eval.log` |
+| `layered_bridge_train` | `succeeded` | `25.1272` | `0` | `reports/stage-2/logs/layered-bridge-train.log` |
+| `teacher_dataset_generation` | `succeeded` | `2613.0654` | `0` | `reports/stage-2/logs/teacher-dataset.log` |
 
 ---
 
@@ -55,9 +55,9 @@
 - Seed: `n/a`
 
 ### Timing
-- Start: `2026-03-24T10:40:16.506529+00:00`
-- End: `2026-03-24T10:58:01.967804+00:00`
-- Elapsed: `1065.5s (00h 17m 45s)`
+- Start: `2026-03-24T22:56:57.540964+00:00`
+- End: `2026-03-24T23:16:41.683419+00:00`
+- Elapsed: `1184.1s (00h 19m 44s)`
 - Job status: `succeeded`
 
 ### Loss
@@ -82,9 +82,9 @@ flowchart LR
 
 ### Visual Outcomes (Before / After Merge)
 
-_Before sample not available at `stage-2/evals/core-delta/samples/`._
+_Before sample not available at `reports/stage-2/evals/core-delta/samples/`._
 
-_After sample not yet available at `stage-2/evals/core-delta/real-samples/`._
+_After sample not yet available at `reports/stage-2/evals/core-delta/real-samples/`._
 
 ## Workflow: layered-bridge
 
@@ -96,35 +96,35 @@ _After sample not yet available at `stage-2/evals/core-delta/real-samples/`._
 - Notes: This is a smoke-stage proxy, not the final bridge training recipe.
 
 ### Hyperparameters
-- Max steps: `500`
+- Max steps: `1000`
 - Batch size: `2`
 - Learning rate: `0.001`
 - Seed: `1234`
 
 ### Timing
-- Start: `2026-03-24T12:03:14.182373+00:00`
-- End: `2026-03-24T12:03:35.948830+00:00`
-- Elapsed: `4.8s (00h 00m 04s)`
+- Start: `2026-03-25T00:06:02.705275+00:00`
+- End: `2026-03-25T00:06:17.943173+00:00`
+- Elapsed: `3.3s (00h 00m 03s)`
 - Job status: `succeeded`
 
 ### Loss
-- Final: `0.0016438349848613143`
-- Min: `0.000956448377110064`
-- Max: `0.12330838292837143`
+- Final: `0.0014378068735823035`
+- Min: `0.0007670784252695739`
+- Max: `0.1135181412100792`
 
 | Step | Loss |
 | ---: | ---: |
-| 1 | 0.092334 |
-| 2 | 0.081858 |
-| 3 | 0.103077 |
-| 4 | 0.123308 |
-| 5 | 0.067125 |
-| … | _(steps 6–495 omitted)_ |
-| 496 | 0.002484 |
-| 497 | 0.003186 |
-| 498 | 0.002342 |
-| 499 | 0.001504 |
-| 500 | 0.001644 |
+| 1 | 0.090859 |
+| 2 | 0.091829 |
+| 3 | 0.097404 |
+| 4 | 0.110781 |
+| 5 | 0.066881 |
+| … | _(steps 6–995 omitted)_ |
+| 996 | 0.001383 |
+| 997 | 0.001953 |
+| 998 | 0.001322 |
+| 999 | 0.001256 |
+| 1000 | 0.001438 |
 
 ![layered-bridge training loss](figures/layered-bridge-loss.png)
 
@@ -147,15 +147,15 @@ flowchart LR
 
 ### Visual Outcomes (Before / After Merge)
 
-_Before sample not available at `stage-2/evals/layered-bridge/samples/`._
+_Before sample not available at `reports/stage-2/evals/layered-bridge/samples/`._
 
-_After sample not yet available at `stage-2/evals/layered-bridge/real-samples/`._
+_After sample not yet available at `reports/stage-2/evals/layered-bridge/real-samples/`._
 
 ## Workflow: experimental
 
 ### Training Method
 - Type: `experimental-smoke-eval`
-- Model: `stage-2/artifacts/experimental/qwen-image-1.9-layered-bridge-bf16.safetensors`
+- Model: `reports/stage-2/artifacts/experimental/qwen-image-1.9-layered-bridge-bf16.safetensors`
 - Objective: `smoke quality check on layered bridge checkpoint`
 - Optimizer: `n/a`
 - Notes: Experimental eval: visual pass/fail on the layered bridge checkpoint after MSE distillation training.
@@ -167,9 +167,9 @@ _After sample not yet available at `stage-2/evals/layered-bridge/real-samples/`.
 - Seed: `n/a`
 
 ### Timing
-- Start: `2026-03-24T12:03:36.658120+00:00`
-- End: `2026-03-24T12:09:07.929929+00:00`
-- Elapsed: `331.3s (00h 05m 31s)`
+- Start: `2026-03-25T00:06:18.600890+00:00`
+- End: `2026-03-25T00:11:53.077110+00:00`
+- Elapsed: `334.5s (00h 05m 34s)`
 - Job status: `succeeded`
 
 ### Loss
@@ -194,10 +194,10 @@ flowchart LR
 
 ### Visual Outcomes (Before / After Merge)
 
-**Before** (baseline eval sample — `stage-2/evals/experimental/samples/`):
+**Before** (baseline eval sample — `reports/stage-2/evals/experimental/samples/`):
 ![experimental before merge](figures/experimental-before-001.png)
 
-_After sample not yet available at `stage-2/evals/experimental/real-samples/`._
+_After sample not yet available at `reports/stage-2/evals/experimental/real-samples/`._
 
 ---
 
@@ -205,13 +205,13 @@ _After sample not yet available at `stage-2/evals/experimental/real-samples/`._
 
 | Workflow | Status | Metrics source | Duration (s) |
 | --- | --- | --- | --- |
-| `core-delta` | `succeeded` | `stage-2/metrics/core-delta-train.json` | `1065.457` |
-| `layered-bridge` | `succeeded` | `stage-2/metrics/layered-bridge-train.json` | `31.3337` |
-| `experimental` | `succeeded` | `stage-2/metrics/experimental-train.json` | `331.262` |
+| `core-delta` | `succeeded` | `reports/stage-2/metrics/core-delta-train.json` | `1184.136` |
+| `layered-bridge` | `succeeded` | `reports/stage-2/metrics/layered-bridge-train.json` | `25.1272` |
+| `experimental` | `succeeded` | `reports/stage-2/metrics/experimental-train.json` | `334.473` |
 
 ## Artifact References
 
 - Merge manifest: `reports/stage-2/merge-manifest.json`
 - Dataset manifest: `reports/stage-2/dataset-manifest.json`
-- Run status: `stage-2/run-status.json`
+- Run status: `reports/stage-2/run-status.json`
 - Figures: `reports/stage-2/figures/`
