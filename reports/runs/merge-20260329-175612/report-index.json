@@ -1,0 +1,41 @@
+{
+  "manifest": "reports/runs/merge-20260329-175612/manifest.json",
+  "notes": "",
+  "run_id": "merge-20260329-175612",
+  "steps": {
+    "abliterate": {
+      "eval_summary": "reports/runs/merge-20260329-175612/abliterate/eval-summary.json",
+      "metrics": {
+        "refusal_direction_removed": true,
+        "safety_review_required": true,
+        "target_subspace": "refusal-behavior"
+      },
+      "output_checkpoint": "/mnt/artifacts/qwen-image-1.9/runs/merge-20260329-175612/abliterate/abliterated-model",
+      "report": "reports/runs/merge-20260329-175612/abliterate/README.md",
+      "status": "completed",
+      "step_result": "reports/runs/merge-20260329-175612/abliterate/step-result.json"
+    },
+    "merge": {
+      "eval_summary": "reports/runs/merge-20260329-175612/merge/eval-summary.json",
+      "metrics": {
+        "candidate_count": 4,
+        "execution_enabled": true,
+        "run_profile": "full"
+      },
+      "output_checkpoint": "reports/stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
+      "report": "reports/runs/merge-20260329-175612/merge/README.md",
+      "status": "completed",
+      "step_result": "reports/runs/merge-20260329-175612/merge/step-result.json"
+    },
+    "quantize": {
+      "eval_summary": null,
+      "metrics": {},
+      "output_checkpoint": null,
+      "report": null,
+      "status": "pending",
+      "step_result": null
+    }
+  },
+  "tags": [],
+  "updated_at": "2026-03-29T19:24:49+00:00"
+}

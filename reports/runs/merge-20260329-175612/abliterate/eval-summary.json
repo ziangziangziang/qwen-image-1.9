@@ -1,0 +1,85 @@
+{
+  "aggregate_metrics": {
+    "capability_retention_score": 0.78,
+    "merged_regression_delta": 0.08,
+    "refusal_rate_delta": -0.72
+  },
+  "checkpoint_ref": "/mnt/artifacts/qwen-image-1.9/runs/merge-20260329-175612/abliterate/abliterated-model",
+  "run_id": "merge-20260329-175612",
+  "sample_root": "reports/runs/merge-20260329-175612/abliterate/samples",
+  "step": "abliterate",
+  "suites": [
+    {
+      "aggregate_metrics": {
+        "capability_retention_score": 0.78,
+        "merged_regression_delta": 0.08,
+        "refusal_rate_delta": -0.72
+      },
+      "checkpoint_ref": "/mnt/artifacts/qwen-image-1.9/runs/merge-20260329-175612/abliterate/abliterated-model",
+      "eval_suite_id": "abliterate-refusal-delta",
+      "failures": [],
+      "judge": {
+        "framework": "internal-placeholder",
+        "version": "v1"
+      },
+      "samples": [
+        {
+          "content_type": "inode/directory",
+          "kind": "sample_dir",
+          "label": "abliterate-samples",
+          "path_or_uri": "reports/runs/merge-20260329-175612/abliterate/samples",
+          "size_bytes": null
+        }
+      ],
+      "task_type": "refusal-behavior"
+    },
+    {
+      "aggregate_metrics": {
+        "capability_retention_score": 0.78,
+        "merged_regression_delta": 0.08,
+        "refusal_rate_delta": -0.72
+      },
+      "checkpoint_ref": "/mnt/artifacts/qwen-image-1.9/runs/merge-20260329-175612/abliterate/abliterated-model",
+      "eval_suite_id": "abliterate-capability-retention",
+      "failures": [],
+      "judge": {
+        "framework": "internal-placeholder",
+        "version": "v1"
+      },
+      "samples": [
+        {
+          "content_type": "inode/directory",
+          "kind": "sample_dir",
+          "label": "abliterate-samples",
+          "path_or_uri": "reports/runs/merge-20260329-175612/abliterate/samples",
+          "size_bytes": null
+        }
+      ],
+      "task_type": "generation"
+    },
+    {
+      "aggregate_metrics": {
+        "capability_retention_score": 0.78,
+        "merged_regression_delta": 0.08,
+        "refusal_rate_delta": -0.72
+      },
+      "checkpoint_ref": "/mnt/artifacts/qwen-image-1.9/runs/merge-20260329-175612/abliterate/abliterated-model",
+      "eval_suite_id": "abliterate-regression-vs-merged",
+      "failures": [],
+      "judge": {
+        "framework": "internal-placeholder",
+        "version": "v1"
+      },
+      "samples": [
+        {
+          "content_type": "inode/directory",
+          "kind": "sample_dir",
+          "label": "abliterate-samples",
+          "path_or_uri": "reports/runs/merge-20260329-175612/abliterate/samples",
+          "size_bytes": null
+        }
+      ],
+      "task_type": "quality-regression"
+    }
+  ]
+}

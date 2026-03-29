@@ -1,0 +1,37 @@
+{
+  "manifest": "reports/runs/merge-20260329-175559/manifest.json",
+  "notes": "",
+  "run_id": "merge-20260329-175559",
+  "steps": {
+    "abliterate": {
+      "eval_summary": null,
+      "metrics": {},
+      "output_checkpoint": null,
+      "report": null,
+      "status": "pending",
+      "step_result": null
+    },
+    "merge": {
+      "eval_summary": "reports/runs/merge-20260329-175559/merge/eval-summary.json",
+      "metrics": {
+        "candidate_count": 4,
+        "execution_enabled": false,
+        "run_profile": "full"
+      },
+      "output_checkpoint": "reports/stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
+      "report": "reports/runs/merge-20260329-175559/merge/README.md",
+      "status": "completed",
+      "step_result": "reports/runs/merge-20260329-175559/merge/step-result.json"
+    },
+    "quantize": {
+      "eval_summary": null,
+      "metrics": {},
+      "output_checkpoint": null,
+      "report": null,
+      "status": "pending",
+      "step_result": null
+    }
+  },
+  "tags": [],
+  "updated_at": "2026-03-29T17:55:59+00:00"
+}
