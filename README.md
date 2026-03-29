@@ -46,6 +46,7 @@ Large checkpoints and quantized binaries stay in remote or object storage. The r
 Primary commands:
 
 ```bash
+python3 -m pip install -e .
 q19 preflight --dry-run
 q19 merge --run-id run-001 --run-profile full
 q19 abliterate --run-id run-001
@@ -53,6 +54,8 @@ q19 quantize --run-id run-001
 q19 report
 q19 report --serve --host 127.0.0.1 --port 8000
 ```
+
+If `q19` still shows the old `stage1..stage5` help text, you are running an older installed console script. Reinstall the workspace package with `python3 -m pip install -e .` and check again.
 
 Legacy `stage1`, `stage2`, `stage4`, and `stage5` commands remain available for compatibility, but they are no longer the preferred interface.
 

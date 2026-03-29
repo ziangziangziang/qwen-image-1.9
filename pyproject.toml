@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "qwen-image-1-9"
-version = "0.1.0"
-description = "Remote-first scaffold for Project Qwen-Image 1.9."
+version = "0.2.0"
+description = "Three-step Qwen-Image 1.9 checkpoint pipeline with shared results reporting."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "Apache-2.0" }
