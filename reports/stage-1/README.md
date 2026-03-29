@@ -9,7 +9,7 @@ Stage 1 now combines structural checkpoint compatibility with value-level block 
 - Remote cache: `/mnt/cache/qwen-image`
 - Remote artifact dir: `/mnt/artifacts/qwen-image-1.9`
 - HF home: `/lustre_scratch/user_scratch/zziang/huggingface`
-- Weight analysis available: `False`
+- Weight analysis available: `True`
 - Low-delta threshold: `relative_l2_delta <= 1e-06`
 
 ## Methods
@@ -56,9 +56,9 @@ Phase B: value-level analysis from loaded tensor payloads on roadmap pairs, with
 ### Tensor Pairwise Comparison Stats
 | Pair | Shared keys | Missing keys | Shape mismatches | Top mismatch prefixes | Left components | Right components |
 | --- | --- | --- | --- | --- | --- | --- |
-| `foundation_vs_edit` | `2856` | `0` | `0` | `none` | `text_encoder:729, transformer:1933, vae:194` | `text_encoder:729, transformer:1933, vae:194` |
-| `base_vs_layered` | `2856` | `1` | `3` | `vae.decoder, transformer.time_text_embed, vae.encoder` | `text_encoder:729, transformer:1933, vae:194` | `text_encoder:729, transformer:1934, vae:194` |
-| `foundation_vs_layered` | `2856` | `1` | `3` | `vae.decoder, transformer.time_text_embed, vae.encoder` | `text_encoder:729, transformer:1933, vae:194` | `text_encoder:729, transformer:1934, vae:194` |
+| `foundation_vs_edit` | `2856` | `0` | `0` | `none` | `transformer:1933, text_encoder:729, vae:194` | `transformer:1933, text_encoder:729, vae:194` |
+| `base_vs_layered` | `2856` | `1` | `3` | `vae.decoder, transformer.time_text_embed, vae.encoder` | `transformer:1933, text_encoder:729, vae:194` | `transformer:1934, text_encoder:729, vae:194` |
+| `foundation_vs_layered` | `2856` | `1` | `3` | `vae.decoder, transformer.time_text_embed, vae.encoder` | `transformer:1933, text_encoder:729, vae:194` | `transformer:1934, text_encoder:729, vae:194` |
 
 ### Layer Inventory Summary
 | Alias | Normalized layers | Subsystem counts |
@@ -81,16 +81,16 @@ Phase B: value-level analysis from loaded tensor payloads on roadmap pairs, with
 ### Block Review Executive Summary
 | Pair | Comparable tensors | Exact ratio | Low-delta ratio | Mean relative L2 delta | Mean block similarity |
 | --- | --- | --- | --- | --- | --- |
-| `2512 vs edit-2511` | `—` | `—` | `—` | `—` | `—` |
-| `base vs layered` | `—` | `—` | `—` | `—` | `—` |
-| `2512 vs layered` | `—` | `—` | `—` | `—` | `—` |
+| `2512 vs edit-2511` | `2856` | `0.3246` | `0.3246` | `0.0757626437` | `0.9073` |
+| `base vs layered` | `2853` | `0.2611` | `0.2611` | `0.0661978195` | `0.8647` |
+| `2512 vs layered` | `2853` | `0.2597` | `0.2597` | `0.1002445725` | `0.8223` |
 
 ### Value-Level Weight Comparison
 | Pair | Comparable tensors | Exact-equal tensors | Exact ratio | Low-delta ratio | Mean relative L2 delta | Max relative L2 delta | Missing excluded | Shape excluded | Dtype excluded |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| `2512 vs edit-2511` | `—` | `—` | `—` | `—` | `—` | `—` | `—` | `—` | `—` |
-| `base vs layered` | `—` | `—` | `—` | `—` | `—` | `—` | `—` | `—` | `—` |
-| `2512 vs layered` | `—` | `—` | `—` | `—` | `—` | `—` | `—` | `—` | `—` |
+| `2512 vs edit-2511` | `2856` | `927` | `0.3246` | `0.3246` | `0.0757626437` | `0.7148181988` | `0` | `0` | `0` |
+| `base vs layered` | `2853` | `745` | `0.2611` | `0.2611` | `0.0661978195` | `1.0472772873` | `1` | `3` | `0` |
+| `2512 vs layered` | `2853` | `741` | `0.2597` | `0.2597` | `0.1002445725` | `1.0472772873` | `1` | `3` | `0` |
 
 ## Hardware Account + Time Usage
 ### Environment
@@ -110,25 +110,25 @@ Phase B: value-level analysis from loaded tensor payloads on roadmap pairs, with
 ### Phase Timing
 | Phase | Seconds | Percent of total |
 | --- | --- | --- |
-| `setup_context` | `0.0023` | `0.0755%` |
-| `cache_snapshot_discovery` | `0.0024` | `0.0793%` |
-| `structural_manifest_build` | `0.8385` | `27.7905%` |
-| `pairwise_structural_layer` | `0.0371` | `1.2304%` |
-| `value_level_weight_comparison` | `0.0` | `0.0001%` |
-| `figure_generation` | `1.9994` | `66.2625%` |
-| `report_json_write` | `0.1343` | `4.4518%` |
+| `setup_context` | `0.0038` | `0.0002%` |
+| `cache_snapshot_discovery` | `0.0083` | `0.0005%` |
+| `structural_manifest_build` | `1.1042` | `0.0638%` |
+| `pairwise_structural_layer` | `0.0382` | `0.0022%` |
+| `value_level_weight_comparison` | `1727.9329` | `99.7803%` |
+| `figure_generation` | `2.2516` | `0.13%` |
+| `report_json_write` | `0.3942` | `0.0228%` |
 
 ### Roadmap Pair Workload
 | Pair | Comparable tensors | Left bytes | Right bytes | Total bytes | Missing excluded | Shape excluded | Dtype excluded |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `2512 vs edit-2511` | `0` | `unknown` | `unknown` | `unknown` | `0` | `0` | `0` |
-| `base vs layered` | `0` | `unknown` | `unknown` | `unknown` | `0` | `0` | `0` |
-| `2512 vs layered` | `0` | `unknown` | `unknown` | `unknown` | `0` | `0` | `0` |
+| `2512 vs edit-2511` | `2856` | `53.74 GiB` | `53.74 GiB` | `107.47 GiB` | `0` | `0` | `0` |
+| `base vs layered` | `2853` | `53.74 GiB` | `53.74 GiB` | `107.47 GiB` | `1` | `3` | `0` |
+| `2512 vs layered` | `2853` | `53.74 GiB` | `53.74 GiB` | `107.47 GiB` | `1` | `3` | `0` |
 
 ### Runtime Estimate vs Observed
-- Observed total wall time: `3.0173s`
-- Value-analysis bytes processed: `0.00 B` (`0.0 GiB`)
-- Estimated total runtime (low/typical/high): `0.0s` / `0.0s` / `0.0s`
+- Observed total wall time: `1731.7381s`
+- Value-analysis bytes processed: `322.42 GiB` (`322.4177 GiB`)
+- Estimated total runtime (low/typical/high): `120.5495s` / `217.0578s` / `434.1155s`
 - Operational note: Stage 1 value comparison is CPU and storage I/O bound; GPU is not required.
 
 ### Subsystem Compatibility And Strategy
@@ -227,29 +227,212 @@ Phase B: value-level analysis from loaded tensor payloads on roadmap pairs, with
 
 ### Block-By-Block Weight Tables
 ### 2512 vs edit-2511
-
-_Weight layer data not available (smoke mode)._
+#### mmdit_backbone
+| Block | Comparable tensors | Exact ratio | Low-delta ratio | Relative L2 delta | Similarity score |
+| --- | --- | --- | --- | --- | --- |
+| `mmdit_backbone:transformer_blocks:49` | `32` | `0.0` | `0.0` | `0.278331319` | `0.7217` |
+| `mmdit_backbone:transformer_blocks:48` | `32` | `0.0` | `0.0` | `0.2690509515` | `0.7309` |
+| `mmdit_backbone:transformer_blocks:47` | `32` | `0.0` | `0.0` | `0.2639448163` | `0.7361` |
+| `mmdit_backbone:transformer_blocks:50` | `32` | `0.0` | `0.0` | `0.2634178482` | `0.7366` |
+| `mmdit_backbone:transformer_blocks:46` | `32` | `0.0` | `0.0` | `0.2572267219` | `0.7428` |
+| `mmdit_backbone:transformer_blocks:44` | `32` | `0.0` | `0.0` | `0.2560088858` | `0.744` |
+| `mmdit_backbone:transformer_blocks:57` | `32` | `0.0` | `0.0` | `0.2524446286` | `0.7476` |
+| `mmdit_backbone:transformer_blocks:42` | `32` | `0.0` | `0.0` | `0.251543738` | `0.7485` |
+| `mmdit_backbone:transformer_blocks:43` | `32` | `0.0` | `0.0` | `0.2506992107` | `0.7493` |
+| `mmdit_backbone:transformer_blocks:40` | `32` | `0.0` | `0.0` | `0.2500843889` | `0.7499` |
+| `mmdit_backbone:transformer_blocks:41` | `32` | `0.0` | `0.0` | `0.2492838584` | `0.7507` |
+| `mmdit_backbone:transformer_blocks:56` | `32` | `0.0` | `0.0` | `0.2454091722` | `0.7546` |
+#### text_encoder
+| Block | Comparable tensors | Exact ratio | Low-delta ratio | Relative L2 delta | Similarity score |
+| --- | --- | --- | --- | --- | --- |
+| `text_encoder:__global__` | `9` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:0` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:1` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:10` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:11` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:12` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:13` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:14` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:15` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:16` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:17` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:18` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+#### vae
+| Block | Comparable tensors | Exact ratio | Low-delta ratio | Relative L2 delta | Similarity score |
+| --- | --- | --- | --- | --- | --- |
+| `vae:__global__` | `2` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `vae:decoder.conv_in` | `2` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `vae:decoder.conv_out` | `2` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `vae:decoder.mid_block` | `17` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `vae:decoder.up_blocks:0` | `22` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `vae:decoder.up_blocks:1` | `24` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `vae:decoder.up_blocks:2` | `20` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `vae:decoder.up_blocks:3` | `18` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `vae:encoder.conv_in` | `2` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `vae:encoder.conv_out` | `2` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `vae:encoder.down_blocks:0` | `6` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `vae:encoder.down_blocks:1` | `6` | `1.0` | `1.0` | `0.0` | `1.0` |
+#### rope
+| Block | Comparable tensors | Exact ratio | Low-delta ratio | Relative L2 delta | Similarity score |
+| --- | --- | --- | --- | --- | --- |
+| `none` | `0` | `0.0` | `0.0` | `0.0` | `0.0` |
 
 ### base vs layered
-
-_Weight layer data not available (smoke mode)._
+#### mmdit_backbone
+| Block | Comparable tensors | Exact ratio | Low-delta ratio | Relative L2 delta | Similarity score |
+| --- | --- | --- | --- | --- | --- |
+| `mmdit_backbone:transformer_blocks:58` | `32` | `0.0` | `0.0` | `0.1254440593` | `0.8746` |
+| `mmdit_backbone:transformer_blocks:57` | `32` | `0.0` | `0.0` | `0.111554353` | `0.8884` |
+| `mmdit_backbone:transformer_blocks:59` | `32` | `0.25` | `0.25` | `0.101626112` | `0.8984` |
+| `mmdit_backbone:transformer_blocks:49` | `32` | `0.0` | `0.0` | `0.1013748038` | `0.8986` |
+| `mmdit_backbone:transformer_blocks:56` | `32` | `0.0` | `0.0` | `0.1007430282` | `0.8993` |
+| `mmdit_backbone:transformer_blocks:48` | `32` | `0.0` | `0.0` | `0.1005137976` | `0.8995` |
+| `mmdit_backbone:transformer_blocks:47` | `32` | `0.0` | `0.0` | `0.0981070396` | `0.9019` |
+| `mmdit_backbone:transformer_blocks:46` | `32` | `0.0` | `0.0` | `0.0966898841` | `0.9033` |
+| `mmdit_backbone:transformer_blocks:44` | `32` | `0.0` | `0.0` | `0.0951489749` | `0.9049` |
+| `mmdit_backbone:transformer_blocks:55` | `32` | `0.0` | `0.0` | `0.0947323925` | `0.9053` |
+| `mmdit_backbone:transformer_blocks:50` | `32` | `0.0` | `0.0` | `0.0942069176` | `0.9058` |
+| `mmdit_backbone:transformer_blocks:45` | `32` | `0.0` | `0.0` | `0.0929358856` | `0.9071` |
+#### text_encoder
+| Block | Comparable tensors | Exact ratio | Low-delta ratio | Relative L2 delta | Similarity score |
+| --- | --- | --- | --- | --- | --- |
+| `text_encoder:__global__` | `9` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:0` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:1` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:10` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:11` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:12` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:13` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:14` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:15` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:16` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:17` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:18` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+#### vae
+| Block | Comparable tensors | Exact ratio | Low-delta ratio | Relative L2 delta | Similarity score |
+| --- | --- | --- | --- | --- | --- |
+| `vae:decoder.up_blocks:3` | `18` | `0.0` | `0.0` | `0.7904003906` | `0.2096` |
+| `vae:decoder.up_blocks:1` | `24` | `0.0833` | `0.0833` | `0.7865492832` | `0.2135` |
+| `vae:decoder.up_blocks:0` | `22` | `0.0909` | `0.0909` | `0.7854239752` | `0.2146` |
+| `vae:decoder.up_blocks:2` | `20` | `0.0` | `0.0` | `0.7702721686` | `0.2297` |
+| `vae:encoder.down_blocks:10` | `6` | `0.0` | `0.0` | `0.7477305298` | `0.2523` |
+| `vae:decoder.mid_block` | `17` | `0.0` | `0.0` | `0.7469286307` | `0.2531` |
+| `vae:encoder.down_blocks:6` | `8` | `0.0` | `0.0` | `0.7371491669` | `0.2629` |
+| `vae:encoder.mid_block` | `17` | `0.0` | `0.0` | `0.7345701901` | `0.2654` |
+| `vae:encoder.down_blocks:8` | `4` | `0.5` | `0.5` | `0.7295242356` | `0.2705` |
+| `vae:encoder.down_blocks:9` | `6` | `0.0` | `0.0` | `0.7293374766` | `0.2707` |
+| `vae:encoder.down_blocks:7` | `6` | `0.0` | `0.0` | `0.7025291861` | `0.2975` |
+| `vae:encoder.down_blocks:3` | `8` | `0.0` | `0.0` | `0.6574126561` | `0.3426` |
+#### rope
+| Block | Comparable tensors | Exact ratio | Low-delta ratio | Relative L2 delta | Similarity score |
+| --- | --- | --- | --- | --- | --- |
+| `none` | `0` | `0.0` | `0.0` | `0.0` | `0.0` |
 
 ### 2512 vs layered
-
-_Weight layer data not available (smoke mode)._
+#### mmdit_backbone
+| Block | Comparable tensors | Exact ratio | Low-delta ratio | Relative L2 delta | Similarity score |
+| --- | --- | --- | --- | --- | --- |
+| `mmdit_backbone:transformer_blocks:49` | `32` | `0.0` | `0.0` | `0.2355479678` | `0.7645` |
+| `mmdit_backbone:transformer_blocks:48` | `32` | `0.0` | `0.0` | `0.2281827297` | `0.7718` |
+| `mmdit_backbone:transformer_blocks:50` | `32` | `0.0` | `0.0` | `0.2238606851` | `0.7761` |
+| `mmdit_backbone:transformer_blocks:47` | `32` | `0.0` | `0.0` | `0.2231128199` | `0.7769` |
+| `mmdit_backbone:transformer_blocks:42` | `32` | `0.0` | `0.0` | `0.2188991864` | `0.7811` |
+| `mmdit_backbone:transformer_blocks:44` | `32` | `0.0` | `0.0` | `0.2187641042` | `0.7812` |
+| `mmdit_backbone:transformer_blocks:46` | `32` | `0.0` | `0.0` | `0.2186857585` | `0.7813` |
+| `mmdit_backbone:transformer_blocks:40` | `32` | `0.0` | `0.0` | `0.2184594912` | `0.7815` |
+| `mmdit_backbone:transformer_blocks:43` | `32` | `0.0` | `0.0` | `0.2172331708` | `0.7828` |
+| `mmdit_backbone:transformer_blocks:41` | `32` | `0.0` | `0.0` | `0.2171460505` | `0.7829` |
+| `mmdit_backbone:transformer_blocks:57` | `32` | `0.0` | `0.0` | `0.2122464676` | `0.7878` |
+| `mmdit_backbone:transformer_blocks:58` | `32` | `0.0` | `0.0` | `0.2120184698` | `0.788` |
+#### text_encoder
+| Block | Comparable tensors | Exact ratio | Low-delta ratio | Relative L2 delta | Similarity score |
+| --- | --- | --- | --- | --- | --- |
+| `text_encoder:__global__` | `9` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:0` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:1` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:10` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:11` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:12` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:13` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:14` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:15` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:16` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:17` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+| `text_encoder:blocks:18` | `12` | `1.0` | `1.0` | `0.0` | `1.0` |
+#### vae
+| Block | Comparable tensors | Exact ratio | Low-delta ratio | Relative L2 delta | Similarity score |
+| --- | --- | --- | --- | --- | --- |
+| `vae:decoder.up_blocks:3` | `18` | `0.0` | `0.0` | `0.7904003906` | `0.2096` |
+| `vae:decoder.up_blocks:1` | `24` | `0.0833` | `0.0833` | `0.7865492832` | `0.2135` |
+| `vae:decoder.up_blocks:0` | `22` | `0.0909` | `0.0909` | `0.7854239752` | `0.2146` |
+| `vae:decoder.up_blocks:2` | `20` | `0.0` | `0.0` | `0.7702721686` | `0.2297` |
+| `vae:encoder.down_blocks:10` | `6` | `0.0` | `0.0` | `0.7477305298` | `0.2523` |
+| `vae:decoder.mid_block` | `17` | `0.0` | `0.0` | `0.7469286307` | `0.2531` |
+| `vae:encoder.down_blocks:6` | `8` | `0.0` | `0.0` | `0.7371491669` | `0.2629` |
+| `vae:encoder.mid_block` | `17` | `0.0` | `0.0` | `0.7345701901` | `0.2654` |
+| `vae:encoder.down_blocks:8` | `4` | `0.5` | `0.5` | `0.7295242356` | `0.2705` |
+| `vae:encoder.down_blocks:9` | `6` | `0.0` | `0.0` | `0.7293374766` | `0.2707` |
+| `vae:encoder.down_blocks:7` | `6` | `0.0` | `0.0` | `0.7025291861` | `0.2975` |
+| `vae:encoder.down_blocks:3` | `8` | `0.0` | `0.0` | `0.6574126561` | `0.3426` |
+#### rope
+| Block | Comparable tensors | Exact ratio | Low-delta ratio | Relative L2 delta | Similarity score |
+| --- | --- | --- | --- | --- | --- |
+| `none` | `0` | `0.0` | `0.0` | `0.0` | `0.0` |
 
 ### Weight-Level Divergences
 ### 2512 vs edit-2511
 
-_Weight divergence data not available (smoke mode)._
+| Divergent layer | Relative L2 delta | Exact ratio | Low-delta ratio | Comparable tensors |
+| --- | --- | --- | --- | --- | --- |
+| `mmdit_backbone:transformer_blocks:49` | `0.278331319` | `0.0` | `0.0` | `32` | `mmdit_backbone` |
+| `mmdit_backbone:transformer_blocks:48` | `0.2690509515` | `0.0` | `0.0` | `32` | `mmdit_backbone` |
+| `mmdit_backbone:transformer_blocks:47` | `0.2639448163` | `0.0` | `0.0` | `32` | `mmdit_backbone` |
+| `mmdit_backbone:transformer_blocks:50` | `0.2634178482` | `0.0` | `0.0` | `32` | `mmdit_backbone` |
+| `mmdit_backbone:transformer_blocks:46` | `0.2572267219` | `0.0` | `0.0` | `32` | `mmdit_backbone` |
+
+| Divergent tensor | Layer | Relative L2 delta | Mean abs delta | Max abs delta |
+| --- | --- | --- | --- | --- |
+| `transformer.time_text_embed.timestep_embedder.linear_2.weight` | `transformer:__global__` | `0.7148181988` | `0.0139497096` | `0.5234375` |
+| `transformer.transformer_blocks.50.txt_mlp.net.0.proj.weight` | `mmdit_backbone:transformer_blocks:50` | `0.6100095851` | `0.0171162274` | `0.1252441406` |
+| `transformer.transformer_blocks.55.attn.add_q_proj.weight` | `mmdit_backbone:transformer_blocks:55` | `0.5317556` | `0.0169144978` | `0.19921875` |
+| `transformer.transformer_blocks.0.attn.to_v.weight` | `mmdit_backbone:transformer_blocks:0` | `0.5304859807` | `0.0125562874` | `0.19140625` |
+| `transformer.transformer_blocks.56.attn.add_q_proj.weight` | `mmdit_backbone:transformer_blocks:56` | `0.5266514578` | `0.0168004251` | `0.1293945312` |
 
 ### base vs layered
 
-_Weight divergence data not available (smoke mode)._
+| Divergent layer | Relative L2 delta | Exact ratio | Low-delta ratio | Comparable tensors |
+| --- | --- | --- | --- | --- | --- |
+| `vae:decoder.up_blocks:3` | `0.7904003906` | `0.0` | `0.0` | `18` | `vae` |
+| `vae:decoder.up_blocks:1` | `0.7865492832` | `0.0833` | `0.0833` | `24` | `vae` |
+| `vae:decoder.up_blocks:0` | `0.7854239752` | `0.0909` | `0.0909` | `22` | `vae` |
+| `vae:decoder.up_blocks:2` | `0.7702721686` | `0.0` | `0.0` | `20` | `vae` |
+| `vae:encoder.down_blocks:10` | `0.7477305298` | `0.0` | `0.0` | `6` | `vae` |
+
+| Divergent tensor | Layer | Relative L2 delta | Mean abs delta | Max abs delta |
+| --- | --- | --- | --- | --- |
+| `vae.decoder.up_blocks.3.resnets.2.conv1.bias` | `vae:decoder.up_blocks:3` | `1.0472772873` | `0.026539882` | `0.1301269531` |
+| `vae.encoder.conv_out.bias` | `vae:encoder.conv_out` | `1.0298804639` | `0.0205132961` | `0.0559082031` |
+| `vae.encoder.mid_block.resnets.1.conv2.bias` | `vae:encoder.mid_block` | `0.9288137038` | `0.0147879577` | `0.2865905762` |
+| `vae.encoder.mid_block.resnets.0.conv2.bias` | `vae:encoder.mid_block` | `0.92161797` | `0.0245268748` | `0.2904052734` |
+| `vae.decoder.mid_block.attentions.0.proj.weight` | `vae:decoder.mid_block` | `0.9214817032` | `0.0186881151` | `0.162109375` |
 
 ### 2512 vs layered
 
-_Weight divergence data not available (smoke mode)._
+| Divergent layer | Relative L2 delta | Exact ratio | Low-delta ratio | Comparable tensors |
+| --- | --- | --- | --- | --- | --- |
+| `vae:decoder.up_blocks:3` | `0.7904003906` | `0.0` | `0.0` | `18` | `vae` |
+| `vae:decoder.up_blocks:1` | `0.7865492832` | `0.0833` | `0.0833` | `24` | `vae` |
+| `vae:decoder.up_blocks:0` | `0.7854239752` | `0.0909` | `0.0909` | `22` | `vae` |
+| `vae:decoder.up_blocks:2` | `0.7702721686` | `0.0` | `0.0` | `20` | `vae` |
+| `vae:encoder.down_blocks:10` | `0.7477305298` | `0.0` | `0.0` | `6` | `vae` |
+
+| Divergent tensor | Layer | Relative L2 delta | Mean abs delta | Max abs delta |
+| --- | --- | --- | --- | --- |
+| `vae.decoder.up_blocks.3.resnets.2.conv1.bias` | `vae:decoder.up_blocks:3` | `1.0472772873` | `0.026539882` | `0.1301269531` |
+| `vae.encoder.conv_out.bias` | `vae:encoder.conv_out` | `1.0298804639` | `0.0205132961` | `0.0559082031` |
+| `vae.encoder.mid_block.resnets.1.conv2.bias` | `vae:encoder.mid_block` | `0.9288137038` | `0.0147879577` | `0.2865905762` |
+| `vae.encoder.mid_block.resnets.0.conv2.bias` | `vae:encoder.mid_block` | `0.92161797` | `0.0245268748` | `0.2904052734` |
+| `vae.decoder.mid_block.attentions.0.proj.weight` | `vae:decoder.mid_block` | `0.9214817032` | `0.0186881151` | `0.162109375` |
 
 ### Secondary Visualization
 ```mermaid

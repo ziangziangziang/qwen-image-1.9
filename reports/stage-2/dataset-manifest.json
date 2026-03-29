@@ -1,6 +1,6 @@
 {
   "flatten_layered_rgba": "alpha-composite-to-rgb",
-  "generated_at": "2026-03-24T21:46:01.128879+00:00",
+  "generated_at": "2026-03-24T22:56:57.513437+00:00",
   "name": "stage-2-synthetic-teacher-dataset",
   "output_root": "reports/stage-2/datasets/teacher-db",
   "planned_records": [
@@ -41,6 +41,286 @@
       "prompt": "studio product photo of a brushed metal camera on cream paper with sharp label text",
       "sample_id": "generation_teacher-0002",
       "seed": 202,
+      "teacher_model": "Qwen/Qwen-Image-2512",
+      "teacher_model_alias": "qwen-image-2512"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/generation_teacher/images/generation_teacher-0003.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/generation_teacher/metadata/generation_teacher-0003.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "text-to-image"
+      },
+      "prompt": "rainy neon street at night with a taxi sign and reflective pavement",
+      "sample_id": "generation_teacher-0003",
+      "seed": 303,
+      "teacher_model": "Qwen/Qwen-Image-2512",
+      "teacher_model_alias": "qwen-image-2512"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/generation_teacher/images/generation_teacher-0004.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/generation_teacher/metadata/generation_teacher-0004.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "text-to-image"
+      },
+      "prompt": "storybook castle on a hill at sunrise with crisp title lettering",
+      "sample_id": "generation_teacher-0004",
+      "seed": 404,
+      "teacher_model": "Qwen/Qwen-Image-2512",
+      "teacher_model_alias": "qwen-image-2512"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/generation_teacher/images/generation_teacher-0005.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/generation_teacher/metadata/generation_teacher-0005.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "text-to-image"
+      },
+      "prompt": "editorial flat lay of vintage maps and compass on worn leather",
+      "sample_id": "generation_teacher-0005",
+      "seed": 505,
+      "teacher_model": "Qwen/Qwen-Image-2512",
+      "teacher_model_alias": "qwen-image-2512"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/generation_teacher/images/generation_teacher-0006.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/generation_teacher/metadata/generation_teacher-0006.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "text-to-image"
+      },
+      "prompt": "macro shot of a mechanical watch face on dark velvet with metallic highlights",
+      "sample_id": "generation_teacher-0006",
+      "seed": 606,
+      "teacher_model": "Qwen/Qwen-Image-2512",
+      "teacher_model_alias": "qwen-image-2512"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/generation_teacher/images/generation_teacher-0007.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/generation_teacher/metadata/generation_teacher-0007.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "text-to-image"
+      },
+      "prompt": "wide-angle interior of a mid-century modern living room in golden hour light",
+      "sample_id": "generation_teacher-0007",
+      "seed": 707,
+      "teacher_model": "Qwen/Qwen-Image-2512",
+      "teacher_model_alias": "qwen-image-2512"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/generation_teacher/images/generation_teacher-0008.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/generation_teacher/metadata/generation_teacher-0008.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "text-to-image"
+      },
+      "prompt": "street food vendor at dusk with illuminated sign and steam rising from the grill",
+      "sample_id": "generation_teacher-0008",
+      "seed": 808,
+      "teacher_model": "Qwen/Qwen-Image-2512",
+      "teacher_model_alias": "qwen-image-2512"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/generation_teacher/images/generation_teacher-0009.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/generation_teacher/metadata/generation_teacher-0009.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "text-to-image"
+      },
+      "prompt": "overhead drone shot of a winding river through autumn forest with vivid foliage",
+      "sample_id": "generation_teacher-0009",
+      "seed": 101,
+      "teacher_model": "Qwen/Qwen-Image-2512",
+      "teacher_model_alias": "qwen-image-2512"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/generation_teacher/images/generation_teacher-0010.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/generation_teacher/metadata/generation_teacher-0010.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "text-to-image"
+      },
+      "prompt": "black and white portrait of a jazz musician holding a saxophone under stage light",
+      "sample_id": "generation_teacher-0010",
+      "seed": 202,
+      "teacher_model": "Qwen/Qwen-Image-2512",
+      "teacher_model_alias": "qwen-image-2512"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/generation_teacher/images/generation_teacher-0011.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/generation_teacher/metadata/generation_teacher-0011.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "text-to-image"
+      },
+      "prompt": "fantasy illustration of a dragon perched on a crystal spire at twilight",
+      "sample_id": "generation_teacher-0011",
+      "seed": 303,
+      "teacher_model": "Qwen/Qwen-Image-2512",
+      "teacher_model_alias": "qwen-image-2512"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/generation_teacher/images/generation_teacher-0012.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/generation_teacher/metadata/generation_teacher-0012.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "text-to-image"
+      },
+      "prompt": "underwater photograph of a coral reef with tropical fish and dappled sunlight",
+      "sample_id": "generation_teacher-0012",
+      "seed": 404,
+      "teacher_model": "Qwen/Qwen-Image-2512",
+      "teacher_model_alias": "qwen-image-2512"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/generation_teacher/images/generation_teacher-0013.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/generation_teacher/metadata/generation_teacher-0013.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "text-to-image"
+      },
+      "prompt": "minimalist still life of three pears on a marble countertop with side window light",
+      "sample_id": "generation_teacher-0013",
+      "seed": 505,
+      "teacher_model": "Qwen/Qwen-Image-2512",
+      "teacher_model_alias": "qwen-image-2512"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/generation_teacher/images/generation_teacher-0014.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/generation_teacher/metadata/generation_teacher-0014.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "text-to-image"
+      },
+      "prompt": "cyberpunk alley at night with holographic signs and wet asphalt reflections",
+      "sample_id": "generation_teacher-0014",
+      "seed": 606,
+      "teacher_model": "Qwen/Qwen-Image-2512",
+      "teacher_model_alias": "qwen-image-2512"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/generation_teacher/images/generation_teacher-0015.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/generation_teacher/metadata/generation_teacher-0015.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "text-to-image"
+      },
+      "prompt": "architectural photograph of a spiral staircase from directly above with strong geometry",
+      "sample_id": "generation_teacher-0015",
+      "seed": 707,
+      "teacher_model": "Qwen/Qwen-Image-2512",
+      "teacher_model_alias": "qwen-image-2512"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/generation_teacher/images/generation_teacher-0016.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/generation_teacher/metadata/generation_teacher-0016.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "text-to-image"
+      },
+      "prompt": "oil painting style landscape of rolling hills under dramatic cloud formations",
+      "sample_id": "generation_teacher-0016",
+      "seed": 808,
       "teacher_model": "Qwen/Qwen-Image-2512",
       "teacher_model_alias": "qwen-image-2512"
     },
@@ -90,6 +370,314 @@
     },
     {
       "asset_paths": {
+        "edited_image": "reports/stage-2/datasets/teacher-db/edit_teacher/edited/edit_teacher-0003.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/edit_teacher/metadata/edit_teacher-0003.json",
+        "source_image": "reports/stage-2/datasets/teacher-db/edit_teacher/source/edit_teacher-0003.png"
+      },
+      "edit_instruction": "update the poster palette to teal and cream while preserving layout",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "generate-then-edit"
+      },
+      "sample_id": "edit_teacher-0003",
+      "seed": 333,
+      "source_prompt": "retro poster of a rocket launch with bold orange typography",
+      "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+      "teacher_model_alias": "qwen-image-edit-2511"
+    },
+    {
+      "asset_paths": {
+        "edited_image": "reports/stage-2/datasets/teacher-db/edit_teacher/edited/edit_teacher-0004.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/edit_teacher/metadata/edit_teacher-0004.json",
+        "source_image": "reports/stage-2/datasets/teacher-db/edit_teacher/source/edit_teacher-0004.png"
+      },
+      "edit_instruction": "switch the raincoat to forest green and keep the dog expression unchanged",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "generate-then-edit"
+      },
+      "sample_id": "edit_teacher-0004",
+      "seed": 444,
+      "source_prompt": "close portrait of a corgi in a yellow raincoat on wet pavement",
+      "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+      "teacher_model_alias": "qwen-image-edit-2511"
+    },
+    {
+      "asset_paths": {
+        "edited_image": "reports/stage-2/datasets/teacher-db/edit_teacher/edited/edit_teacher-0005.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/edit_teacher/metadata/edit_teacher-0005.json",
+        "source_image": "reports/stage-2/datasets/teacher-db/edit_teacher/source/edit_teacher-0005.png"
+      },
+      "edit_instruction": "shift the flower color from red to deep purple while keeping the field composition",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "generate-then-edit"
+      },
+      "sample_id": "edit_teacher-0005",
+      "seed": 555,
+      "source_prompt": "aerial view of a colorful tulip field in early morning fog",
+      "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+      "teacher_model_alias": "qwen-image-edit-2511"
+    },
+    {
+      "asset_paths": {
+        "edited_image": "reports/stage-2/datasets/teacher-db/edit_teacher/edited/edit_teacher-0006.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/edit_teacher/metadata/edit_teacher-0006.json",
+        "source_image": "reports/stage-2/datasets/teacher-db/edit_teacher/source/edit_teacher-0006.png"
+      },
+      "edit_instruction": "change the lighting from warm amber to cool moonlight and add snow outside the window",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "generate-then-edit"
+      },
+      "sample_id": "edit_teacher-0006",
+      "seed": 666,
+      "source_prompt": "wooden cabin interior with warm fireplace light and plaid blanket on sofa",
+      "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+      "teacher_model_alias": "qwen-image-edit-2511"
+    },
+    {
+      "asset_paths": {
+        "edited_image": "reports/stage-2/datasets/teacher-db/edit_teacher/edited/edit_teacher-0007.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/edit_teacher/metadata/edit_teacher-0007.json",
+        "source_image": "reports/stage-2/datasets/teacher-db/edit_teacher/source/edit_teacher-0007.png"
+      },
+      "edit_instruction": "replace the coffee cup with a succulent plant and keep everything else unchanged",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "generate-then-edit"
+      },
+      "sample_id": "edit_teacher-0007",
+      "seed": 777,
+      "source_prompt": "minimalist desk setup with a laptop, coffee cup, and notebook in soft office light",
+      "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+      "teacher_model_alias": "qwen-image-edit-2511"
+    },
+    {
+      "asset_paths": {
+        "edited_image": "reports/stage-2/datasets/teacher-db/edit_teacher/edited/edit_teacher-0008.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/edit_teacher/metadata/edit_teacher-0008.json",
+        "source_image": "reports/stage-2/datasets/teacher-db/edit_teacher/source/edit_teacher-0008.png"
+      },
+      "edit_instruction": "swap the dish to a dark chocolate dessert with gold leaf garnish",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "generate-then-edit"
+      },
+      "sample_id": "edit_teacher-0008",
+      "seed": 888,
+      "source_prompt": "chef plating a colorful dish in a professional kitchen under strong overhead light",
+      "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+      "teacher_model_alias": "qwen-image-edit-2511"
+    },
+    {
+      "asset_paths": {
+        "edited_image": "reports/stage-2/datasets/teacher-db/edit_teacher/edited/edit_teacher-0009.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/edit_teacher/metadata/edit_teacher-0009.json",
+        "source_image": "reports/stage-2/datasets/teacher-db/edit_teacher/source/edit_teacher-0009.png"
+      },
+      "edit_instruction": "change the car color from red to deep metallic blue while preserving reflections",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "generate-then-edit"
+      },
+      "sample_id": "edit_teacher-0009",
+      "seed": 111,
+      "source_prompt": "vintage car parked on a cobblestone street with old brick buildings behind",
+      "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+      "teacher_model_alias": "qwen-image-edit-2511"
+    },
+    {
+      "asset_paths": {
+        "edited_image": "reports/stage-2/datasets/teacher-db/edit_teacher/edited/edit_teacher-0010.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/edit_teacher/metadata/edit_teacher-0010.json",
+        "source_image": "reports/stage-2/datasets/teacher-db/edit_teacher/source/edit_teacher-0010.png"
+      },
+      "edit_instruction": "change the season from summer to snowy winter while keeping the hiker and composition",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "generate-then-edit"
+      },
+      "sample_id": "edit_teacher-0010",
+      "seed": 222,
+      "source_prompt": "hiker standing on a mountain ridge overlooking a green valley at sunrise",
+      "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+      "teacher_model_alias": "qwen-image-edit-2511"
+    },
+    {
+      "asset_paths": {
+        "edited_image": "reports/stage-2/datasets/teacher-db/edit_teacher/edited/edit_teacher-0011.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/edit_teacher/metadata/edit_teacher-0011.json",
+        "source_image": "reports/stage-2/datasets/teacher-db/edit_teacher/source/edit_teacher-0011.png"
+      },
+      "edit_instruction": "replace all paint tubes with watercolor pans and add a glass of water",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "generate-then-edit"
+      },
+      "sample_id": "edit_teacher-0011",
+      "seed": 333,
+      "source_prompt": "tabletop flat lay of art supplies including brushes, paint tubes, and sketchbook",
+      "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+      "teacher_model_alias": "qwen-image-edit-2511"
+    },
+    {
+      "asset_paths": {
+        "edited_image": "reports/stage-2/datasets/teacher-db/edit_teacher/edited/edit_teacher-0012.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/edit_teacher/metadata/edit_teacher-0012.json",
+        "source_image": "reports/stage-2/datasets/teacher-db/edit_teacher/source/edit_teacher-0012.png"
+      },
+      "edit_instruction": "change the dog breed to a border collie while keeping the meadow scene intact",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "generate-then-edit"
+      },
+      "sample_id": "edit_teacher-0012",
+      "seed": 444,
+      "source_prompt": "golden retriever sitting in a sunlit meadow with wildflowers",
+      "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+      "teacher_model_alias": "qwen-image-edit-2511"
+    },
+    {
+      "asset_paths": {
+        "edited_image": "reports/stage-2/datasets/teacher-db/edit_teacher/edited/edit_teacher-0013.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/edit_teacher/metadata/edit_teacher-0013.json",
+        "source_image": "reports/stage-2/datasets/teacher-db/edit_teacher/source/edit_teacher-0013.png"
+      },
+      "edit_instruction": "change the neon lighting from pink to cool blue and swap sushi for ramen bowls",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "generate-then-edit"
+      },
+      "sample_id": "edit_teacher-0013",
+      "seed": 555,
+      "source_prompt": "neon-lit sushi bar interior with a chef preparing rolls behind the counter",
+      "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+      "teacher_model_alias": "qwen-image-edit-2511"
+    },
+    {
+      "asset_paths": {
+        "edited_image": "reports/stage-2/datasets/teacher-db/edit_teacher/edited/edit_teacher-0014.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/edit_teacher/metadata/edit_teacher-0014.json",
+        "source_image": "reports/stage-2/datasets/teacher-db/edit_teacher/source/edit_teacher-0014.png"
+      },
+      "edit_instruction": "replace the red balloon with a cluster of pastel-colored balloons",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "generate-then-edit"
+      },
+      "sample_id": "edit_teacher-0014",
+      "seed": 666,
+      "source_prompt": "child holding a red balloon in front of a carnival Ferris wheel at dusk",
+      "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+      "teacher_model_alias": "qwen-image-edit-2511"
+    },
+    {
+      "asset_paths": {
+        "edited_image": "reports/stage-2/datasets/teacher-db/edit_teacher/edited/edit_teacher-0015.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/edit_teacher/metadata/edit_teacher-0015.json",
+        "source_image": "reports/stage-2/datasets/teacher-db/edit_teacher/source/edit_teacher-0015.png"
+      },
+      "edit_instruction": "change the calm bay to stormy seas with dark clouds while keeping the sailboat",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "generate-then-edit"
+      },
+      "sample_id": "edit_teacher-0015",
+      "seed": 777,
+      "source_prompt": "sailboat anchored in a calm turquoise bay with palm trees on the shore",
+      "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+      "teacher_model_alias": "qwen-image-edit-2511"
+    },
+    {
+      "asset_paths": {
+        "edited_image": "reports/stage-2/datasets/teacher-db/edit_teacher/edited/edit_teacher-0016.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/edit_teacher/metadata/edit_teacher-0016.json",
+        "source_image": "reports/stage-2/datasets/teacher-db/edit_teacher/source/edit_teacher-0016.png"
+      },
+      "edit_instruction": "replace sourdough loaves with decorated cupcakes and keep the rustic shelf style",
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": false,
+        "task": "generate-then-edit"
+      },
+      "sample_id": "edit_teacher-0016",
+      "seed": 888,
+      "source_prompt": "rustic bakery display with fresh sourdough loaves and croissants on wooden shelves",
+      "teacher_model": "Qwen/Qwen-Image-Edit-2511",
+      "teacher_model_alias": "qwen-image-edit-2511"
+    },
+    {
+      "asset_paths": {
         "image": "reports/stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0001.png",
         "metadata": "reports/stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0001.json"
       },
@@ -127,6 +715,286 @@
       "seed": 242,
       "teacher_model": "Qwen/Qwen-Image-Layered",
       "teacher_model_alias": "qwen-image-layered"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0003.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0003.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": true,
+        "task": "layer-aware-generation"
+      },
+      "prompt": "fashion mannequin in a trench coat isolated from a soft gradient background",
+      "sample_id": "layered_teacher-0003",
+      "seed": 363,
+      "teacher_model": "Qwen/Qwen-Image-Layered",
+      "teacher_model_alias": "qwen-image-layered"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0004.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0004.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": true,
+        "task": "layer-aware-generation"
+      },
+      "prompt": "glass perfume bottle with strong silhouette and easy foreground-background separation",
+      "sample_id": "layered_teacher-0004",
+      "seed": 484,
+      "teacher_model": "Qwen/Qwen-Image-Layered",
+      "teacher_model_alias": "qwen-image-layered"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0005.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0005.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": true,
+        "task": "layer-aware-generation"
+      },
+      "prompt": "ceramic bowl on a plain white surface with hard studio lighting and sharp shadows",
+      "sample_id": "layered_teacher-0005",
+      "seed": 545,
+      "teacher_model": "Qwen/Qwen-Image-Layered",
+      "teacher_model_alias": "qwen-image-layered"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0006.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0006.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": true,
+        "task": "layer-aware-generation"
+      },
+      "prompt": "sneaker product shot on seamless white with strong overhead light and minimal reflections",
+      "sample_id": "layered_teacher-0006",
+      "seed": 666,
+      "teacher_model": "Qwen/Qwen-Image-Layered",
+      "teacher_model_alias": "qwen-image-layered"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0007.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0007.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": true,
+        "task": "layer-aware-generation"
+      },
+      "prompt": "single apple on a neutral gray tabletop with clean shadow beneath",
+      "sample_id": "layered_teacher-0007",
+      "seed": 727,
+      "teacher_model": "Qwen/Qwen-Image-Layered",
+      "teacher_model_alias": "qwen-image-layered"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0008.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0008.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": true,
+        "task": "layer-aware-generation"
+      },
+      "prompt": "vintage camera on a flat white backdrop with no distracting background elements",
+      "sample_id": "layered_teacher-0008",
+      "seed": 848,
+      "teacher_model": "Qwen/Qwen-Image-Layered",
+      "teacher_model_alias": "qwen-image-layered"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0009.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0009.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": true,
+        "task": "layer-aware-generation"
+      },
+      "prompt": "white coffee cup on a dark wooden desk with sharp edge contrast for easy masking",
+      "sample_id": "layered_teacher-0009",
+      "seed": 121,
+      "teacher_model": "Qwen/Qwen-Image-Layered",
+      "teacher_model_alias": "qwen-image-layered"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0010.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0010.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": true,
+        "task": "layer-aware-generation"
+      },
+      "prompt": "leather handbag isolated on a pale pink cyclorama with soft diffused lighting",
+      "sample_id": "layered_teacher-0010",
+      "seed": 242,
+      "teacher_model": "Qwen/Qwen-Image-Layered",
+      "teacher_model_alias": "qwen-image-layered"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0011.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0011.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": true,
+        "task": "layer-aware-generation"
+      },
+      "prompt": "small cactus in a terracotta pot on a clean white shelf with directional window light",
+      "sample_id": "layered_teacher-0011",
+      "seed": 363,
+      "teacher_model": "Qwen/Qwen-Image-Layered",
+      "teacher_model_alias": "qwen-image-layered"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0012.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0012.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": true,
+        "task": "layer-aware-generation"
+      },
+      "prompt": "chess piece king standing alone on a reflective black surface with dark background",
+      "sample_id": "layered_teacher-0012",
+      "seed": 484,
+      "teacher_model": "Qwen/Qwen-Image-Layered",
+      "teacher_model_alias": "qwen-image-layered"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0013.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0013.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": true,
+        "task": "layer-aware-generation"
+      },
+      "prompt": "wristwatch laid flat on folded linen with even studio lighting and no reflections",
+      "sample_id": "layered_teacher-0013",
+      "seed": 545,
+      "teacher_model": "Qwen/Qwen-Image-Layered",
+      "teacher_model_alias": "qwen-image-layered"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0014.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0014.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": true,
+        "task": "layer-aware-generation"
+      },
+      "prompt": "sunglasses placed on a marble slab with hard overhead light and crisp shadow",
+      "sample_id": "layered_teacher-0014",
+      "seed": 666,
+      "teacher_model": "Qwen/Qwen-Image-Layered",
+      "teacher_model_alias": "qwen-image-layered"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0015.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0015.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": true,
+        "task": "layer-aware-generation"
+      },
+      "prompt": "single red rose in a clear glass vase against a neutral gray studio backdrop",
+      "sample_id": "layered_teacher-0015",
+      "seed": 727,
+      "teacher_model": "Qwen/Qwen-Image-Layered",
+      "teacher_model_alias": "qwen-image-layered"
+    },
+    {
+      "asset_paths": {
+        "image": "reports/stage-2/datasets/teacher-db/layered_teacher/images/layered_teacher-0016.png",
+        "metadata": "reports/stage-2/datasets/teacher-db/layered_teacher/metadata/layered_teacher-0016.json"
+      },
+      "generation_settings": {
+        "guidance_scale": 4.0,
+        "resolution": "512x512",
+        "steps": 30
+      },
+      "output_metadata": {
+        "flattened_to_rgb": true,
+        "task": "layer-aware-generation"
+      },
+      "prompt": "pair of wireless earbuds on a matte white surface with soft overhead lighting",
+      "sample_id": "layered_teacher-0016",
+      "seed": 848,
+      "teacher_model": "Qwen/Qwen-Image-Layered",
+      "teacher_model_alias": "qwen-image-layered"
     }
   ],
   "record_schema": [
@@ -150,7 +1018,7 @@
         "resolution": "512x512",
         "steps": 30
       },
-      "planned_sample_count": 2,
+      "planned_sample_count": 16,
       "prompt_bank": [
         {
           "edit_instruction": "change the jacket to white while keeping pose, lighting, and camera angle",
@@ -159,11 +1027,73 @@
         {
           "edit_instruction": "replace the mug pattern with blue stripes and keep the same composition",
           "source_prompt": "product shot of a ceramic mug on a wooden table in morning light"
+        },
+        {
+          "edit_instruction": "update the poster palette to teal and cream while preserving layout",
+          "source_prompt": "retro poster of a rocket launch with bold orange typography"
+        },
+        {
+          "edit_instruction": "switch the raincoat to forest green and keep the dog expression unchanged",
+          "source_prompt": "close portrait of a corgi in a yellow raincoat on wet pavement"
+        },
+        {
+          "edit_instruction": "shift the flower color from red to deep purple while keeping the field composition",
+          "source_prompt": "aerial view of a colorful tulip field in early morning fog"
+        },
+        {
+          "edit_instruction": "change the lighting from warm amber to cool moonlight and add snow outside the window",
+          "source_prompt": "wooden cabin interior with warm fireplace light and plaid blanket on sofa"
+        },
+        {
+          "edit_instruction": "replace the coffee cup with a succulent plant and keep everything else unchanged",
+          "source_prompt": "minimalist desk setup with a laptop, coffee cup, and notebook in soft office light"
+        },
+        {
+          "edit_instruction": "swap the dish to a dark chocolate dessert with gold leaf garnish",
+          "source_prompt": "chef plating a colorful dish in a professional kitchen under strong overhead light"
+        },
+        {
+          "edit_instruction": "change the car color from red to deep metallic blue while preserving reflections",
+          "source_prompt": "vintage car parked on a cobblestone street with old brick buildings behind"
+        },
+        {
+          "edit_instruction": "change the season from summer to snowy winter while keeping the hiker and composition",
+          "source_prompt": "hiker standing on a mountain ridge overlooking a green valley at sunrise"
+        },
+        {
+          "edit_instruction": "replace all paint tubes with watercolor pans and add a glass of water",
+          "source_prompt": "tabletop flat lay of art supplies including brushes, paint tubes, and sketchbook"
+        },
+        {
+          "edit_instruction": "change the dog breed to a border collie while keeping the meadow scene intact",
+          "source_prompt": "golden retriever sitting in a sunlit meadow with wildflowers"
+        },
+        {
+          "edit_instruction": "change the neon lighting from pink to cool blue and swap sushi for ramen bowls",
+          "source_prompt": "neon-lit sushi bar interior with a chef preparing rolls behind the counter"
+        },
+        {
+          "edit_instruction": "replace the red balloon with a cluster of pastel-colored balloons",
+          "source_prompt": "child holding a red balloon in front of a carnival Ferris wheel at dusk"
+        },
+        {
+          "edit_instruction": "change the calm bay to stormy seas with dark clouds while keeping the sailboat",
+          "source_prompt": "sailboat anchored in a calm turquoise bay with palm trees on the shore"
+        },
+        {
+          "edit_instruction": "replace sourdough loaves with decorated cupcakes and keep the rustic shelf style",
+          "source_prompt": "rustic bakery display with fresh sourdough loaves and croissants on wooden shelves"
         }
       ],
       "seed_schedule": [
         111,
-        222
+        222,
+        333,
+        444,
+        555,
+        666,
+        777,
+        888
       ],
       "task": "generate-then-edit",
       "teacher_model": "Qwen/Qwen-Image-Edit-2511",
@@ -176,14 +1106,34 @@
         "resolution": "512x512",
         "steps": 30
       },
-      "planned_sample_count": 2,
+      "planned_sample_count": 16,
       "prompt_bank": [
         "cinematic portrait of a botanist in a glass greenhouse with readable name badge text",
-        "studio product photo of a brushed metal camera on cream paper with sharp label text"
+        "studio product photo of a brushed metal camera on cream paper with sharp label text",
+        "rainy neon street at night with a taxi sign and reflective pavement",
+        "storybook castle on a hill at sunrise with crisp title lettering",
+        "editorial flat lay of vintage maps and compass on worn leather",
+        "macro shot of a mechanical watch face on dark velvet with metallic highlights",
+        "wide-angle interior of a mid-century modern living room in golden hour light",
+        "street food vendor at dusk with illuminated sign and steam rising from the grill",
+        "overhead drone shot of a winding river through autumn forest with vivid foliage",
+        "black and white portrait of a jazz musician holding a saxophone under stage light",
+        "fantasy illustration of a dragon perched on a crystal spire at twilight",
+        "underwater photograph of a coral reef with tropical fish and dappled sunlight",
+        "minimalist still life of three pears on a marble countertop with side window light",
+        "cyberpunk alley at night with holographic signs and wet asphalt reflections",
+        "architectural photograph of a spiral staircase from directly above with strong geometry",
+        "oil painting style landscape of rolling hills under dramatic cloud formations"
       ],
       "seed_schedule": [
         101,
-        202
+        202,
+        303,
+        404,
+        505,
+        606,
+        707,
+        808
       ],
       "task": "text-to-image",
       "teacher_model": "Qwen/Qwen-Image-2512",
@@ -196,14 +1146,34 @@
         "resolution": "512x512",
         "steps": 30
       },
-      "planned_sample_count": 2,
+      "planned_sample_count": 16,
       "prompt_bank": [
         "single toy robot centered on seamless paper backdrop with clean subject separation",
-        "cutout-style potted plant on a tabletop with simple studio background"
+        "cutout-style potted plant on a tabletop with simple studio background",
+        "fashion mannequin in a trench coat isolated from a soft gradient background",
+        "glass perfume bottle with strong silhouette and easy foreground-background separation",
+        "ceramic bowl on a plain white surface with hard studio lighting and sharp shadows",
+        "sneaker product shot on seamless white with strong overhead light and minimal reflections",
+        "single apple on a neutral gray tabletop with clean shadow beneath",
+        "vintage camera on a flat white backdrop with no distracting background elements",
+        "white coffee cup on a dark wooden desk with sharp edge contrast for easy masking",
+        "leather handbag isolated on a pale pink cyclorama with soft diffused lighting",
+        "small cactus in a terracotta pot on a clean white shelf with directional window light",
+        "chess piece king standing alone on a reflective black surface with dark background",
+        "wristwatch laid flat on folded linen with even studio lighting and no reflections",
+        "sunglasses placed on a marble slab with hard overhead light and crisp shadow",
+        "single red rose in a clear glass vase against a neutral gray studio backdrop",
+        "pair of wireless earbuds on a matte white surface with soft overhead lighting"
       ],
       "seed_schedule": [
         121,
-        242
+        242,
+        363,
+        484,
+        545,
+        666,
+        727,
+        848
       ],
       "task": "layer-aware-generation",
       "teacher_model": "Qwen/Qwen-Image-Layered",

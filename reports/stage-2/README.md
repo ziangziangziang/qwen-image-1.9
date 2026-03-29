@@ -5,12 +5,12 @@ Stage 2 now builds two tracks from the Stage 1 evidence: a stable BF16 core base
 
 ## Run Mode
 - Run mode: `write`
-- Run profile: `smoke`
+- Run profile: `full`
 - Execution enabled: `True`
 - Execution policy: `overwrite`
 - Cleanup performed: `True`
 - Resource profile: `num_gpus=2`, `vram_target_gb=160`
-- Limits: `{"bridge_batch_size": 1, "bridge_train_steps": 64, "consistency_eval_prompt_count": 4, "core_candidate_id": "core-delta-w035", "dataset_samples_per_split": 2, "eval_edit_prompt_count": 3, "eval_prompt_count": 6, "poc_guidance_scale": 1.0, "poc_negative_prompt": "low resolution, low quality, deformed limbs, deformed fingers, oversaturated image, waxy skin, over-smoothed face, artificial look, chaotic composition, blurry text, distorted text", "poc_side": 512, "poc_true_cfg_scale": 4.0}`
+- Limits: `{"bridge_batch_size": 2, "bridge_train_steps": 1000, "consistency_eval_prompt_count": 16, "core_candidate_id": "core-delta-w035", "dataset_samples_per_split": 16, "eval_edit_prompt_count": 8, "eval_prompt_count": 24, "poc_guidance_scale": 1.0, "poc_negative_prompt": "low resolution, low quality, deformed limbs, deformed fingers, oversaturated image, waxy skin, over-smoothed face, artificial look, chaotic composition, blurry text, distorted text", "poc_side": 1024, "poc_steps": 30, "poc_true_cfg_scale": 4.0}`
 
 ## Stage 1 Evidence
 - Foundation vs Edit transformer path is the one clean merge lane: `shared=2856`, `exact=0.3246`, `strategy=delta-merge`.
@@ -32,7 +32,10 @@ Stage 2 now builds two tracks from the Stage 1 evidence: a stable BF16 core base
 
 | Candidate | Blend weight | Status | Planned checkpoint | Planned smoke report |
 | --- | --- | --- | --- | --- |
+| `core-delta-w020` | `0.2` | `candidate` | `reports/stage-2/artifacts/core-candidates/core-delta-w020/qwen-image-1.9-core-bf16.safetensors` | `reports/stage-2/evals/core-candidates/core-delta-w020/smoke-summary.json` |
+| `core-delta-w030` | `0.3` | `candidate` | `reports/stage-2/artifacts/core-candidates/core-delta-w030/qwen-image-1.9-core-bf16.safetensors` | `reports/stage-2/evals/core-candidates/core-delta-w030/smoke-summary.json` |
 | `core-delta-w035` | `0.35` | `selected` | `reports/stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors` | `reports/stage-2/evals/core-candidates/core-delta-w035/smoke-summary.json` |
+| `core-delta-w040` | `0.4` | `candidate` | `reports/stage-2/artifacts/core-candidates/core-delta-w040/qwen-image-1.9-core-bf16.safetensors` | `reports/stage-2/evals/core-candidates/core-delta-w040/smoke-summary.json` |
 
 ## Experimental Layered Bridge Track
 - Donor: `Qwen/Qwen-Image-Layered`
@@ -53,9 +56,9 @@ Stage 2 now builds two tracks from the Stage 1 evidence: a stable BF16 core base
 
 | Split | Teacher model | Task | Planned samples | Asset root |
 | --- | --- | --- | --- | --- |
-| `generation_teacher` | `Qwen/Qwen-Image-2512` | `text-to-image` | `2` | `reports/stage-2/datasets/teacher-db/generation_teacher` |
-| `edit_teacher` | `Qwen/Qwen-Image-Edit-2511` | `generate-then-edit` | `2` | `reports/stage-2/datasets/teacher-db/edit_teacher` |
-| `layered_teacher` | `Qwen/Qwen-Image-Layered` | `layer-aware-generation` | `2` | `reports/stage-2/datasets/teacher-db/layered_teacher` |
+| `generation_teacher` | `Qwen/Qwen-Image-2512` | `text-to-image` | `16` | `reports/stage-2/datasets/teacher-db/generation_teacher` |
+| `edit_teacher` | `Qwen/Qwen-Image-Edit-2511` | `generate-then-edit` | `16` | `reports/stage-2/datasets/teacher-db/edit_teacher` |
+| `layered_teacher` | `Qwen/Qwen-Image-Layered` | `layer-aware-generation` | `16` | `reports/stage-2/datasets/teacher-db/layered_teacher` |
 
 ## Remote Jobs
 | Job | Status | Entry point | Workdir | Log |
@@ -91,19 +94,19 @@ Stage 2 now builds two tracks from the Stage 1 evidence: a stable BF16 core base
 
 ## Run Results
 
-> Profile: `smoke` · Policy: `overwrite` · Total: `20m 17s`
+> Profile: `full` · Policy: `overwrite` · Total: `1h 42m 26s`
 
 ### Job Execution
 
 | Job | Status | Duration (s) | Exit | Log |
 | --- | --- | --- | --- | --- |
-| `core_delta_sweep` | ✓ `succeeded` | `220.1725` | `0` | `reports/stage-2/logs/core-delta-sweep.log` |
-| `core_smoke_eval` | ✓ `succeeded` | `132.6117` | `0` | `reports/stage-2/logs/core-smoke-eval.log` |
-| `teacher_dataset_generation` | ✓ `succeeded` | `420.0342` | `0` | `reports/stage-2/logs/teacher-dataset.log` |
-| `layered_bridge_train` | ✓ `succeeded` | `7.0931` | `0` | `reports/stage-2/logs/layered-bridge-train.log` |
-| `experimental_smoke_eval` | ✓ `succeeded` | `90.6703` | `0` | `reports/stage-2/logs/experimental-smoke-eval.log` |
-| `core_edit_eval` | ✓ `succeeded` | `152.178` | `0` | `reports/stage-2/logs/core-edit-eval.log` |
-| `consistency_eval` | ✓ `succeeded` | `194.7767` | `0` | `reports/stage-2/logs/consistency-eval.log` |
+| `core_delta_sweep` | ✓ `succeeded` | `1184.1361` | `0` | `reports/stage-2/logs/core-delta-sweep.log` |
+| `core_smoke_eval` | ✓ `succeeded` | `338.6642` | `0` | `reports/stage-2/logs/core-smoke-eval.log` |
+| `teacher_dataset_generation` | ✓ `succeeded` | `2613.0654` | `0` | `reports/stage-2/logs/teacher-dataset.log` |
+| `layered_bridge_train` | ✓ `succeeded` | `25.1272` | `0` | `reports/stage-2/logs/layered-bridge-train.log` |
+| `experimental_smoke_eval` | ✓ `succeeded` | `334.4732` | `0` | `reports/stage-2/logs/experimental-smoke-eval.log` |
+| `core_edit_eval` | ✓ `succeeded` | `617.5378` | `0` | `reports/stage-2/logs/core-edit-eval.log` |
+| `consistency_eval` | ✓ `succeeded` | `1033.6228` | `0` | `reports/stage-2/logs/consistency-eval.log` |
 
 ### Training Report
 
