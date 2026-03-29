@@ -1,136 +1,84 @@
 # Qwen-Image 1.9
 
-Qwen-Image 2.0 still is not open, so this repo does the obvious internet thing: build a serious community bridge and make the process readable enough that future-us does not need archaeology tools. The goal is not to cosplay as upstream. The goal is to fuse what is already open, keep the research traceable, and ship a remote-first scaffold that another engineer can actually use.
+This package now exposes a 3-step checkpoint pipeline:
 
-## What This Repo Actually Does
-- Treats `Qwen/Qwen-Image-2512` as the realism-heavy foundation.
-- Treats `Qwen/Qwen-Image-Edit-2511` as the edit-skill donor.
-- Treats `Qwen/Qwen-Image-Layered` as the weird but useful RGBA outlier we refuse to ignore.
-- Assumes heavyweight execution happens on a remote machine, not on the laptop that is currently trying to stay employed.
+1. `merge`
+2. `abliterate`
+3. `quantize`
 
-## The Three-Model Problem
-| Model | Job in 1.9 | Expected conflict |
-| --- | --- | --- |
-| `Qwen/Qwen-Image-2512` | Foundation checkpoint | Baseline for realism/text fidelity |
-| `Qwen/Qwen-Image-Edit-2511` | Edit delta donor | Transformer-only delta on top of 2512 |
-| `Qwen/Qwen-Image-Layered` | Layered behavior donor | RGBA-VAE and RoPE incompatibilities force a bridge path |
+Every step emits a run-scoped result bundle, a compact eval summary, and a Markdown report. A single internal results server reads the JSON artifacts directly from `reports/runs/<run_id>/...`; it does not scrape Markdown.
 
-All three public model cards currently advertise Apache-2.0 licensing. The scaffold stores configs, manifests, code, and reports only. Model weights stay remote and uncommitted.
+## Operating Model
+- `merge` builds the merged checkpoint lineage and records the merge recipe/evidence.
+- `abliterate` applies refusal-direction removal to the merged checkpoint and records the policy-sensitive deltas that must be reviewed.
+- `quantize` produces smaller deployment-oriented artifacts and records quality, latency, and memory regressions.
+- `preflight` remains available as evidence gathering for source checkpoints, but it is no longer the product-facing stage model.
 
-## Roadmap
-1. Stage 1: Structural Fusion Analysis
-2. Stage 2: Fusion
-3. Stage 3: Safety Evaluation and Risk Report
-4. Stage 4: Compression
-5. Stage 5: Deployment and vLLM-Omni Integration
+The layered donor remains a separate research track. It is still useful, but it is not part of the mainline `merge -> abliterate -> quantize` release path.
 
-## System View
-```mermaid
-flowchart LR
-    subgraph Sources["Open Models"]
-        B["Qwen-Image-2512\nrealism + text rendering"]
-        E["Qwen-Image-Edit-2511\nediting + consistency"]
-        L["Qwen-Image-Layered\nRGBA decomposition"]
-    end
+## Artifact Contract
+Each run lives under:
 
-    subgraph S1["Stage 1: Structural Fusion Analysis"]
-        C["state_dict diff + tensor audit"]
-        V["VAE compatibility\nRGB vs RGBA"]
-        R["RoPE + text encoder audit"]
-        Z["similarity visuals + DNA report"]
-    end
-
-    subgraph S2["Stage 2: Fusion"]
-        M["2512 base checkpoint"]
-        D["edit delta transplant"]
-        T["layered bridge distillation"]
-        F16["BF16 research artifact"]
-    end
-
-    subgraph S3S5["Stages 3 to 5"]
-        EV["safety + capability evals"]
-        Q["quantization recipes"]
-        DEP["vLLM-Omni deploy config"]
-    end
-
-    B --> C
-    E --> C
-    L --> V
-    L --> R
-    C --> Z
-    V --> Z
-    R --> Z
-    Z --> M
-    E --> D
-    V --> T
-    R --> T
-    M --> F16
-    D --> F16
-    T --> F16
-    F16 --> EV
-    F16 --> Q
-    Q --> DEP
+```text
+reports/runs/<run_id>/
+  manifest.json
+  report-index.json
+  merge/
+    step-result.json
+    eval-summary.json
+    README.md
+    samples/
+  abliterate/
+    step-result.json
+    eval-summary.json
+    README.md
+    samples/
+  quantize/
+    step-result.json
+    eval-summary.json
+    README.md
+    samples/
 ```
 
-## Remote-First Execution Model
-- Local repo: authoring, dry-runs, config validation, report assembly.
-- Remote machine: model download, tensor inspection at scale, BF16 merge jobs, quantization, deployment benchmarks.
-- Shared rule: no committed weights, no local-VRAM assumptions, and every stage must be able to explain itself with manifests and Markdown.
+Large checkpoints and quantized binaries stay in remote or object storage. The repo stores metadata, summaries, thumbnails, and URIs only.
 
-Primary CLI:
+## CLI
+Primary commands:
+
 ```bash
-q19 stage1 analyze --dry-run
-q19 stage1 analyze --smoke-run
-q19 stage1 analyze --execute
-q19 stage2 fuse --dry-run
-q19 stage2 fuse --smoke-run
-q19 stage2 fuse --run-profile full --execute
-q19 stage3 eval --smoke-run
-q19 stage3 eval --execute
-q19 stage4 quantize --smoke-run
-q19 stage4 quantize --execute
-q19 stage5 deploy --smoke-run
-q19 stage5 deploy --execute
+q19 preflight --dry-run
+q19 merge --run-id run-001 --run-profile full
+q19 abliterate --run-id run-001
+q19 quantize --run-id run-001
+q19 report
+q19 report --serve --host 127.0.0.1 --port 8000
 ```
 
-Common flags (all stages):
-- `--remote-config`
-- `--artifact-dir`
-- `--cache-dir`
-- `--dry-run` — validate config and print plan, no side effects
-- `--smoke-run` — minimal task set to prove the pipeline runs end-to-end
-- `--execute` — full run; can be time- and resource-intensive
-- `--resume` — skip already-completed artifacts
+Legacy `stage1`, `stage2`, `stage4`, and `stage5` commands remain available for compatibility, but they are no longer the preferred interface.
 
-Stage-specific flags:
-- `--run-profile {smoke,full,quality}` — Stage 2 job selection
-- `--hf-home` — Stage 1 cache inspection override
-- `--cache-map-config` — custom HF cache alias mapping
+## Results Server
+The internal results server exposes stage-neutral endpoints:
+
+- `GET /api/runs`
+- `GET /api/runs/{run_id}`
+- `GET /api/runs/{run_id}/steps/{step}`
+- `GET /api/runs/{run_id}/steps/{step}/samples`
+
+Its job is to visualize lineage, metrics, reports, and image samples across all stages from a single dashboard.
+
+## Governance
+`abliterate` is an internal-only, policy-sensitive operation in this repo. A run is not considered complete unless:
+
+- per-step eval summaries exist
+- refusal-behavior deltas are recorded after `abliterate`
+- regression metrics are recorded after `quantize`
+- the run manifest and report index are present for the shared dashboard
 
 ## Repo Map
 ```text
-configs/   remote launch config, model metadata, merge and quant recipes
-src/       CLI, stage orchestration, and GPU worker modules
-reports/   Markdown and JSON deliverables for each stage
-docs/      deeper notes on architecture, remote execution, and release policy
-tests/     dry-run and schema validation coverage
-examples/  starter prompts and notebook placeholders
+src/      CLI, workflow orchestration, contracts, stage modules, results server
+configs/  model metadata and merge/quantization recipes
+reports/  committed examples plus run-scoped JSON/Markdown outputs
+docs/     architecture and execution notes
+tests/    CLI, contract, and workflow coverage
 ```
-
-## Deliverables By Stage
-| Stage | Primary deliverable | Secondary output |
-| --- | --- | --- |
-| 1 | `reports/stage-1/README.md` | `reports/stage-1/compatibility-matrix.json` plus `reports/stage-1/figures/*.png` |
-| 2 | `reports/stage-2/README.md` | `reports/stage-2/merge-manifest.json` plus `reports/stage-2/dataset-manifest.json` |
-| 3 | `reports/stage-3/README.md` | eval registry in CLI output |
-| 4 | `reports/stage-4/README.md` | validated GGUF and EXL2 recipes |
-| 5 | `reports/stage-5/README.md` | generated stage config |
-
-## Safety Policy
-This repo does not implement safeguard bypass or refusal-vector removal. Stage 3 exists to evaluate capability, misuse risk, and release constraints so the project can document what it is doing without acting like governance is optional.
-
-## Current Status
-- Repo scaffold: in place
-- Stage numbering: canonical across configs, scripts, reports, and TODO items
-- Next checkpoint: [TODO.md](TODO.md)
-- Deep notes: [docs/architecture.md](docs/architecture.md), [docs/remote-execution.md](docs/remote-execution.md)

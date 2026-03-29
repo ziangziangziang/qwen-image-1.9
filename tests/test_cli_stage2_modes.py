@@ -6,38 +6,36 @@ from unittest.mock import patch
 from qwen_image_19.cli import build_parser, dispatch
 
 
-class Stage2CliModeTests(unittest.TestCase):
-    def test_parser_accepts_smoke_run_without_execute(self) -> None:
+class PipelineCliTests(unittest.TestCase):
+    def test_parser_accepts_merge_smoke_run_without_execute(self) -> None:
         parser = build_parser()
-        args = parser.parse_args(["stage2", "fuse", "--smoke-run"])
+        args = parser.parse_args(["merge", "--smoke-run"])
         self.assertTrue(args.smoke_run)
         self.assertFalse(args.execute)
 
-    def test_parser_accepts_smoke_profile_and_execute(self) -> None:
+    def test_parser_accepts_merge_quality_profile(self) -> None:
         parser = build_parser()
-        args = parser.parse_args(
-            [
-                "stage2",
-                "fuse",
-                "--smoke-run",
-                "--run-profile",
-                "smoke",
-                "--execute",
-                "--resume",
-            ]
-        )
-        self.assertTrue(args.smoke_run)
-        self.assertEqual(args.run_profile, "smoke")
-        self.assertTrue(args.execute)
-        self.assertTrue(args.resume)
-
-    def test_parser_accepts_quality_profile(self) -> None:
-        parser = build_parser()
-        args = parser.parse_args(["stage2", "fuse", "--run-profile", "quality"])
+        args = parser.parse_args(["merge", "--run-profile", "quality"])
         self.assertEqual(args.run_profile, "quality")
         self.assertFalse(args.smoke_run)
 
-    def test_dispatch_forwards_stage2_flags(self) -> None:
+    def test_dispatch_forwards_merge_flags(self) -> None:
+        parser = build_parser()
+        args = parser.parse_args(["merge", "--smoke-run", "--execute", "--tag", "nightly"])
+        with patch("qwen_image_19.cli.run_merge", return_value={"ok": True}) as mocked_merge:
+            dispatch(args)
+        kwargs = mocked_merge.call_args.kwargs
+        self.assertEqual(kwargs["smoke_run"], True)
+        self.assertEqual(kwargs["execute"], True)
+        self.assertEqual(kwargs["tags"], ["nightly"])
+        self.assertEqual(kwargs["run_profile"], None)
+
+    def test_parser_requires_run_id_for_abliterate(self) -> None:
+        parser = build_parser()
+        with self.assertRaises(SystemExit):
+            parser.parse_args(["abliterate"])
+
+    def test_legacy_stage2_dispatch_still_works(self) -> None:
         parser = build_parser()
         args = parser.parse_args(["stage2", "fuse", "--smoke-run", "--execute"])
         with patch("qwen_image_19.cli.fuse", return_value={"ok": True}) as mocked_fuse:
@@ -46,8 +44,6 @@ class Stage2CliModeTests(unittest.TestCase):
         self.assertEqual(kwargs["smoke_run"], True)
         self.assertEqual(kwargs["execute"], True)
         self.assertEqual(kwargs["resume"], False)
-        self.assertEqual(kwargs["run_profile"], None)
-        self.assertEqual(kwargs["dry_run"], False)
 
 
 if __name__ == "__main__":
