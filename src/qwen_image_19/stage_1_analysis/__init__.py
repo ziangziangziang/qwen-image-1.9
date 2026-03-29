@@ -12,7 +12,12 @@ import shutil
 import socket
 import struct
 import time
-from typing import Any, Iterable
+from typing import Any, Callable, Iterable
+
+try:
+    from tqdm.auto import tqdm
+except Exception:  # pragma: no cover - optional progress dependency
+    tqdm = None  # type: ignore[assignment]
 
 from qwen_image_19.config_io import load_json, repo_root, write_json, write_text
 from qwen_image_19.remote import default_remote_context
@@ -82,6 +87,9 @@ SHORT_ALIAS = {
 
 class Stage1AnalysisError(RuntimeError):
     """Raised when Stage 1 cannot inspect the remote cache layout."""
+
+
+ProgressCallback = Callable[[str, dict[str, Any]], None]
 
 
 def _safe_round(value: float, digits: int = 4) -> float:
@@ -829,14 +837,31 @@ def inspect_cache_models(
     hf_home: str | Path | None,
     metadata_models: dict[str, dict[str, Any]],
     cache_alias_map: dict[str, str],
+    progress_callback: ProgressCallback | None = None,
 ) -> dict[str, dict[str, Any]]:
     manifests: dict[str, dict[str, Any]] = {}
-    for alias in MODEL_ORDER:
+    aliases: Iterable[str] = MODEL_ORDER
+    progress_bar = None
+    if tqdm is not None:
+        progress_bar = tqdm(MODEL_ORDER, desc="preflight cache inspect", unit="model", leave=False)
+        aliases = progress_bar
+    for alias in aliases:
         if alias not in metadata_models:
             raise Stage1AnalysisError(f"Missing metadata config for model alias: {alias}")
         if alias not in cache_alias_map:
             raise Stage1AnalysisError(f"Missing cache alias mapping for model alias: {alias}")
+        if progress_callback:
+            progress_callback(
+                "inspect_model_snapshot",
+                {
+                    "alias": alias,
+                    "model_id": metadata_models[alias].get("model_id", alias),
+                    "cache_entry": cache_alias_map[alias],
+                },
+            )
         manifests[alias] = inspect_model_snapshot(alias, metadata_models[alias], hf_home, cache_alias_map[alias])
+    if progress_bar is not None:
+        progress_bar.close()
     return manifests
 
 
@@ -2408,6 +2433,15 @@ def build_stage1_terminal_summary(result: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _emit_progress(
+    progress_callback: ProgressCallback | None,
+    event: str,
+    **details: Any,
+) -> None:
+    if progress_callback is not None:
+        progress_callback(event, details)
+
+
 def analyze(
     artifact_dir: str | Path | None = None,
     remote_config: str | None = None,
@@ -2419,6 +2453,7 @@ def analyze(
     cache_dir: str | None = None,
     hf_home: str | Path | None = None,
     cache_map_config: str | Path | None = None,
+    progress_callback: ProgressCallback | None = None,
 ) -> dict[str, Any]:
     target_dir = Path(artifact_dir) if artifact_dir else repo_root() / "reports" / "stage-1"
     artifact_paths = stage1_artifact_paths(target_dir)
@@ -2427,24 +2462,42 @@ def analyze(
     phase_seconds: dict[str, float] = {}
 
     phase_start = time.perf_counter()
+    _emit_progress(progress_callback, "load_model_inventory", model_dir=str(model_dir) if model_dir else "configs/models")
     metadata_models = load_model_inventory(model_dir)
+    _emit_progress(progress_callback, "load_cache_alias_map", cache_map_config=str(cache_map_config) if cache_map_config else "(default)")
     cache_alias_map = load_cache_alias_map(cache_map_config)
+    _emit_progress(progress_callback, "resolve_remote_context", remote_config=remote_config or "(default)")
     remote_context = default_remote_context(remote_config)
     if cache_dir:
         remote_context["cache_dir"] = cache_dir
     resolved_hf_home = resolve_hf_home(hf_home)
+    _emit_progress(
+        progress_callback,
+        "resolve_hf_home",
+        hf_home=str(resolved_hf_home),
+        hub_root=str(hub_root(resolved_hf_home)),
+        cache_lookup_mode="read-only local cache inspection; no downloads are performed by preflight",
+    )
     phase_seconds["setup_context"] = time.perf_counter() - phase_start
 
     phase_start = time.perf_counter()
+    _emit_progress(progress_callback, "collect_snapshot_inventory", hf_home=str(resolved_hf_home))
     snapshot_inventory = collect_snapshot_inventory(resolved_hf_home, cache_alias_map)
     phase_seconds["cache_snapshot_discovery"] = time.perf_counter() - phase_start
     hardware_snapshot = build_hardware_snapshot(resolved_hf_home, target_dir, snapshot_inventory)
 
     phase_start = time.perf_counter()
-    manifests = inspect_cache_models(resolved_hf_home, metadata_models, cache_alias_map)
+    _emit_progress(progress_callback, "inspect_cache_models", model_count=len(metadata_models))
+    manifests = inspect_cache_models(
+        resolved_hf_home,
+        metadata_models,
+        cache_alias_map,
+        progress_callback=progress_callback,
+    )
     phase_seconds["structural_manifest_build"] = time.perf_counter() - phase_start
 
     phase_start = time.perf_counter()
+    _emit_progress(progress_callback, "build_compatibility_matrix", pair_count=len(list(combinations(MODEL_ORDER, 2))))
     matrix = build_compatibility_matrix(manifests)
     layer_analysis = build_layer_analysis_payload(manifests, matrix)
     phase_seconds["pairwise_structural_layer"] = time.perf_counter() - phase_start
@@ -2456,9 +2509,19 @@ def analyze(
         weight_pairwise: dict[str, Any] = {}
         weight_analysis: dict[str, Any] = {"smoke_run": True}
         value_runtime_profile: dict[str, Any] = {}
+        _emit_progress(
+            progress_callback,
+            "skip_weight_analysis",
+            reason="smoke-run requested; tensor-value comparison skipped",
+        )
         phase_seconds["value_level_weight_comparison"] = time.perf_counter() - phase_start
         matrix["weight_analysis_available"] = False
     else:
+        _emit_progress(
+            progress_callback,
+            "build_weight_pairwise_analysis",
+            roadmap_pairs=", ".join(f"{left} vs {right}" for left, right in ROADMAP_LAYER_PAIRS),
+        )
         weight_result = build_weight_pairwise_analysis(manifests)
         weight_pairwise, weight_analysis, value_runtime_profile = weight_result
         phase_seconds["value_level_weight_comparison"] = time.perf_counter() - phase_start
@@ -2514,13 +2577,16 @@ def analyze(
         result["layer_analysis"] = layer_analysis
         result["weight_analysis"] = weight_analysis
         result["terminal_summary"] = build_stage1_terminal_summary(result)
+        _emit_progress(progress_callback, "dry_run_complete", artifact_dir=str(target_dir))
         return result
 
     phase_start = time.perf_counter()
+    _emit_progress(progress_callback, "generate_stage1_figures", figures_dir=str(artifact_paths["figures_dir"]))
     generate_stage1_figures(matrix, artifact_paths)
     phase_seconds["figure_generation"] = time.perf_counter() - phase_start
 
     write_start = time.perf_counter()
+    _emit_progress(progress_callback, "write_artifacts", artifact_dir=str(target_dir))
     phase_seconds["report_json_write"] = 0.0
     phase_seconds["total_wall"] = time.perf_counter() - total_start
     matrix["resource_accounting"] = build_resource_accounting(

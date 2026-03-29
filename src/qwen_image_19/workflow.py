@@ -97,6 +97,25 @@ def _merge_extra_sections(merge_result: dict[str, Any]) -> list[str]:
     ]
 
 
+def _preflight_progress(event: str, details: dict[str, Any]) -> None:
+    messages = {
+        "load_model_inventory": "loading source model metadata",
+        "load_cache_alias_map": "loading Hugging Face cache alias map",
+        "resolve_remote_context": "resolving remote execution context",
+        "resolve_hf_home": "resolving Hugging Face cache roots",
+        "collect_snapshot_inventory": "scanning cache snapshots already present under HF_HOME",
+        "inspect_cache_models": "reading cached model manifests and safetensors headers",
+        "inspect_model_snapshot": "inspecting cached model snapshot",
+        "build_compatibility_matrix": "building structural compatibility matrix",
+        "build_weight_pairwise_analysis": "running value-level tensor comparison across roadmap pairs",
+        "skip_weight_analysis": "skipping value-level tensor comparison",
+        "generate_stage1_figures": "rendering stage figures",
+        "write_artifacts": "writing preflight artifacts",
+        "dry_run_complete": "preflight dry-run complete",
+    }
+    log_stage_progress("preflight", messages.get(event, event), **details)
+
+
 def run_preflight(
     *,
     artifact_dir: str | None = None,
@@ -126,6 +145,7 @@ def run_preflight(
         execute=execute,
         hf_home=hf_home,
         cache_map_config=cache_map_config,
+        progress_callback=_preflight_progress,
     )
     log_stage_complete("preflight", result)
     return result

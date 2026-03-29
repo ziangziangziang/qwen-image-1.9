@@ -17,6 +17,7 @@ dependencies = [
   "rich>=13.7",
   "safetensors>=0.4",
   "torch>=2.2",
+  "tqdm>=4.66",
   "transformers>=4.44"
 ]
 authors = [

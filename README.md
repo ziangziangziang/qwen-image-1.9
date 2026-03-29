@@ -59,6 +59,8 @@ If `q19` still shows the old `stage1..stage5` help text, you are running an olde
 
 The old `stage*` CLI surface has been removed. Use the 5 commands above.
 
+`preflight` is cache-inspection only. It reads model metadata, cached snapshot layouts, and local safetensors headers under `HF_HOME`; it does not call Hugging Face download APIs or materialize weights when the checkpoints are already present in the cache.
+
 ## Results Server
 The internal results server exposes stage-neutral endpoints:
 
