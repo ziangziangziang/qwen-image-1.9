@@ -1,0 +1,50 @@
+{
+  "artifacts": [
+    {
+      "content_type": "application/json",
+      "kind": "manifest",
+      "path_or_uri": "reports/runs/merge-20260329-175612/merge/artifacts/merge-manifest.json",
+      "size_bytes": null
+    },
+    {
+      "content_type": "application/json",
+      "kind": "dataset_manifest",
+      "path_or_uri": "reports/runs/merge-20260329-175612/merge/artifacts/dataset-manifest.json",
+      "size_bytes": null
+    },
+    {
+      "content_type": "text/markdown",
+      "kind": "report",
+      "path_or_uri": "reports/runs/merge-20260329-175612/merge/artifacts/README.md",
+      "size_bytes": null
+    }
+  ],
+  "command": [
+    "q19",
+    "merge",
+    "--run-profile=full"
+  ],
+  "eval_summary": "reports/runs/merge-20260329-175612/merge/eval-summary.json",
+  "input_checkpoint": "Qwen/Qwen-Image-2512",
+  "legacy_stage_result": {
+    "artifact_dir": "reports/runs/merge-20260329-175612/merge/artifacts",
+    "mode": "write"
+  },
+  "metrics": {
+    "candidate_count": 4,
+    "execution_enabled": true,
+    "run_profile": "full"
+  },
+  "output_checkpoint": "reports/stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
+  "remote_job": {
+    "artifact_dir": "/mnt/artifacts/qwen-image-1.9",
+    "name": "merge-fusion",
+    "status": "ready",
+    "workdir": "/mnt/experiments/qwen-image-1.9"
+  },
+  "report": "reports/runs/merge-20260329-175612/merge/README.md",
+  "run_id": "merge-20260329-175612",
+  "status": "completed",
+  "step": "merge",
+  "updated_at": "2026-03-29T19:20:42+00:00"
+}

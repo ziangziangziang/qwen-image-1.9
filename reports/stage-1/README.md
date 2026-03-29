@@ -96,7 +96,7 @@ Phase B: value-level analysis from loaded tensor payloads on roadmap pairs, with
 ### Environment
 | Item | Value |
 | --- | --- |
-| Hostname | `nodegpu217` |
+| Hostname | `nodegpu218` |
 | OS | `Linux-4.18.0-553.42.1.el8_10.x86_64-x86_64-with-glibc2.28` |
 | Python | `3.12.13` |
 | CPU model | `x86_64` |
@@ -110,13 +110,13 @@ Phase B: value-level analysis from loaded tensor payloads on roadmap pairs, with
 ### Phase Timing
 | Phase | Seconds | Percent of total |
 | --- | --- | --- |
-| `setup_context` | `0.0038` | `0.0002%` |
-| `cache_snapshot_discovery` | `0.0083` | `0.0005%` |
-| `structural_manifest_build` | `1.1042` | `0.0638%` |
-| `pairwise_structural_layer` | `0.0382` | `0.0022%` |
-| `value_level_weight_comparison` | `1727.9329` | `99.7803%` |
-| `figure_generation` | `2.2516` | `0.13%` |
-| `report_json_write` | `0.3942` | `0.0228%` |
+| `setup_context` | `0.0017` | `0.0002%` |
+| `cache_snapshot_discovery` | `0.0024` | `0.0003%` |
+| `structural_manifest_build` | `0.8113` | `0.1157%` |
+| `pairwise_structural_layer` | `0.0348` | `0.005%` |
+| `value_level_weight_comparison` | `698.3462` | `99.5529%` |
+| `figure_generation` | `1.8952` | `0.2702%` |
+| `report_json_write` | `0.3876` | `0.0553%` |
 
 ### Roadmap Pair Workload
 | Pair | Comparable tensors | Left bytes | Right bytes | Total bytes | Missing excluded | Shape excluded | Dtype excluded |
@@ -126,7 +126,7 @@ Phase B: value-level analysis from loaded tensor payloads on roadmap pairs, with
 | `2512 vs layered` | `2853` | `53.74 GiB` | `53.74 GiB` | `107.47 GiB` | `1` | `3` | `0` |
 
 ### Runtime Estimate vs Observed
-- Observed total wall time: `1731.7381s`
+- Observed total wall time: `701.4825s`
 - Value-analysis bytes processed: `322.42 GiB` (`322.4177 GiB`)
 - Estimated total runtime (low/typical/high): `120.5495s` / `217.0578s` / `434.1155s`
 - Operational note: Stage 1 value comparison is CPU and storage I/O bound; GPU is not required.
