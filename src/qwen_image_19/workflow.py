@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from qwen_image_19.abliterate import run_abliteration
+from qwen_image_19.abliterate import execute_abliteration, plan_abliteration
 from qwen_image_19.config_io import repo_root, write_text
 from qwen_image_19.contracts import (
     artifact_ref,
@@ -317,13 +317,30 @@ def run_abliterate_step(
         source_models=pipeline_source_models(),
     )
     merged_checkpoint = _require_previous_checkpoint(manifest, "merge", input_checkpoint)
-    abliteration = run_abliteration(
+    abliteration = plan_abliteration(
         input_checkpoint=merged_checkpoint,
         run_dir=run_dir,
         remote_config=remote_config,
-        dry_run=dry_run,
-        execute=execute,
     )
+    if execute and not dry_run:
+        log_stage_progress(
+            "abliterate",
+            "launching abliteration worker",
+            log_path=public_path(abliteration["log_path"]),
+        )
+        abliteration["remote_job"]["status"] = "running"
+        execution_result = execute_abliteration(abliteration)
+        abliteration["remote_job"].update(
+            {
+                "status": execution_result["status"],
+                "log_path": public_path(execution_result["log_path"]),
+                "started_at": execution_result["started_at"],
+                "ended_at": execution_result["ended_at"],
+                "duration_seconds": execution_result["duration_seconds"],
+                "execution_manifest": public_path(execution_result["execution_manifest"]),
+            }
+        )
+        abliteration["output_checkpoint"] = execution_result["output_checkpoint"]
     log_stage_progress(
         "abliterate",
         "resolved refusal-direction removal job",
@@ -334,21 +351,29 @@ def run_abliterate_step(
     eval_summary = build_eval_summary(
         run_id=run_id,
         step="abliterate",
-        checkpoint_ref=abliteration["output_checkpoint"],
+        checkpoint_ref=abliteration["declared_output_checkpoint"] if execute and not dry_run else abliteration["output_checkpoint"],
         sample_root=run_dir / "abliterate" / "samples",
     )
     eval_report = render_eval_report("abliterate", eval_summary)
     step_result = build_step_result(
         run_id=run_id,
         step="abliterate",
+        status="planned" if (dry_run or not execute) else "succeeded",
         input_checkpoint=merged_checkpoint,
         output_checkpoint=abliteration["output_checkpoint"],
         command=abliteration["command"],
         remote_job=abliteration["remote_job"],
         artifacts=[
-            artifact_ref(kind="checkpoint_ref", path_or_uri=abliteration["output_checkpoint"], content_type="application/octet-stream"),
+            artifact_ref(kind="checkpoint_ref", path_or_uri=abliteration["output_checkpoint"], content_type="application/json"),
+            artifact_ref(kind="declared_checkpoint_ref", path_or_uri=abliteration["declared_output_checkpoint"], content_type="application/octet-stream"),
+            artifact_ref(kind="execution_log", path_or_uri=abliteration["log_path"], content_type="text/plain"),
+            artifact_ref(kind="execution_manifest", path_or_uri=abliteration["execution_manifest"], content_type="application/json"),
         ],
-        metrics=abliteration["metrics"],
+        metrics={
+            **abliteration["metrics"],
+            "execution_requested": execute,
+            "declared_output_checkpoint": abliteration["declared_output_checkpoint"],
+        },
         eval_summary_path=public_path(run_dir / "abliterate" / "eval-summary.json"),
         report_path=public_path(run_dir / "abliterate" / "README.md"),
     )

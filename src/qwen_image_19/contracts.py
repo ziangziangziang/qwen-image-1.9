@@ -122,6 +122,7 @@ def build_step_result(
     *,
     run_id: str,
     step: str,
+    status: str = "completed",
     input_checkpoint: str | None,
     output_checkpoint: str | None,
     command: list[str],
@@ -135,7 +136,7 @@ def build_step_result(
     payload = {
         "run_id": run_id,
         "step": step,
-        "status": "completed",
+        "status": status,
         "input_checkpoint": input_checkpoint,
         "output_checkpoint": output_checkpoint,
         "command": command,
