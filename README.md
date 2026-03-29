@@ -49,7 +49,7 @@ Primary commands:
 python3 -m pip install -e .
 q19 preflight --dry-run
 q19 merge --run-id run-001 --run-profile full
-q19 abliterate --run-id run-001
+q19 abliterate --run-id run-001 --recipe-config configs/abliterate/stage-3-abliteration.example.yaml
 q19 quantize --run-id run-001
 q19 report
 q19 report --serve --host 127.0.0.1 --port 8000
@@ -60,6 +60,8 @@ If `q19` still shows the old `stage1..stage5` help text, you are running an olde
 The old `stage*` CLI surface has been removed. Use the 5 commands above.
 
 `preflight` is cache-inspection only. It reads model metadata, cached snapshot layouts, and local safetensors headers under `HF_HOME`; it does not call Hugging Face download APIs or materialize weights when the checkpoints are already present in the cache.
+
+`abliterate --execute` now requires a real recipe YAML. The worker rewrites local `safetensors` checkpoints or sharded Hugging Face checkpoint directories; it no longer treats a placeholder JSON as a completed model artifact.
 
 ## Results Server
 The internal results server exposes stage-neutral endpoints:

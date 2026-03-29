@@ -47,6 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
     add_common_args(abliterate)
     _add_run_args(abliterate, require_run_id=True)
     abliterate.add_argument("--input-checkpoint", help="Explicit input checkpoint. Defaults to the run's merge output.")
+    abliterate.add_argument("--recipe-config", help="Abliteration recipe YAML. Required for --execute.")
 
     quant = subparsers.add_parser("quantize", help="Run the quantization step and emit run-scoped artifacts.")
     add_common_args(quant)
@@ -95,6 +96,7 @@ def dispatch(args: argparse.Namespace) -> dict[str, Any]:
             artifact_dir=args.artifact_dir,
             remote_config=args.remote_config,
             input_checkpoint=args.input_checkpoint,
+            recipe_config=args.recipe_config,
             dry_run=args.dry_run,
             execute=args.execute,
         )

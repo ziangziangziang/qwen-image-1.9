@@ -299,6 +299,7 @@ def run_abliterate_step(
     artifact_dir: str | None = None,
     remote_config: str | None = None,
     input_checkpoint: str | None = None,
+    recipe_config: str | None = None,
     dry_run: bool = False,
     execute: bool = False,
 ) -> dict[str, Any]:
@@ -310,6 +311,7 @@ def run_abliterate_step(
         dry_run=dry_run,
         execute=execute,
         input_checkpoint=input_checkpoint or "(from merge output)",
+        recipe_config=recipe_config or "(required for execute)",
     )
     manifest, run_dir = ensure_run_manifest(
         run_id=run_id,
@@ -320,13 +322,18 @@ def run_abliterate_step(
     abliteration = plan_abliteration(
         input_checkpoint=merged_checkpoint,
         run_dir=run_dir,
+        recipe_config=recipe_config,
         remote_config=remote_config,
+        require_local_input=execute and not dry_run,
     )
     if execute and not dry_run:
+        if not recipe_config:
+            raise ValueError("`q19 abliterate --execute` requires `--recipe-config`.")
         log_stage_progress(
             "abliterate",
             "launching abliteration worker",
             log_path=public_path(abliteration["log_path"]),
+            recipe_config=recipe_config,
         )
         abliteration["remote_job"]["status"] = "running"
         execution_result = execute_abliteration(abliteration)
@@ -355,6 +362,14 @@ def run_abliterate_step(
         sample_root=run_dir / "abliterate" / "samples",
     )
     eval_report = render_eval_report("abliterate", eval_summary)
+    artifacts = [
+        artifact_ref(kind="checkpoint_ref", path_or_uri=abliteration["output_checkpoint"], content_type="application/octet-stream"),
+        artifact_ref(kind="declared_checkpoint_ref", path_or_uri=abliteration["declared_output_checkpoint"], content_type="application/octet-stream"),
+        artifact_ref(kind="execution_log", path_or_uri=abliteration["log_path"], content_type="text/plain"),
+        artifact_ref(kind="execution_manifest", path_or_uri=abliteration["execution_manifest"], content_type="application/json"),
+    ]
+    if recipe_config:
+        artifacts.append(artifact_ref(kind="recipe_config", path_or_uri=recipe_config, content_type="application/yaml"))
     step_result = build_step_result(
         run_id=run_id,
         step="abliterate",
@@ -363,16 +378,12 @@ def run_abliterate_step(
         output_checkpoint=abliteration["output_checkpoint"],
         command=abliteration["command"],
         remote_job=abliteration["remote_job"],
-        artifacts=[
-            artifact_ref(kind="checkpoint_ref", path_or_uri=abliteration["output_checkpoint"], content_type="application/json"),
-            artifact_ref(kind="declared_checkpoint_ref", path_or_uri=abliteration["declared_output_checkpoint"], content_type="application/octet-stream"),
-            artifact_ref(kind="execution_log", path_or_uri=abliteration["log_path"], content_type="text/plain"),
-            artifact_ref(kind="execution_manifest", path_or_uri=abliteration["execution_manifest"], content_type="application/json"),
-        ],
+        artifacts=artifacts,
         metrics={
             **abliteration["metrics"],
             "execution_requested": execute,
             "declared_output_checkpoint": abliteration["declared_output_checkpoint"],
+            "recipe_config": public_path(recipe_config) if recipe_config else None,
         },
         eval_summary_path=public_path(run_dir / "abliterate" / "eval-summary.json"),
         report_path=public_path(run_dir / "abliterate" / "README.md"),
