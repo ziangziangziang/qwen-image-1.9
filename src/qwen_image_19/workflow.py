@@ -15,6 +15,7 @@ from qwen_image_19.contracts import (
     write_run_manifest,
     write_step_bundle,
 )
+from qwen_image_19.logging_utils import log_stage_complete, log_stage_progress, log_stage_start
 from qwen_image_19.remote import default_remote_context
 from qwen_image_19.reporting import generate_results_summary, write_report_index
 from qwen_image_19.stage_1_analysis import analyze, load_model_inventory
@@ -107,7 +108,16 @@ def run_preflight(
     smoke_run: bool = False,
     execute: bool = False,
 ) -> dict[str, Any]:
-    return analyze(
+    log_stage_start(
+        "preflight",
+        artifact_dir=artifact_dir or public_path(repo_root() / "reports" / "stage-1"),
+        remote_config=remote_config or "(default)",
+        dry_run=dry_run,
+        smoke_run=smoke_run,
+        execute=execute,
+        hf_home=hf_home or "(auto)",
+    )
+    result = analyze(
         artifact_dir=artifact_dir,
         remote_config=remote_config,
         cache_dir=cache_dir,
@@ -117,6 +127,8 @@ def run_preflight(
         hf_home=hf_home,
         cache_map_config=cache_map_config,
     )
+    log_stage_complete("preflight", result)
+    return result
 
 
 def run_merge(
@@ -135,6 +147,15 @@ def run_merge(
 ) -> dict[str, Any]:
     selected_run_id = run_id or default_run_id("merge")
     root = runs_root(artifact_dir)
+    log_stage_start(
+        "merge",
+        run_id=selected_run_id,
+        runs_root=public_path(root),
+        run_profile=run_profile or ("smoke" if smoke_run else "full"),
+        dry_run=dry_run,
+        execute=execute,
+        resume=resume,
+    )
     manifest, run_dir = ensure_run_manifest(
         run_id=selected_run_id,
         runs_root=root,
@@ -152,6 +173,13 @@ def run_merge(
         run_profile=run_profile,
         execute=execute,
         resume=resume,
+    )
+    log_stage_progress(
+        "merge",
+        "fusion artifacts prepared",
+        run_dir=public_path(run_dir),
+        selected_checkpoint=merge_result["manifest"]["selected_core_candidate"]["output_checkpoint"],
+        dataset_root=merge_result["dataset_manifest"]["output_root"],
     )
     checkpoint_ref = merge_result["manifest"]["selected_core_candidate"]["output_checkpoint"]
     eval_summary = build_eval_summary(
@@ -200,13 +228,15 @@ def run_merge(
         extra_sections=_merge_extra_sections(merge_result),
     )
     if dry_run:
-        return {
+        result = {
             "run_id": selected_run_id,
             "run_dir": public_path(run_dir),
             "step_result": step_result,
             "eval_summary": eval_summary,
             "report_preview": report_markdown,
         }
+        log_stage_complete("merge", result)
+        return result
     bundle = write_step_bundle(
         run_dir=run_dir,
         step="merge",
@@ -224,12 +254,14 @@ def run_merge(
     )
     write_report_index(run_dir, manifest)
     write_run_manifest(manifest, run_dir)
-    return {
+    result = {
         "run_id": selected_run_id,
         "run_dir": public_path(run_dir),
         "step_result": step_result,
         "written": [public_path(bundle["step_result"]), public_path(bundle["eval_summary"]), public_path(bundle["report"])],
     }
+    log_stage_complete("merge", result)
+    return result
 
 
 def _require_previous_checkpoint(manifest: dict[str, Any], step: str, fallback: str | None = None) -> str:
@@ -251,6 +283,14 @@ def run_abliterate_step(
     execute: bool = False,
 ) -> dict[str, Any]:
     root = runs_root(artifact_dir)
+    log_stage_start(
+        "abliterate",
+        run_id=run_id,
+        runs_root=public_path(root),
+        dry_run=dry_run,
+        execute=execute,
+        input_checkpoint=input_checkpoint or "(from merge output)",
+    )
     manifest, run_dir = ensure_run_manifest(
         run_id=run_id,
         runs_root=root,
@@ -263,6 +303,13 @@ def run_abliterate_step(
         remote_config=remote_config,
         dry_run=dry_run,
         execute=execute,
+    )
+    log_stage_progress(
+        "abliterate",
+        "resolved refusal-direction removal job",
+        run_dir=public_path(run_dir),
+        merged_checkpoint=merged_checkpoint,
+        output_checkpoint=abliteration["output_checkpoint"],
     )
     eval_summary = build_eval_summary(
         run_id=run_id,
@@ -294,13 +341,15 @@ def run_abliterate_step(
         ],
     )
     if dry_run:
-        return {
+        result = {
             "run_id": run_id,
             "run_dir": public_path(run_dir),
             "step_result": step_result,
             "eval_summary": eval_summary,
             "report_preview": report_markdown,
         }
+        log_stage_complete("abliterate", result)
+        return result
     bundle = write_step_bundle(
         run_dir=run_dir,
         step="abliterate",
@@ -318,12 +367,14 @@ def run_abliterate_step(
     )
     write_report_index(run_dir, manifest)
     write_run_manifest(manifest, run_dir)
-    return {
+    result = {
         "run_id": run_id,
         "run_dir": public_path(run_dir),
         "step_result": step_result,
         "written": [public_path(bundle["step_result"]), public_path(bundle["eval_summary"]), public_path(bundle["report"])],
     }
+    log_stage_complete("abliterate", result)
+    return result
 
 
 def run_quantize_step(
@@ -339,6 +390,16 @@ def run_quantize_step(
     resume: bool = False,
 ) -> dict[str, Any]:
     root = runs_root(artifact_dir)
+    log_stage_start(
+        "quantize",
+        run_id=run_id,
+        runs_root=public_path(root),
+        dry_run=dry_run,
+        smoke_run=smoke_run,
+        execute=execute,
+        resume=resume,
+        input_checkpoint=input_checkpoint or "(from abliterate output)",
+    )
     manifest, run_dir = ensure_run_manifest(
         run_id=run_id,
         runs_root=root,
@@ -354,6 +415,13 @@ def run_quantize_step(
         smoke_run=smoke_run,
         execute=execute,
         resume=resume,
+    )
+    log_stage_progress(
+        "quantize",
+        "quantization profiles resolved",
+        run_dir=public_path(run_dir),
+        source_checkpoint=abliterated_checkpoint,
+        quant_artifact_dir=quant_result["artifact_dir"],
     )
     remote_context = default_remote_context(remote_config)
     quantized_ref = f"{remote_context['artifact_dir']}/runs/{run_id}/quantize/qwen-image-1.9-q4"
@@ -397,13 +465,15 @@ def run_quantize_step(
         ],
     )
     if dry_run:
-        return {
+        result = {
             "run_id": run_id,
             "run_dir": public_path(run_dir),
             "step_result": step_result,
             "eval_summary": eval_summary,
             "report_preview": report_markdown,
         }
+        log_stage_complete("quantize", result)
+        return result
     bundle = write_step_bundle(
         run_dir=run_dir,
         step="quantize",
@@ -421,12 +491,14 @@ def run_quantize_step(
     )
     write_report_index(run_dir, manifest)
     write_run_manifest(manifest, run_dir)
-    return {
+    result = {
         "run_id": run_id,
         "run_dir": public_path(run_dir),
         "step_result": step_result,
         "written": [public_path(bundle["step_result"]), public_path(bundle["eval_summary"]), public_path(bundle["report"])],
     }
+    log_stage_complete("quantize", result)
+    return result
 
 
 def run_report(
@@ -438,12 +510,23 @@ def run_report(
     port: int = 8000,
 ) -> dict[str, Any]:
     root = runs_root(artifact_dir)
+    log_stage_start(
+        "report",
+        runs_root=public_path(root),
+        run_id=run_id or "(all runs)",
+        serve=serve,
+        host=host,
+        port=port,
+    )
     summary = generate_results_summary(root)
     if run_id:
         report_index = root / run_id / "report-index.json"
         if not report_index.exists():
             raise ValueError(f"Run `{run_id}` does not exist under `{public_path(root)}`.")
         summary["run_report_index"] = public_path(report_index)
+        log_stage_progress("report", "validated run report index", run_id=run_id, report_index=summary["run_report_index"])
     if serve:
+        log_stage_progress("report", "starting results server", host=host, port=port)
         serve_results(host=host, port=port, runs_root=root)
+    log_stage_complete("report", summary)
     return summary

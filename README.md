@@ -57,7 +57,7 @@ q19 report --serve --host 127.0.0.1 --port 8000
 
 If `q19` still shows the old `stage1..stage5` help text, you are running an older installed console script. Reinstall the workspace package with `python3 -m pip install -e .` and check again.
 
-Legacy `stage1`, `stage2`, `stage4`, and `stage5` commands remain available for compatibility, but they are no longer the preferred interface.
+The old `stage*` CLI surface has been removed. Use the 5 commands above.
 
 ## Results Server
 The internal results server exposes stage-neutral endpoints:

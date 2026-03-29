@@ -782,7 +782,7 @@ class Stage1Tests(unittest.TestCase):
         with patch("qwen_image_19.stage_1_analysis.generate_stage1_figures", side_effect=self.fake_generate_stage1_figures):
             with patch("qwen_image_19.stage_1_analysis.build_weight_pairwise_analysis", side_effect=self.fake_build_weight_pairwise_analysis):
                 with patch("sys.stdout", new=stdout):
-                    exit_code = cli_main(["stage1", "analyze", "--hf-home", str(self.hf_home), "--artifact-dir", str(Path(self.tmpdir.name) / "reports" / "stage-1")])
+                    exit_code = cli_main(["preflight", "--hf-home", str(self.hf_home), "--artifact-dir", str(Path(self.tmpdir.name) / "reports" / "stage-1")])
         output = stdout.getvalue()
         self.assertEqual(exit_code, 0)
         self.assertIn("Stage 1 DNA analysis", output)
@@ -800,8 +800,7 @@ class Stage1Tests(unittest.TestCase):
                 with patch("sys.stdout", new=stdout):
                     exit_code = cli_main(
                         [
-                            "stage1",
-                            "analyze",
+                            "preflight",
                             "--hf-home",
                             str(self.hf_home),
                             "--artifact-dir",

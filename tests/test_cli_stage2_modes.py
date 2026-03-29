@@ -35,15 +35,10 @@ class PipelineCliTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             parser.parse_args(["abliterate"])
 
-    def test_legacy_stage2_dispatch_still_works(self) -> None:
+    def test_legacy_stage_commands_are_rejected(self) -> None:
         parser = build_parser()
-        args = parser.parse_args(["stage2", "fuse", "--smoke-run", "--execute"])
-        with patch("qwen_image_19.cli.fuse", return_value={"ok": True}) as mocked_fuse:
-            dispatch(args)
-        kwargs = mocked_fuse.call_args.kwargs
-        self.assertEqual(kwargs["smoke_run"], True)
-        self.assertEqual(kwargs["execute"], True)
-        self.assertEqual(kwargs["resume"], False)
+        with self.assertRaises(SystemExit):
+            parser.parse_args(["stage2", "fuse", "--smoke-run", "--execute"])
 
 
 if __name__ == "__main__":

@@ -2,17 +2,10 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
-from typing import Any, Callable
+from typing import Any
 
-from qwen_image_19.stage_1_analysis import analyze
-from qwen_image_19.stage_2_fusion import fuse
-from qwen_image_19.stage_4_quant import quantize
-from qwen_image_19.stage_5_deploy import deploy
+from qwen_image_19.logging_utils import console
 from qwen_image_19.workflow import run_abliterate_step, run_merge, run_preflight, run_quantize_step, run_report
-
-
-CommandHandler = Callable[..., dict[str, Any]]
 
 
 def add_common_args(parser: argparse.ArgumentParser) -> None:
@@ -66,31 +59,6 @@ def build_parser() -> argparse.ArgumentParser:
     report.add_argument("--serve", action="store_true", help="Start the lightweight internal results server.")
     report.add_argument("--host", default="127.0.0.1", help="Server bind host for --serve.")
     report.add_argument("--port", type=int, default=8000, help="Server bind port for --serve.")
-
-    # Legacy compatibility commands remain available but are no longer the primary interface.
-    stage1 = subparsers.add_parser("stage1", help=argparse.SUPPRESS)
-    stage1_sub = stage1.add_subparsers(dest="action", required=True)
-    stage1_analyze = stage1_sub.add_parser("analyze", help=argparse.SUPPRESS)
-    add_common_args(stage1_analyze)
-    stage1_analyze.add_argument("--hf-home", help="Path to HF_HOME or its hub directory on the remote machine.")
-    stage1_analyze.add_argument("--cache-map-config", help="Optional JSON/YAML mapping from model aliases to HF cache directory names.")
-    stage1_analyze.add_argument("--json", dest="json_output", action="store_true", help="Print the full machine-readable payload.")
-
-    stage2 = subparsers.add_parser("stage2", help=argparse.SUPPRESS)
-    stage2_sub = stage2.add_subparsers(dest="action", required=True)
-    stage2_fuse = stage2_sub.add_parser("fuse", help=argparse.SUPPRESS)
-    add_common_args(stage2_fuse)
-    stage2_fuse.add_argument("--run-profile", choices=("smoke", "full", "quality"))
-
-    stage4 = subparsers.add_parser("stage4", help=argparse.SUPPRESS)
-    stage4_sub = stage4.add_subparsers(dest="action", required=True)
-    stage4_quantize = stage4_sub.add_parser("quantize", help=argparse.SUPPRESS)
-    add_common_args(stage4_quantize)
-
-    stage5 = subparsers.add_parser("stage5", help=argparse.SUPPRESS)
-    stage5_sub = stage5.add_subparsers(dest="action", required=True)
-    stage5_deploy = stage5_sub.add_parser("deploy", help=argparse.SUPPRESS)
-    add_common_args(stage5_deploy)
 
     return parser
 
@@ -150,31 +118,7 @@ def dispatch(args: argparse.Namespace) -> dict[str, Any]:
             host=args.host,
             port=args.port,
         )
-
-    handlers: dict[tuple[str, str], CommandHandler] = {
-        ("stage1", "analyze"): analyze,
-        ("stage2", "fuse"): fuse,
-        ("stage4", "quantize"): quantize,
-        ("stage5", "deploy"): deploy,
-    }
-    handler = handlers[(args.command, args.action)]
-    kwargs = {
-        "artifact_dir": args.artifact_dir,
-        "remote_config": args.remote_config,
-        "dry_run": args.dry_run,
-        "smoke_run": args.smoke_run,
-        "execute": args.execute,
-        "resume": args.resume,
-    }
-    if hasattr(args, "cache_dir"):
-        kwargs["cache_dir"] = args.cache_dir
-    if hasattr(args, "hf_home"):
-        kwargs["hf_home"] = args.hf_home
-    if hasattr(args, "cache_map_config"):
-        kwargs["cache_map_config"] = args.cache_map_config
-    if hasattr(args, "run_profile"):
-        kwargs["run_profile"] = args.run_profile
-    return handler(**kwargs)
+    raise ValueError(f"Unsupported command `{args.command}`.")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -183,9 +127,9 @@ def main(argv: list[str] | None = None) -> int:
     try:
         result = dispatch(args)
     except (RuntimeError, ValueError) as exc:
-        print(json.dumps({"command": getattr(args, "command", None), "error": str(exc)}, indent=2), file=sys.stderr)
+        console.print_json(data=json.dumps({"command": getattr(args, "command", None), "error": str(exc)}, indent=2))
         return 1
-    if args.command in {"preflight", "stage1"} and getattr(args, "action", "analyze") == "analyze" and not getattr(args, "json_output", False):
+    if args.command == "preflight" and not getattr(args, "json_output", False):
         if "terminal_summary" in result:
             print(result["terminal_summary"])
             return 0
