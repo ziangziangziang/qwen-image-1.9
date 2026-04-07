@@ -11,14 +11,16 @@ from qwen_image_19.contracts import PIPELINE_STEPS, public_path
 def build_report_index(run_manifest: dict[str, Any]) -> dict[str, Any]:
     steps = {}
     for step in PIPELINE_STEPS:
-        record = run_manifest["steps"][step]
+        record = run_manifest["steps"].get(step)
+        if record is None:
+            continue
         steps[step] = {
             "status": record["status"],
-            "step_result": record["step_result"],
-            "eval_summary": record["eval_summary"],
-            "report": record["report"],
-            "output_checkpoint": record["output_checkpoint"],
-            "metrics": record["metrics"],
+            "step_result": record.get("step_result"),
+            "eval_summary": record.get("eval_summary"),
+            "report": record.get("report"),
+            "output_checkpoint": record.get("output_checkpoint"),
+            "metrics": record.get("metrics", {}),
         }
     return {
         "run_id": run_manifest["run_id"],
@@ -54,7 +56,11 @@ def write_dashboard_fixture(runs_root: Path | None = None) -> Path:
             {
                 "run_id": manifest["run_id"],
                 "updated_at": manifest["updated_at"],
-                "steps": {step: manifest["steps"][step]["status"] for step in PIPELINE_STEPS},
+                "steps": {
+                    step: manifest["steps"][step]["status"]
+                    for step in PIPELINE_STEPS
+                    if step in manifest.get("steps", {})
+                },
                 "report_index": manifest["report_index"],
             }
             for manifest in collect_runs(root)
@@ -68,7 +74,10 @@ def render_report_overview(runs: list[dict[str, Any]]) -> str:
         return "# Results Dashboard\n\n_No runs found._\n"
     rows = []
     for run in runs:
-        status = ", ".join(f"{step}:{run['steps'][step]['status']}" for step in PIPELINE_STEPS)
+        status = ", ".join(
+            f"{step}:{run['steps'].get(step, {}).get('status', 'n/a')}"
+            for step in PIPELINE_STEPS
+        )
         rows.append(f"| `{run['run_id']}` | `{run['updated_at']}` | `{status}` | `{run['report_index']}` |")
     body = "\n".join(rows)
     return f"""# Results Dashboard

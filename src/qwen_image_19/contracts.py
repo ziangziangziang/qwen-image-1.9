@@ -7,13 +7,22 @@ from typing import Any
 from qwen_image_19.config_io import repo_root, write_json, write_text
 
 
-PIPELINE_STEPS = ("merge", "abliterate", "quantize")
+# ── Pipeline definition ────────────────────────────────────────────
+PIPELINE_STEPS = (
+    "merge",
+    "post_merge_train",
+    "abliterate",
+    "post_abliterate_train",
+    "quantize",
+    "post_quantize_eval",
+)
 
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
 
 
+# ── Path helpers ────────────────────────────────────────────────────
 def _is_remote_uri(value: str) -> bool:
     prefixes = ("s3://", "gs://", "hf://", "ssh://", "http://", "https://")
     return value.startswith(prefixes)
@@ -29,6 +38,7 @@ def public_path(value: str | Path) -> str:
         return path.as_posix()
 
 
+# ── Artifact reference ──────────────────────────────────────────────
 def artifact_ref(
     *,
     kind: str,
@@ -48,6 +58,7 @@ def artifact_ref(
     return payload
 
 
+# ── Step record ─────────────────────────────────────────────────────
 def default_step_record(step: str) -> dict[str, Any]:
     return {
         "step": step,
@@ -65,6 +76,7 @@ def default_step_record(step: str) -> dict[str, Any]:
     }
 
 
+# ── Run manifest ────────────────────────────────────────────────────
 def create_run_manifest(
     *,
     run_id: str,
@@ -102,6 +114,10 @@ def ensure_run_manifest(
 
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         manifest["updated_at"] = utc_now()
+        # back-fill any steps added after the manifest was created
+        for step in PIPELINE_STEPS:
+            if step not in manifest["steps"]:
+                manifest["steps"][step] = default_step_record(step)
         return manifest, run_dir
     manifest = create_run_manifest(
         run_id=run_id,
@@ -118,6 +134,7 @@ def write_run_manifest(manifest: dict[str, Any], run_dir: Path) -> Path:
     return write_json(run_dir / "manifest.json", manifest)
 
 
+# ── Step result builder ─────────────────────────────────────────────
 def build_step_result(
     *,
     run_id: str,
@@ -129,8 +146,8 @@ def build_step_result(
     remote_job: dict[str, Any],
     artifacts: list[dict[str, Any]],
     metrics: dict[str, Any],
-    eval_summary_path: str | None,
-    report_path: str | None,
+    eval_summary_path: str | None = None,
+    report_path: str | None = None,
     extra: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     payload = {
@@ -148,10 +165,11 @@ def build_step_result(
         "updated_at": utc_now(),
     }
     if extra:
-        payload.update(extra)
+        payload["extra"] = extra
     return payload
 
 
+# ── Bundle writer ───────────────────────────────────────────────────
 def write_step_bundle(
     *,
     run_dir: Path,
@@ -175,6 +193,7 @@ def write_step_bundle(
     }
 
 
+# ── Manifest updater ───────────────────────────────────────────────
 def update_manifest_with_step(
     manifest: dict[str, Any],
     *,

@@ -13,6 +13,8 @@ dist/
 artifacts/
 remote_runs/
 tmp/
+.playwright-mcp/
+web/node_modules/
 
 # Stage 2 runtime output — raw logs, eval dumps, datasets, and weight artifacts.
 # All Stage 2 output now lives under reports/stage-2/.

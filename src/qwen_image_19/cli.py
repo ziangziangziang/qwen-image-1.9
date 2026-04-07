@@ -1,3 +1,10 @@
+"""Qwen-Image 1.9 CLI.
+
+Pipeline: merge → post-merge-train → abliterate → post-abliterate-train
+          → quantize → post-quantize-eval
+
+All models sourced from HuggingFace.
+"""
 from __future__ import annotations
 
 import argparse
@@ -5,122 +12,158 @@ import json
 from typing import Any
 
 from qwen_image_19.logging_utils import console
-from qwen_image_19.workflow import run_abliterate_step, run_merge, run_preflight, run_quantize_step, run_report
+from qwen_image_19.workflow_v2 import (
+    run_abliterate,
+    run_merge,
+    run_post_abliterate_train,
+    run_post_merge_train,
+    run_post_quantize_eval,
+    run_quantize,
+    run_report,
+)
 
 
-def add_common_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--remote-config", help="Path to remote launcher or env config.")
-    parser.add_argument("--artifact-dir", help="Base artifact directory. Defaults to reports/runs for the new pipeline.")
-    parser.add_argument("--cache-dir", help="Optional cache dir override for remote-first dry runs.")
-    parser.add_argument("--dry-run", action="store_true", help="Resolve configs and print outputs without writing.")
-    parser.add_argument("--smoke-run", action="store_true", help="Run a minimal quick pass to prove the pipeline wiring.")
-    parser.add_argument("--execute", action="store_true", help="Execute the full workload. Can be resource-intensive.")
-    parser.add_argument("--resume", action="store_true", help="Resume from prior outputs instead of overwriting.")
+# ── Shared argument groups ──────────────────────────────────────────
+
+def _common(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--remote-config", help="Remote launcher config (YAML/.env).")
+    p.add_argument("--artifact-dir", help="Runs root. Defaults to reports/runs.")
+    p.add_argument("--dry-run", action="store_true", help="Print plan without writing files.")
+    p.add_argument("--execute", action="store_true", help="Execute the full GPU workload.")
+    p.add_argument("--resume", action="store_true", help="Resume from prior outputs.")
 
 
-def _add_run_args(parser: argparse.ArgumentParser, *, require_run_id: bool) -> None:
-    parser.add_argument("--run-id", required=require_run_id, help="Stable run identifier under reports/runs/<run_id>.")
-    parser.add_argument("--tag", dest="tags", action="append", default=[], help="Tag to store in the run manifest.")
-    parser.add_argument("--notes", help="Free-form notes stored in the run manifest.")
+def _run_args(p: argparse.ArgumentParser, *, require_id: bool) -> None:
+    p.add_argument("--run-id", required=require_id, help="Run identifier.")
+    p.add_argument("--tag", dest="tags", action="append", default=[], help="Tag for the manifest.")
+    p.add_argument("--notes", help="Free-form notes for the manifest.")
 
+
+# ── Parser ──────────────────────────────────────────────────────────
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="q19", description="Qwen-Image 1.9 3-step pipeline CLI.")
-    subparsers = parser.add_subparsers(dest="command", required=True)
-
-    preflight = subparsers.add_parser("preflight", help="Build preflight evidence from source checkpoints.")
-    add_common_args(preflight)
-    preflight.add_argument("--hf-home", help="Path to HF_HOME or its hub directory on the remote machine.")
-    preflight.add_argument("--cache-map-config", help="Optional JSON/YAML mapping from model aliases to HF cache directory names.")
-    preflight.add_argument("--json", dest="json_output", action="store_true", help="Print full machine-readable preflight payload.")
-
-    merge = subparsers.add_parser("merge", help="Run the merge step and emit run-scoped artifacts.")
-    add_common_args(merge)
-    _add_run_args(merge, require_run_id=False)
-    merge.add_argument(
-        "--run-profile",
-        choices=("smoke", "full", "quality"),
-        help="Merge execution profile. Defaults to smoke when --smoke-run is set, otherwise full.",
+    root = argparse.ArgumentParser(
+        prog="q19",
+        description="Qwen-Image 1.9 checkpoint pipeline (HuggingFace-based).",
     )
+    sub = root.add_subparsers(dest="command", required=True)
 
-    abliterate = subparsers.add_parser("abliterate", help="Run the refusal-direction removal step.")
-    add_common_args(abliterate)
-    _add_run_args(abliterate, require_run_id=True)
-    abliterate.add_argument("--input-checkpoint", help="Explicit input checkpoint. Defaults to the run's merge output.")
-    abliterate.add_argument("--recipe-config", help="Abliteration recipe YAML. Required for --execute.")
+    # merge
+    m = sub.add_parser("merge", help="Merge HuggingFace source models.")
+    _common(m); _run_args(m, require_id=False)
+    m.add_argument("--method", default="slerp", help="Merge method (slerp, ties, dare).")
+    m.add_argument("--model-id", dest="model_ids", action="append", default=[],
+                   help="HuggingFace model IDs to merge. Repeatable.")
 
-    quant = subparsers.add_parser("quantize", help="Run the quantization step and emit run-scoped artifacts.")
-    add_common_args(quant)
-    _add_run_args(quant, require_run_id=True)
-    quant.add_argument("--input-checkpoint", help="Explicit input checkpoint. Defaults to the run's abliterate output.")
+    # post-merge-train
+    pmt = sub.add_parser("post-merge-train", help="Fine-tune after merge to verify quality.")
+    _common(pmt); _run_args(pmt, require_id=True)
+    pmt.add_argument("--input-checkpoint", help="Override input checkpoint.")
+    pmt.add_argument("--training-config", help="Training config YAML.")
 
-    report = subparsers.add_parser("report", help="Generate the shared results index and optional internal API server.")
-    report.add_argument("--artifact-dir", help="Runs root. Defaults to reports/runs.")
-    report.add_argument("--run-id", help="Optional run id to validate while building report indexes.")
-    report.add_argument("--serve", action="store_true", help="Start the lightweight internal results server.")
-    report.add_argument("--host", default="127.0.0.1", help="Server bind host for --serve.")
-    report.add_argument("--port", type=int, default=8000, help="Server bind port for --serve.")
+    # abliterate
+    a = sub.add_parser("abliterate", help="Remove refusal directions.")
+    _common(a); _run_args(a, require_id=True)
+    a.add_argument("--input-checkpoint", help="Override input checkpoint.")
+    a.add_argument("--recipe-config", help="Abliteration recipe YAML (required for --execute).")
 
-    return parser
+    # post-abliterate-train
+    pat = sub.add_parser("post-abliterate-train", help="Fine-tune after abliteration.")
+    _common(pat); _run_args(pat, require_id=True)
+    pat.add_argument("--input-checkpoint", help="Override input checkpoint.")
+    pat.add_argument("--training-config", help="Training config YAML.")
 
+    # quantize
+    q = sub.add_parser("quantize", help="Quantize the checkpoint.")
+    _common(q); _run_args(q, require_id=True)
+    q.add_argument("--input-checkpoint", help="Override input checkpoint.")
+    q.add_argument("--method", default="gguf", help="Quantization method (gguf, exl2, gptq).")
+    q.add_argument("--bits", type=int, default=4, help="Quantization bits.")
+
+    # eval
+    e = sub.add_parser("eval", help="Run post-quantize evaluation.")
+    _common(e); _run_args(e, require_id=True)
+    e.add_argument("--input-checkpoint", help="Override input checkpoint.")
+    e.add_argument("--prompts", type=int, default=8, help="Number of eval prompts.")
+
+    # report
+    r = sub.add_parser("report", help="Generate dashboard and optionally serve it.")
+    r.add_argument("--artifact-dir", help="Runs root.")
+    r.add_argument("--run-id", help="Validate a specific run.")
+    r.add_argument("--serve", action="store_true", help="Start the dashboard server.")
+    r.add_argument("--host", default="127.0.0.1", help="Server host.")
+    r.add_argument("--port", type=int, default=8000, help="Server port.")
+
+    return root
+
+
+# ── Dispatch ────────────────────────────────────────────────────────
 
 def dispatch(args: argparse.Namespace) -> dict[str, Any]:
-    if args.command == "preflight":
-        return run_preflight(
-            artifact_dir=args.artifact_dir,
-            remote_config=args.remote_config,
-            cache_dir=args.cache_dir,
-            dry_run=args.dry_run,
-            smoke_run=args.smoke_run,
-            execute=args.execute,
-            hf_home=args.hf_home,
-            cache_map_config=args.cache_map_config,
-        )
-    if args.command == "merge":
+    cmd = args.command
+
+    if cmd == "merge":
         return run_merge(
-            run_id=args.run_id,
-            artifact_dir=args.artifact_dir,
+            run_id=args.run_id, artifact_dir=args.artifact_dir,
             remote_config=args.remote_config,
-            cache_dir=args.cache_dir,
-            run_profile=args.run_profile,
-            dry_run=args.dry_run,
-            smoke_run=args.smoke_run,
-            execute=args.execute,
-            resume=args.resume,
-            tags=args.tags,
-            notes=args.notes,
+            model_ids=args.model_ids or None,
+            merge_method=args.method,
+            dry_run=args.dry_run, execute=args.execute, resume=args.resume,
+            tags=args.tags, notes=args.notes,
         )
-    if args.command == "abliterate":
-        return run_abliterate_step(
-            run_id=args.run_id,
-            artifact_dir=args.artifact_dir,
+
+    if cmd == "post-merge-train":
+        return run_post_merge_train(
+            run_id=args.run_id, artifact_dir=args.artifact_dir,
+            remote_config=args.remote_config,
+            input_checkpoint=args.input_checkpoint,
+            training_config_path=args.training_config,
+            dry_run=args.dry_run, execute=args.execute, resume=args.resume,
+        )
+
+    if cmd == "abliterate":
+        return run_abliterate(
+            run_id=args.run_id, artifact_dir=args.artifact_dir,
             remote_config=args.remote_config,
             input_checkpoint=args.input_checkpoint,
             recipe_config=args.recipe_config,
-            dry_run=args.dry_run,
-            execute=args.execute,
+            dry_run=args.dry_run, execute=args.execute,
         )
-    if args.command == "quantize":
-        return run_quantize_step(
-            run_id=args.run_id,
-            artifact_dir=args.artifact_dir,
+
+    if cmd == "post-abliterate-train":
+        return run_post_abliterate_train(
+            run_id=args.run_id, artifact_dir=args.artifact_dir,
             remote_config=args.remote_config,
-            cache_dir=args.cache_dir,
             input_checkpoint=args.input_checkpoint,
-            dry_run=args.dry_run,
-            smoke_run=args.smoke_run,
-            execute=args.execute,
-            resume=args.resume,
+            training_config_path=args.training_config,
+            dry_run=args.dry_run, execute=args.execute, resume=args.resume,
         )
-    if args.command == "report":
+
+    if cmd == "quantize":
+        return run_quantize(
+            run_id=args.run_id, artifact_dir=args.artifact_dir,
+            remote_config=args.remote_config,
+            input_checkpoint=args.input_checkpoint,
+            quant_method=args.method, quant_bits=args.bits,
+            dry_run=args.dry_run, execute=args.execute, resume=args.resume,
+        )
+
+    if cmd == "eval":
+        return run_post_quantize_eval(
+            run_id=args.run_id, artifact_dir=args.artifact_dir,
+            remote_config=args.remote_config,
+            input_checkpoint=args.input_checkpoint,
+            num_prompts=args.prompts,
+            dry_run=args.dry_run, execute=args.execute,
+        )
+
+    if cmd == "report":
         return run_report(
-            artifact_dir=args.artifact_dir,
-            run_id=args.run_id,
-            serve=args.serve,
-            host=args.host,
-            port=args.port,
+            artifact_dir=args.artifact_dir, run_id=args.run_id,
+            serve=args.serve, host=args.host, port=args.port,
         )
-    raise ValueError(f"Unsupported command `{args.command}`.")
+
+    raise ValueError(f"Unknown command: {cmd}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -129,14 +172,16 @@ def main(argv: list[str] | None = None) -> int:
     try:
         result = dispatch(args)
     except (RuntimeError, ValueError) as exc:
-        console.print_json(data=json.dumps({"command": getattr(args, "command", None), "error": str(exc)}, indent=2))
+        console.print_json(
+            data=json.dumps({"command": getattr(args, "command", None), "error": str(exc)}, indent=2)
+        )
         return 1
-    if args.command == "preflight" and not getattr(args, "json_output", False):
-        if "terminal_summary" in result:
-            print(result["terminal_summary"])
-            return 0
-    print(json.dumps(result, indent=2))
+    print(json.dumps(result, indent=2, default=str))
     return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
 
 
 if __name__ == "__main__":

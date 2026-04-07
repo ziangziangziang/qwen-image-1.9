@@ -1,5 +1,5 @@
-"""Project Qwen-Image 1.9 scaffold."""
+"""Qwen-Image 1.9 — unified checkpoint pipeline."""
 
 __all__ = ["__version__"]
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"

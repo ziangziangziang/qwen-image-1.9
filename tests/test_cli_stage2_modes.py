@@ -7,28 +7,26 @@ from qwen_image_19.cli import build_parser, dispatch
 
 
 class PipelineCliTests(unittest.TestCase):
-    def test_parser_accepts_merge_smoke_run_without_execute(self) -> None:
+    def test_parser_accepts_merge_dry_run(self) -> None:
         parser = build_parser()
-        args = parser.parse_args(["merge", "--smoke-run"])
-        self.assertTrue(args.smoke_run)
+        args = parser.parse_args(["merge", "--dry-run"])
+        self.assertTrue(args.dry_run)
         self.assertFalse(args.execute)
 
-    def test_parser_accepts_merge_quality_profile(self) -> None:
+    def test_parser_accepts_merge_method(self) -> None:
         parser = build_parser()
-        args = parser.parse_args(["merge", "--run-profile", "quality"])
-        self.assertEqual(args.run_profile, "quality")
-        self.assertFalse(args.smoke_run)
+        args = parser.parse_args(["merge", "--method", "ties"])
+        self.assertEqual(args.method, "ties")
 
     def test_dispatch_forwards_merge_flags(self) -> None:
         parser = build_parser()
-        args = parser.parse_args(["merge", "--smoke-run", "--execute", "--tag", "nightly"])
+        args = parser.parse_args(["merge", "--execute", "--tag", "nightly"])
         with patch("qwen_image_19.cli.run_merge", return_value={"ok": True}) as mocked_merge:
             dispatch(args)
         kwargs = mocked_merge.call_args.kwargs
-        self.assertEqual(kwargs["smoke_run"], True)
         self.assertEqual(kwargs["execute"], True)
         self.assertEqual(kwargs["tags"], ["nightly"])
-        self.assertEqual(kwargs["run_profile"], None)
+        self.assertEqual(kwargs["merge_method"], "slerp")
 
     def test_parser_requires_run_id_for_abliterate(self) -> None:
         parser = build_parser()
