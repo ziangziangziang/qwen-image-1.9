@@ -450,6 +450,114 @@ def _abliterate_sharded_checkpoint(
     return {"modified_keys": sorted(set(modified_keys))}
 
 
+def _abliterate_componentized_checkpoint(
+    input_path: Path,
+    output_path: Path,
+    orders: list[dict[str, Any]],
+    measurements: dict[str, Any],
+    recipe: dict[str, Any],
+) -> dict[str, Any]:
+    """Handle diffusers-style componentized checkpoints (model_index.json + component subdirs)."""
+    model_index = json.loads((input_path / "model_index.json").read_text(encoding="utf-8"))
+    output_path.mkdir(parents=True, exist_ok=True)
+    modified_keys: list[str] = []
+
+    # Copy root-level config files (including model_index.json)
+    for f in input_path.iterdir():
+        if f.is_file() and (f.suffix in {".json", ".txt", ".model"} or f.name.endswith(".jinja")):
+            shutil.copy(f, output_path / f.name)
+
+    # Process each component subdir
+    component_names = [
+        key for key, val in model_index.items()
+        if not key.startswith("_") and isinstance(val, list) and len(val) == 2
+    ]
+    for comp_name in component_names:
+        comp_src = input_path / comp_name
+        comp_dst = output_path / comp_name
+        if not comp_src.is_dir():
+            continue
+        comp_dst.mkdir(parents=True, exist_ok=True)
+        # Copy all non-safetensors files from the component
+        for f in comp_src.iterdir():
+            if f.is_file() and f.suffix not in {".safetensors"}:
+                shutil.copy(f, comp_dst / f.name)
+
+        # Handle sharded component
+        shard_index = comp_src / "model.safetensors.index.json"
+        if shard_index.exists():
+            index = json.loads(shard_index.read_text(encoding="utf-8"))
+            weight_map = index.get("weight_map", {})
+            shard_to_matched: dict[str, list[str]] = {}
+            for key, shard in weight_map.items():
+                for order in orders:
+                    if _tensor_matches(key, order["tensor_patterns"]):
+                        shard_to_matched.setdefault(shard, []).append(key)
+                        break
+            for shard_name in sorted(set(weight_map.values())):
+                src_shard = comp_src / shard_name
+                dst_shard = comp_dst / shard_name
+                if shard_name not in shard_to_matched:
+                    shutil.copy(src_shard, dst_shard)
+                    continue
+                state_dict = load_file(str(src_shard))
+                for key in shard_to_matched[shard_name]:
+                    for order in orders:
+                        if not _tensor_matches(key, order["tensor_patterns"]):
+                            continue
+                        direction = _measurement_direction(
+                            measurements=measurements,
+                            layer=order["layer"],
+                            measurement=order["measurement"],
+                            projected=bool(recipe.get("projected", False)),
+                            sparsity=float(order["sparsity"]),
+                        )
+                        if bool(recipe.get("directional", False)):
+                            state_dict[key] = modify_tensor_directional_scaling(state_dict[key], direction, order["scale"]).contiguous()
+                        elif bool(recipe.get("normpreserve", False)):
+                            state_dict[key] = modify_tensor_norm_preserved(state_dict[key], direction, order["scale"]).contiguous()
+                        else:
+                            state_dict[key] = modify_tensor(state_dict[key], direction, order["scale"]).contiguous()
+                        modified_keys.append(f"{comp_name}.{key}")
+                        break
+                save_file(state_dict, str(dst_shard))
+            shutil.copy(shard_index, comp_dst / "model.safetensors.index.json")
+            continue
+
+        # Handle single-file component
+        single = comp_src / "model.safetensors"
+        if not single.exists():
+            continue
+        state_dict = load_file(str(single))
+        comp_modified = False
+        for key in list(state_dict.keys()):
+            for order in orders:
+                if not _tensor_matches(key, order["tensor_patterns"]):
+                    continue
+                direction = _measurement_direction(
+                    measurements=measurements,
+                    layer=order["layer"],
+                    measurement=order["measurement"],
+                    projected=bool(recipe.get("projected", False)),
+                    sparsity=float(order["sparsity"]),
+                )
+                if bool(recipe.get("directional", False)):
+                    state_dict[key] = modify_tensor_directional_scaling(state_dict[key], direction, order["scale"]).contiguous()
+                elif bool(recipe.get("normpreserve", False)):
+                    state_dict[key] = modify_tensor_norm_preserved(state_dict[key], direction, order["scale"]).contiguous()
+                else:
+                    state_dict[key] = modify_tensor(state_dict[key], direction, order["scale"]).contiguous()
+                modified_keys.append(f"{comp_name}.{key}")
+                comp_modified = True
+                break
+        if comp_modified:
+            save_file(state_dict, str(comp_dst / "model.safetensors"))
+        else:
+            shutil.copy(single, comp_dst / "model.safetensors")
+
+    return {"modified_keys": sorted(set(modified_keys))}
+
+
 def run_worker(
     *,
     input_checkpoint: str,
@@ -466,7 +574,10 @@ def run_worker(
     measurements = _load_measurements(recipe, recipe_config)
     orders = _compile_orders(recipe, measurements)
     if input_path.is_dir():
-        result = _abliterate_sharded_checkpoint(input_path, output_path, orders, measurements, recipe)
+        if (input_path / "model_index.json").exists():
+            result = _abliterate_componentized_checkpoint(input_path, output_path, orders, measurements, recipe)
+        else:
+            result = _abliterate_sharded_checkpoint(input_path, output_path, orders, measurements, recipe)
     else:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         result = _abliterate_single_safetensors(input_path, output_path, orders, measurements, recipe)

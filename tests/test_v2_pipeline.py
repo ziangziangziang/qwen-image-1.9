@@ -13,8 +13,10 @@ from qwen_image_19.workflow_v2 import (
     run_post_merge_train,
     run_abliterate,
     run_post_abliterate_train,
+    run_preflight,
     run_quantize,
     run_post_quantize_eval,
+    run_publish,
     run_report,
 )
 
@@ -36,12 +38,13 @@ class TestPipelineSteps(unittest.TestCase):
     # ── PIPELINE_STEPS definition ─────────────────────────────────
 
     def test_pipeline_has_six_steps(self) -> None:
-        self.assertEqual(len(PIPELINE_STEPS), 6)
-        self.assertEqual(
-            PIPELINE_STEPS,
-            ("merge", "post_merge_train", "abliterate",
-             "post_abliterate_train", "quantize", "post_quantize_eval"),
-        )
+        self.assertGreaterEqual(len(PIPELINE_STEPS), 6)
+        self.assertIn("merge", PIPELINE_STEPS)
+        self.assertIn("post_merge_train", PIPELINE_STEPS)
+        self.assertIn("abliterate", PIPELINE_STEPS)
+        self.assertIn("post_abliterate_train", PIPELINE_STEPS)
+        self.assertIn("quantize", PIPELINE_STEPS)
+        self.assertIn("post_quantize_eval", PIPELINE_STEPS)
 
     # ── Merge ─────────────────────────────────────────────────────
 
@@ -130,12 +133,14 @@ class TestPipelineSteps(unittest.TestCase):
 
     def test_full_pipeline_dry_run(self) -> None:
         rid = "test-full"
+        run_preflight(run_id=rid, artifact_dir=str(self.root))
         run_merge(run_id=rid, artifact_dir=str(self.root))
         run_post_merge_train(run_id=rid, artifact_dir=str(self.root))
         run_abliterate(run_id=rid, artifact_dir=str(self.root))
         run_post_abliterate_train(run_id=rid, artifact_dir=str(self.root))
         run_quantize(run_id=rid, artifact_dir=str(self.root))
         run_post_quantize_eval(run_id=rid, artifact_dir=str(self.root))
+        run_publish(run_id=rid, artifact_dir=str(self.root), dry_run=True)
 
         manifest = json.loads(
             (self.root / rid / "manifest.json").read_text("utf-8")

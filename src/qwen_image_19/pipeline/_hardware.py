@@ -18,7 +18,8 @@ def require_gpus(*, min_gpus: int = 1, min_vram_gb: float = 40.0) -> None:
 
     for i in range(count):
         props = torch.cuda.get_device_properties(i)
-        vram_gb = props.total_mem / (1024 ** 3)
+        vram_gb = getattr(props, "total_memory", None) or getattr(props, "total_mem", 0)
+        vram_gb = vram_gb / (1024 ** 3)
         if vram_gb < min_vram_gb:
             raise RuntimeError(
                 f"GPU {i} has {vram_gb:.1f} GB VRAM, need {min_vram_gb:.1f} GB"

@@ -9,12 +9,14 @@ from qwen_image_19.config_io import repo_root, write_json, write_text
 
 # ── Pipeline definition ────────────────────────────────────────────
 PIPELINE_STEPS = (
+    "preflight",
     "merge",
     "post_merge_train",
     "abliterate",
     "post_abliterate_train",
     "quantize",
     "post_quantize_eval",
+    "publish",
 )
 
 

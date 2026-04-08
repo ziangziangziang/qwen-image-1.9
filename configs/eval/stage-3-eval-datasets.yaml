@@ -1,0 +1,261 @@
+{
+  "description": "Held-out validation and test datasets for all three capabilities. None of these samples appear in the training split. Used for: (1) post-merge regression checks, (2) post-training quality gates, (3) post-abliterate capability retention, (4) post-quantize degradation bounds. The quality judge (Qwen/Qwen3.5-35B-A3B) scores every generated sample.",
+
+  "judge": {
+    "model_id": "Qwen/Qwen3.5-35B-A3B",
+    "checkpoint": "/scratch/qwen-judge-abliterated/abliterated-judge",
+    "checkpoint_note": "Abliterated judge preferred when this path exists. Run `q19 prepare-judge --execute` to produce it. Falls back to model_id when not present.",
+    "dtype": "bfloat16",
+    "max_new_tokens": 512,
+    "temperature": 0.1,
+    "scoring": {
+      "scale": "1-10",
+      "dimensions": ["prompt_adherence", "visual_quality", "detail_fidelity", "aesthetic_score"],
+      "pass_threshold": 6.5,
+      "regression_tolerance": 0.5,
+      "note": "A score drop > 0.5 vs. baseline on any dimension triggers a pipeline gate failure."
+    }
+  },
+
+  "splits": {
+    "generation_val": {
+      "purpose": "Validation during training — monitor for capability degradation every N steps",
+      "check_frequency": "every eval_steps",
+      "datasets": [
+        {
+          "hf_id": "nateraw/parti-prompts",
+          "split": "train",
+          "prompt_column": "Prompt",
+          "category_column": "Category",
+          "sample_count": 500,
+          "sampling": "stratified_by_category",
+          "note": "PartiPrompts stratified — covers abstract, world knowledge, people, animals, food, buildings, etc."
+        },
+        {
+          "hf_id": "VisDiff/T2I-CompBench",
+          "split": "test",
+          "prompt_column": "prompt",
+          "sample_count": 300,
+          "note": "T2I-CompBench — compositional text-to-image alignment (attribute binding, spatial relations)"
+        },
+        {
+          "hf_id": "TIGER-Lab/MMIU",
+          "split": "test",
+          "prompt_column": "prompt",
+          "image_column": "image",
+          "sample_count": 200,
+          "note": "MMIU — multi-image understanding prompts for generation quality"
+        }
+      ],
+      "total_samples": 1000,
+      "judge_dimensions": ["prompt_adherence", "visual_quality", "aesthetic_score"],
+      "reference_model": "qwen-image-2512"
+    },
+
+    "generation_test": {
+      "purpose": "Final held-out test — run once after training is complete, never during training",
+      "datasets": [
+        {
+          "hf_id": "sayakpaul/pokemon-blip-captions",
+          "split": "train",
+          "prompt_column": "text",
+          "image_column": "image",
+          "sample_count": 500,
+          "note": "Out-of-domain style transfer — tests generalization"
+        },
+        {
+          "hf_id": "phiyodr/coco2017",
+          "split": "validation",
+          "prompt_column": "captions",
+          "image_column": "image",
+          "sample_count": 1000,
+          "note": "COCO val — real-world photo fidelity"
+        },
+        {
+          "hf_id": "unography/genai-bench",
+          "split": "test",
+          "prompt_column": "prompt",
+          "sample_count": 1200,
+          "note": "GenAI-Bench 1200 — standardized T2I benchmark with human preference labels"
+        }
+      ],
+      "total_samples": 2700,
+      "judge_dimensions": ["prompt_adherence", "visual_quality", "detail_fidelity", "aesthetic_score"],
+      "reference_model": "qwen-image-2512",
+      "human_preference_metric": "ELO"
+    },
+
+    "editing_val": {
+      "purpose": "Validation — instruction fidelity and non-edit region preservation",
+      "datasets": [
+        {
+          "hf_id": "facebook/emu_edit_test_set",
+          "split": "test",
+          "instruction_column": "instruction",
+          "input_column": "input_image",
+          "output_column": "output_image",
+          "sample_count": 500,
+          "note": "EMU Edit hold-out — 9 edit types: color, texture, background, style, adding, dropping, shape, action, alter"
+        },
+        {
+          "hf_id": "osunlp/MagicBrush",
+          "split": "validation",
+          "instruction_column": "instruction",
+          "input_column": "source_img",
+          "output_column": "target_img",
+          "sample_count": 200,
+          "note": "MagicBrush val — multi-turn instruction edits"
+        }
+      ],
+      "total_samples": 700,
+      "judge_dimensions": ["instruction_adherence", "non_edit_preservation", "visual_quality"],
+      "reference_metrics": ["l1_distance", "dino_score", "clip_direction_score"],
+      "reference_model": "qwen-image-edit-2511"
+    },
+
+    "editing_test": {
+      "purpose": "Final hold-out test for editing capability",
+      "datasets": [
+        {
+          "hf_id": "google/imagenet-1k",
+          "split": "validation",
+          "image_column": "image",
+          "label_column": "label",
+          "sample_count": 500,
+          "synthetic_instructions": true,
+          "instruction_template": "change the {attribute} while keeping everything else the same",
+          "note": "ImageNet val with LLM-generated edit instructions — tests diverse subject editing"
+        },
+        {
+          "hf_id": "laion/laion2B-en-aesthetic",
+          "split": "train",
+          "image_column": "url",
+          "prompt_column": "TEXT",
+          "sample_count": 800,
+          "synthetic_instructions": true,
+          "note": "LAION-aesthetic images with style/lighting edit instructions generated by Qwen judge"
+        }
+      ],
+      "total_samples": 1300,
+      "judge_dimensions": ["instruction_adherence", "non_edit_preservation", "visual_quality", "aesthetic_score"],
+      "reference_model": "qwen-image-edit-2511"
+    },
+
+    "layering_val": {
+      "purpose": "Validation — alpha channel quality and foreground/background separation",
+      "datasets": [
+        {
+          "hf_id": "briaai/RMBG-2.0-TrainData",
+          "split": "train",
+          "image_column": "image",
+          "alpha_column": "mask",
+          "prompt_column": "caption",
+          "sample_count": 300,
+          "note": "RMBG background removal training data — clean alpha ground truth"
+        },
+        {
+          "hf_id": "LayerDiffuse/LayerDiffuse-Data",
+          "split": "validation",
+          "prompt_column": "caption",
+          "alpha_column": "alpha_image",
+          "rgb_column": "rgb_image",
+          "sample_count": 200,
+          "note": "LayerDiffuse val split — RGBA composition ground truth"
+        }
+      ],
+      "total_samples": 500,
+      "judge_dimensions": ["alpha_quality", "foreground_fidelity", "background_cleanness"],
+      "reference_metrics": ["alpha_iou", "layer_psnr", "composite_lpips"],
+      "reference_model": "qwen-image-layered"
+    },
+
+    "layering_test": {
+      "purpose": "Final hold-out test for layering capability",
+      "datasets": [
+        {
+          "hf_id": "ImageNet-S/ImageNet-S",
+          "split": "validation",
+          "image_column": "image",
+          "segmentation_column": "annotation",
+          "sample_count": 500,
+          "note": "ImageNet-S segmentation — measures whether layered output correctly isolates subjects"
+        },
+        {
+          "hf_id": "xtreme1io/sam_100k",
+          "split": "train",
+          "image_column": "image",
+          "mask_column": "mask",
+          "sample_count": 500,
+          "note": "SAM 100K — diverse subject segmentation for compositing quality"
+        }
+      ],
+      "total_samples": 1000,
+      "judge_dimensions": ["alpha_quality", "foreground_fidelity", "background_cleanness", "composite_naturalness"],
+      "reference_model": "qwen-image-layered"
+    },
+
+    "regression_suite": {
+      "purpose": "Cross-capability regression guard — run after every pipeline step (merge, abliterate, quantize). Fails gate if any score drops > 0.5 vs. prior step.",
+      "fixed_prompts": [
+        {
+          "id": "gen-001", "task": "generation",
+          "prompt": "a photorealistic portrait of an astronaut on Mars at sunrise, detailed spacesuit, red dust, dramatic sky",
+          "seed": 2025, "reference_model": "qwen-image-2512"
+        },
+        {
+          "id": "gen-002", "task": "generation",
+          "prompt": "an oil painting of a Victorian library at night, warm candelight, leather-bound books, spiral staircase",
+          "seed": 2025, "reference_model": "qwen-image-2512"
+        },
+        {
+          "id": "gen-003", "task": "generation",
+          "prompt": "a dramatic wide-angle photograph of a lightning storm over the ocean",
+          "seed": 2025, "reference_model": "qwen-image-2512"
+        },
+        {
+          "id": "edit-001", "task": "editing",
+          "source_prompt": "a red sports car parked on a cobblestone street",
+          "instruction": "change the car color to midnight blue and make it rain",
+          "seed": 2025, "reference_model": "qwen-image-edit-2511"
+        },
+        {
+          "id": "edit-002", "task": "editing",
+          "source_prompt": "a golden retriever sitting in a sunny park",
+          "instruction": "add a red collar with a silver tag to the dog",
+          "seed": 2025, "reference_model": "qwen-image-edit-2511"
+        },
+        {
+          "id": "edit-003", "task": "editing",
+          "source_prompt": "minimalist desk setup with laptop and coffee mug",
+          "instruction": "replace the coffee mug with a glass of orange juice",
+          "seed": 2025, "reference_model": "qwen-image-edit-2511"
+        },
+        {
+          "id": "layer-001", "task": "layering",
+          "prompt": "a transparent glass vase with white roses, RGBA with isolated foreground",
+          "seed": 2025, "reference_model": "qwen-image-layered"
+        },
+        {
+          "id": "layer-002", "task": "layering",
+          "prompt": "product shot of wireless headphones on transparent background for compositing",
+          "seed": 2025, "reference_model": "qwen-image-layered"
+        },
+        {
+          "id": "layer-003", "task": "layering",
+          "prompt": "a cat portrait isolated from background with clean alpha channel",
+          "seed": 2025, "reference_model": "qwen-image-layered"
+        }
+      ],
+      "total_samples": 9,
+      "judge_dimensions": ["prompt_adherence", "visual_quality", "aesthetic_score"],
+      "gate_policy": "fail_if_any_dimension_drops_by_more_than_0.5"
+    }
+  },
+
+  "aggregate": {
+    "validation_total": 2200,
+    "test_total": 5000,
+    "regression_suite": 9,
+    "note": "Validation runs every eval_steps during training. Test runs once after each pipeline step completes. Regression suite runs after every step (merge, abliterate, quantize) and acts as a quality gate."
+  }
+}

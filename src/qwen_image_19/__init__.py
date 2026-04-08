@@ -2,4 +2,9 @@
 
 __all__ = ["__version__"]
 
-__version__ = "0.3.0"
+from importlib.metadata import PackageNotFoundError, version
+
+try:
+    __version__ = version("qwen-image-1-9")
+except PackageNotFoundError:
+    __version__ = "0.3.0"  # fallback for uninstalled runs

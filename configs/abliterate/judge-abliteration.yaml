@@ -1,0 +1,176 @@
+# Abliteration recipe for the quality judge: Qwen/Qwen3.5-35B-A3B
+#
+# Qwen3.5-35B-A3B carries Qwen3 safety training that causes it to refuse
+# scoring NSFW-adjacent content or to penalise prompt_adherence for
+# sensitive topics, producing systematically biased eval scores. This
+# recipe removes those refusal directions so the judge evaluates purely
+# on visual quality dimensions.
+#
+# Measurement datasets are the same image-prompt datasets used for the
+# main model abliteration. The judge sees these as textual scoring
+# requests, so the prompts are the right signal for refusal directions.
+#
+# Usage:
+#   q19 prepare-judge \
+#     --recipe-config configs/abliterate/judge-abliteration.yaml \
+#     --output-path /scratch/qwen-judge-abliterated \
+#     --execute
+#
+# NOTE: reports/abliterate/judge-measurements.pt must exist before
+#       --execute is used (pre-computed via the measurement step).
+
+measurement_datasets:
+  harmful_image_prompts:
+    - dataset: "DRDELATV/SHORT_NSFW"
+      split: "train"
+      prompt_column: "text"
+      sample_count: 512
+      description: "Short NSFW image generation prompts for refusal direction measurement"
+    - dataset: "wallstoneai/civitai-top-nsfw-images-with-metadata"
+      split: "train"
+      prompt_column: "prompt"
+      sample_count: 512
+      description: "Top CivitAI NSFW prompts with metadata for direction calibration"
+    - dataset: "jtatman/stable-diffusion-prompts-stats-full-uncensored"
+      split: "train"
+      prompt_column: "Prompt"
+      sample_count: 256
+      description: "Full uncensored SD prompt stats — harmful tail for direction contrast"
+  harmless_image_prompts:
+    - dataset: "ProGamerGov/synthetic-dataset-1m-dalle3-high-quality-captions"
+      split: "train"
+      prompt_column: "caption"
+      sample_count: 1024
+      description: "High-quality benign image captions as harmless contrast"
+
+# Pre-computed direction measurements for the judge model.
+# Separate from the image-model measurements.pt.
+# If judge-measurements.pt does not exist yet, the image-model measurements.pt
+# can be used as a bootstrap (pass --measurements reports/abliterate/measurements.pt).
+measurements: reports/abliterate/judge-measurements.pt
+
+# Global ablation settings
+scale: 1.0
+projected: false
+normpreserve: true
+directional: false
+invert: false
+
+# Qwen3.5-35B-A3B architecture notes:
+#   - 94 total layers
+#   - MoE architecture: most mlp layers use per-expert tensors
+#     (model.layers.N.mlp.experts.{E}.down_proj.weight, 64 experts/layer)
+#     rather than a single mlp.down_proj.weight
+#   - Shared-expert layers retain model.layers.N.mlp.shared_expert.down_proj.weight
+#   - Attention o_proj is standard across all layers
+#
+# We target layers 14–26 which correspond to the mid-range where
+# refusal directions are typically encoded in Qwen3-class models.
+# Both o_proj (attention output) and mlp down_proj (including expert
+# variants via substring matching) are included per layer.
+
+ablate:
+- layer: 14
+  measurement: 14
+  scale: 1.0
+  sparsity: 0.0
+  tensor_patterns:
+  - model.language_model.layers.14.linear_attn.out_proj.weight
+  - model.language_model.layers.14.mlp.shared_expert.down_proj.weight
+  - model.language_model.layers.14.mlp.experts.down_proj
+- layer: 15
+  measurement: 15
+  scale: 1.0
+  sparsity: 0.0
+  tensor_patterns:
+  - model.language_model.layers.15.self_attn.o_proj.weight
+  - model.language_model.layers.15.mlp.shared_expert.down_proj.weight
+  - model.language_model.layers.15.mlp.experts.down_proj
+- layer: 16
+  measurement: 16
+  scale: 1.0
+  sparsity: 0.0
+  tensor_patterns:
+  - model.language_model.layers.16.linear_attn.out_proj.weight
+  - model.language_model.layers.16.mlp.shared_expert.down_proj.weight
+  - model.language_model.layers.16.mlp.experts.down_proj
+- layer: 17
+  measurement: 17
+  scale: 1.0
+  sparsity: 0.0
+  tensor_patterns:
+  - model.language_model.layers.17.linear_attn.out_proj.weight
+  - model.language_model.layers.17.mlp.shared_expert.down_proj.weight
+  - model.language_model.layers.17.mlp.experts.down_proj
+- layer: 18
+  measurement: 18
+  scale: 1.0
+  sparsity: 0.0
+  tensor_patterns:
+  - model.language_model.layers.18.linear_attn.out_proj.weight
+  - model.language_model.layers.18.mlp.shared_expert.down_proj.weight
+  - model.language_model.layers.18.mlp.experts.down_proj
+- layer: 19
+  measurement: 19
+  scale: 1.0
+  sparsity: 0.0
+  tensor_patterns:
+  - model.language_model.layers.19.self_attn.o_proj.weight
+  - model.language_model.layers.19.mlp.shared_expert.down_proj.weight
+  - model.language_model.layers.19.mlp.experts.down_proj
+- layer: 20
+  measurement: 20
+  scale: 1.0
+  sparsity: 0.0
+  tensor_patterns:
+  - model.language_model.layers.20.linear_attn.out_proj.weight
+  - model.language_model.layers.20.mlp.shared_expert.down_proj.weight
+  - model.language_model.layers.20.mlp.experts.down_proj
+- layer: 21
+  measurement: 21
+  scale: 1.0
+  sparsity: 0.0
+  tensor_patterns:
+  - model.language_model.layers.21.linear_attn.out_proj.weight
+  - model.language_model.layers.21.mlp.shared_expert.down_proj.weight
+  - model.language_model.layers.21.mlp.experts.down_proj
+- layer: 22
+  measurement: 22
+  scale: 1.0
+  sparsity: 0.0
+  tensor_patterns:
+  - model.language_model.layers.22.linear_attn.out_proj.weight
+  - model.language_model.layers.22.mlp.shared_expert.down_proj.weight
+  - model.language_model.layers.22.mlp.experts.down_proj
+- layer: 23
+  measurement: 23
+  scale: 1.0
+  sparsity: 0.0
+  tensor_patterns:
+  - model.language_model.layers.23.self_attn.o_proj.weight
+  - model.language_model.layers.23.mlp.shared_expert.down_proj.weight
+  - model.language_model.layers.23.mlp.experts.down_proj
+- layer: 24
+  measurement: 24
+  scale: 1.0
+  sparsity: 0.0
+  tensor_patterns:
+  - model.language_model.layers.24.linear_attn.out_proj.weight
+  - model.language_model.layers.24.mlp.shared_expert.down_proj.weight
+  - model.language_model.layers.24.mlp.experts.down_proj
+- layer: 25
+  measurement: 25
+  scale: 1.0
+  sparsity: 0.0
+  tensor_patterns:
+  - model.language_model.layers.25.linear_attn.out_proj.weight
+  - model.language_model.layers.25.mlp.shared_expert.down_proj.weight
+  - model.language_model.layers.25.mlp.experts.down_proj
+- layer: 26
+  measurement: 26
+  scale: 1.0
+  sparsity: 0.0
+  tensor_patterns:
+  - model.language_model.layers.26.linear_attn.out_proj.weight
+  - model.language_model.layers.26.mlp.shared_expert.down_proj.weight
+  - model.language_model.layers.26.mlp.experts.down_proj

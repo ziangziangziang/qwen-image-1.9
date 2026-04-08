@@ -1,12 +1,33 @@
 {
   "profile": "exl2-gptq",
-  "format": "EXL2/GPTQ",
-  "targets": [
-    "4.0bpw"
-  ],
-  "runtime": {
-    "primary": "vllm-omni",
-    "hardware": "ROCm"
+
+  "gptq": {
+    "description": "GPTQ with marlin kernel — primary vllm-omni serving format",
+    "format": "GPTQ",
+    "targets": ["4bit"],
+    "group_size": 128,
+    "desc_act": false,
+    "sym": true,
+    "damp_percent": 0.01,
+    "backend": "auto-gptq",
+    "marlin_compatible": true,
+    "runtime": {
+      "primary": "vllm-omni",
+      "engine": "gptq_marlin",
+      "hardware": "ROCm",
+      "note": "Load with --quantization gptq_marlin in vllm. Requires vllm >= 0.4.0 on ROCm."
+    }
+  },
+
+  "exl2": {
+    "description": "EXL2 — high-quality local inference via exllamav2 (not vllm-omni)",
+    "format": "EXL2",
+    "targets": ["4.0bpw"],
+    "runtime": {
+      "primary": "exllamav2",
+      "hardware": "ROCm",
+      "note": "Not supported by vllm-omni. Use exllamav2 server or TabbyAPI."
+    }
   }
 }
 

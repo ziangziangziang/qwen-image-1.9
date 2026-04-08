@@ -9,6 +9,13 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+try:
+    import torch as _torch
+    import safetensors as _safetensors
+    _HAS_TORCH_AND_SAFETENSORS = True
+except ImportError:
+    _HAS_TORCH_AND_SAFETENSORS = False
+
 from qwen_image_19.cli import main as cli_main
 
 from qwen_image_19.stage_1_analysis import (
@@ -1009,6 +1016,7 @@ class Stage1Tests(unittest.TestCase):
             estimate["total_seconds"]["high"],
         )
 
+    @unittest.skipIf(_HAS_TORCH_AND_SAFETENSORS, "torch + safetensors are installed; dep-missing path not exercisable")
     def test_analyze_fails_clearly_when_weight_dependencies_are_missing(self) -> None:
         self.create_full_mock_cache()
         with self.assertRaises(Stage1AnalysisError) as raised:

@@ -21,18 +21,26 @@ def plan_abliteration(
 
     ctx = default_remote_context(remote_config)
     abl_dir = run_dir / "abliterate"
-    output_ckpt = f"{ctx['artifact_dir']}/runs/{run_dir.name}/abliterate/abliterated-checkpoint"
+    # Use local path for execution; declared path for manifest references
+    local_output_ckpt = str(abl_dir / "abliterated-checkpoint")
+    declared_output_ckpt = f"{ctx['artifact_dir']}/runs/{run_dir.name}/abliterate/abliterated-checkpoint"
     log_path = abl_dir / "abliterate.log"
 
     return {
         "input_checkpoint": input_checkpoint,
-        "output_checkpoint": output_ckpt,
-        "declared_output_checkpoint": output_ckpt,
+        "output_checkpoint": local_output_ckpt,
+        "declared_output_checkpoint": declared_output_ckpt,
         "log_path": str(log_path),
         "execution_manifest": str(abl_dir / "execution-manifest.json"),
         "recipe_config": recipe_config,
-        "command": ["q19", "abliterate", f"--run-id={run_dir.name}"]
-                   + ([f"--recipe-config={recipe_config}"] if recipe_config else []),
+        "command": [
+            str(ctx.get("python") or "python3"), "-m", "qwen_image_19.abliterate",
+            "--execute-worker",
+            "--input-checkpoint", input_checkpoint,
+            "--output-checkpoint", local_output_ckpt,
+            "--declared-output-checkpoint", declared_output_ckpt,
+            "--execution-manifest", str(abl_dir / "execution-manifest.json"),
+        ] + ([f"--recipe-config={recipe_config}"] if recipe_config else []),
         "remote_job": {
             "name": "abliterate",
             "workdir": ctx["workdir"],

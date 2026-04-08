@@ -1,13 +1,14 @@
 # AGENTS.md — Qwen-Image 1.9
 
 ## Project Overview
-Three-step checkpoint pipeline for Qwen-Image models: **merge → abliterate → quantize**, with preflight analysis and shared results reporting. Each step emits run-scoped JSON contracts and Markdown reports under `reports/runs/<run_id>/`. A lightweight HTTP server exposes a JSON API for dashboard visualization.
+Tri-capability checkpoint pipeline for Qwen-Image models: **merge → train → abliterate → quantize → publish**. Produces a single LoRA-tuned model serving generation, editing, and layering from one checkpoint. Each step emits run-scoped JSON contracts and Markdown reports under `reports/runs/<run_id>/`. A lightweight HTTP server exposes a JSON API for dashboard visualization.
 
 ## Execution Environment
 - **This environment is dev-only.** Do not attempt to run the pipeline locally.
-- All `--execute` workloads run on a remote machine with **2× 80G VRAM GPUs**.
+- All `--execute` workloads run on a remote machine with **2× 80G VRAM GPUs** (AMD MI300X, ROCm 6.2).
 - This environment is for editing code, running `make test`, validating contracts, and dry-run verification only.
 - Remote execution is configured via `configs/remote/*.yaml`, `.env` files, or `REMOTE_*` environment variables resolved by `default_remote_context()`.
+- GPU commands require `sg render -c "..."` wrapper.
 
 ## Commands
 - **Test:** `make test` (runs `python -m unittest discover -s tests -p 'test_*.py'`)
@@ -18,10 +19,14 @@ Three-step checkpoint pipeline for Qwen-Image models: **merge → abliterate →
 | Command | Purpose |
 | --- | --- |
 | `q19 preflight` | Inspect source checkpoints, build compatibility matrix |
-| `q19 merge` | Build merged checkpoint lineage |
+| `q19 merge` | Build merged checkpoint lineage (tri-capability SLERP) |
+| `q19 post-merge-train` | LoRA fine-tune across generation + editing + layering |
 | `q19 abliterate` | Apply refusal-direction removal |
-| `q19 quantize` | Produce compressed deployment artifacts |
+| `q19 post-abliterate-train` | Stabilize abliterated model |
+| `q19 quantize` | Produce GGUF, GPTQ, EXL2 artifacts |
+| `q19 eval` | Post-quantize quality audit |
 | `q19 report` | Generate shared results index, optionally serve API |
+| `q19 publish` | Upload to HuggingFace Hub |
 
 ### Common Flags
 - `--dry-run` — resolve configs and print outputs without writing
@@ -36,7 +41,7 @@ Three-step checkpoint pipeline for Qwen-Image models: **merge → abliterate →
 | File | Responsibility |
 | --- | --- |
 | `src/qwen_image_19/cli.py` | CLI parser (argparse) and command dispatcher |
-| `src/qwen_image_19/workflow.py` | Orchestration for all pipeline steps |
+| `src/qwen_image_19/workflow_v2.py` | Orchestration for all pipeline steps |
 | `src/qwen_image_19/contracts.py` | Run manifest, step result, artifact reference contracts |
 | `src/qwen_image_19/abliterate.py` | Refusal-direction tensor removal (real implementation with safetensors) |
 | `src/qwen_image_19/reporting.py` | Run index, dashboard generation, run collection |
@@ -45,6 +50,13 @@ Three-step checkpoint pipeline for Qwen-Image models: **merge → abliterate →
 | `src/qwen_image_19/logging_utils.py` | Rich console logging with fallback |
 | `src/qwen_image_19/remote/__init__.py` | Remote execution context resolution (env/JSON/.env) |
 
+### Pipeline Modules
+| Module | Purpose |
+| --- | --- |
+| `pipeline/training.py` | LoRA fine-tuning (all 3 capabilities: generation + editing + layering) |
+| `pipeline/abliteration.py` | Tensor-level refusal direction removal |
+| `pipeline/eval_runner.py` | Quality evaluation runner |
+
 ### Stage Modules
 | Module | Purpose |
 | --- | --- |
@@ -52,7 +64,7 @@ Three-step checkpoint pipeline for Qwen-Image models: **merge → abliterate →
 | `stage_2_fusion/` | Merge planning, dataset manifests, job execution, training reports |
 | `stage_3_eval/` | Eval summary builder, per-step eval suite definitions |
 | `stage_4_quant/` | Quantization profile loading (GGUF imatrix, EXL2/GPTQ) |
-| `stage_5_deploy/` | Deployment stage config generation (vLLM orchestration) |
+| `stage_6_publish/` | HuggingFace Hub upload |
 
 ## Run Contract
 Every pipeline run lives under `reports/runs/<run_id>/`:
@@ -108,6 +120,8 @@ Every pipeline run lives under `reports/runs/<run_id>/`:
 ## Configuration
 - **Model metadata:** `configs/models/*.yaml` (JSON format with alias, model_id, role)
 - **Merge profiles:** `configs/merge/*.yaml` (run profiles, candidate weights)
+- **Training datasets:** `configs/merge/stage-2-synthetic-dataset.yaml` (generation, editing, layering splits)
+- **Training config:** `configs/merge/stage-2-training-full.yaml` (LoRA rank, LR, steps)
 - **Quantization:** `configs/quant/*.yaml` (GGUF imatrix, EXL2/GPTQ profiles)
 - **Abliteration:** `configs/abliterate/*.yaml` (recipe with measurements, ablation orders)
 - **Remote:** `configs/remote/*.yaml` (launcher, paths, cache maps)

@@ -1,182 +1,172 @@
 {
-  "recipe_name": "stage-2-synthetic-teacher-dataset",
-  "output_root": "reports/stage-2/datasets/teacher-db",
-  "flatten_layered_rgba": "alpha-composite-to-rgb",
-  "prompt_source": "Kazimir-ai/text-to-image-prompts",
-  "record_schema": [
-    "sample_id",
-    "teacher_model_alias",
-    "teacher_model",
-    "prompt",
-    "source_prompt",
-    "edit_instruction",
-    "seed",
-    "generation_settings",
-    "asset_paths",
-    "output_metadata"
-  ],
+  "recipe_name": "stage-2-tri-capability-training-dataset",
+  "description": "Training dataset for post-merge LoRA stabilization across all three capabilities. Targets ~2M samples across generation, editing, and layering tasks.",
   "splits": {
-    "generation_teacher": {
-      "teacher_model": "qwen-image-2512",
-      "task": "text-to-image",
-      "planned_sample_count": 16,
-      "seed_schedule": [
-        101,
-        202,
-        303,
-        404,
-        505,
-        606,
-        707,
-        808
-      ],
-      "generation_settings": {
-        "resolution": "512x512",
-        "steps": 30,
-        "guidance_scale": 4.0
-      },
-      "prompt_bank": [
-        "cinematic portrait of a botanist in a glass greenhouse with readable name badge text",
-        "studio product photo of a brushed metal camera on cream paper with sharp label text",
-        "rainy neon street at night with a taxi sign and reflective pavement",
-        "storybook castle on a hill at sunrise with crisp title lettering",
-        "editorial flat lay of vintage maps and compass on worn leather",
-        "macro shot of a mechanical watch face on dark velvet with metallic highlights",
-        "wide-angle interior of a mid-century modern living room in golden hour light",
-        "street food vendor at dusk with illuminated sign and steam rising from the grill",
-        "overhead drone shot of a winding river through autumn forest with vivid foliage",
-        "black and white portrait of a jazz musician holding a saxophone under stage light",
-        "fantasy illustration of a dragon perched on a crystal spire at twilight",
-        "underwater photograph of a coral reef with tropical fish and dappled sunlight",
-        "minimalist still life of three pears on a marble countertop with side window light",
-        "cyberpunk alley at night with holographic signs and wet asphalt reflections",
-        "architectural photograph of a spiral staircase from directly above with strong geometry",
-        "oil painting style landscape of rolling hills under dramatic cloud formations"
-      ]
-    },
-    "edit_teacher": {
-      "teacher_model": "qwen-image-edit-2511",
-      "task": "generate-then-edit",
-      "planned_sample_count": 16,
-      "seed_schedule": [
-        111,
-        222,
-        333,
-        444,
-        555,
-        666,
-        777,
-        888
-      ],
-      "generation_settings": {
-        "resolution": "512x512",
-        "steps": 30,
-        "guidance_scale": 4.0
-      },
-      "prompt_bank": [
+    "generation": {
+      "description": "Text-to-image generation stabilization — high-diversity prompt corpus",
+      "datasets": [
         {
-          "source_prompt": "street style portrait of a runner in a red jacket against a subway wall",
-          "edit_instruction": "change the jacket to white while keeping pose, lighting, and camera angle"
+          "hf_id": "ProGamerGov/synthetic-dataset-1m-dalle3-high-quality-captions",
+          "split": "train",
+          "prompt_column": "caption",
+          "sample_count": 1000000,
+          "weight": 1.0,
+          "note": "1M DALL-E 3 synthetic captions — primary generation corpus"
         },
         {
-          "source_prompt": "product shot of a ceramic mug on a wooden table in morning light",
-          "edit_instruction": "replace the mug pattern with blue stripes and keep the same composition"
+          "hf_id": "Gustavosta/Stable-Diffusion-Prompts",
+          "split": "train",
+          "prompt_column": "Prompt",
+          "sample_count": 73119,
+          "weight": 0.8,
+          "note": "73K curated SD prompts — diverse style coverage"
         },
         {
-          "source_prompt": "retro poster of a rocket launch with bold orange typography",
-          "edit_instruction": "update the poster palette to teal and cream while preserving layout"
+          "hf_id": "laion/laion-art",
+          "split": "train",
+          "prompt_column": "TEXT",
+          "image_column": "URL",
+          "sample_count": 400000,
+          "weight": 0.7,
+          "note": "LAION-Art subset — aesthetic high-quality image-text pairs"
         },
         {
-          "source_prompt": "close portrait of a corgi in a yellow raincoat on wet pavement",
-          "edit_instruction": "switch the raincoat to forest green and keep the dog expression unchanged"
+          "hf_id": "recastai/LAION-art-EN-improved-captions",
+          "split": "train",
+          "prompt_column": "improved_text",
+          "image_column": "url",
+          "sample_count": 200000,
+          "weight": 0.8,
+          "note": "LAION-Art with LLM-improved captions for better alignment"
         },
         {
-          "source_prompt": "aerial view of a colorful tulip field in early morning fog",
-          "edit_instruction": "shift the flower color from red to deep purple while keeping the field composition"
+          "hf_id": "nateraw/parti-prompts",
+          "split": "train",
+          "prompt_column": "Prompt",
+          "sample_count": 1632,
+          "weight": 1.0,
+          "note": "PartiPrompts benchmark — 1.6K challenging compositional prompts"
         },
         {
-          "source_prompt": "wooden cabin interior with warm fireplace light and plaid blanket on sofa",
-          "edit_instruction": "change the lighting from warm amber to cool moonlight and add snow outside the window"
-        },
-        {
-          "source_prompt": "minimalist desk setup with a laptop, coffee cup, and notebook in soft office light",
-          "edit_instruction": "replace the coffee cup with a succulent plant and keep everything else unchanged"
-        },
-        {
-          "source_prompt": "chef plating a colorful dish in a professional kitchen under strong overhead light",
-          "edit_instruction": "swap the dish to a dark chocolate dessert with gold leaf garnish"
-        },
-        {
-          "source_prompt": "vintage car parked on a cobblestone street with old brick buildings behind",
-          "edit_instruction": "change the car color from red to deep metallic blue while preserving reflections"
-        },
-        {
-          "source_prompt": "hiker standing on a mountain ridge overlooking a green valley at sunrise",
-          "edit_instruction": "change the season from summer to snowy winter while keeping the hiker and composition"
-        },
-        {
-          "source_prompt": "tabletop flat lay of art supplies including brushes, paint tubes, and sketchbook",
-          "edit_instruction": "replace all paint tubes with watercolor pans and add a glass of water"
-        },
-        {
-          "source_prompt": "golden retriever sitting in a sunlit meadow with wildflowers",
-          "edit_instruction": "change the dog breed to a border collie while keeping the meadow scene intact"
-        },
-        {
-          "source_prompt": "neon-lit sushi bar interior with a chef preparing rolls behind the counter",
-          "edit_instruction": "change the neon lighting from pink to cool blue and swap sushi for ramen bowls"
-        },
-        {
-          "source_prompt": "child holding a red balloon in front of a carnival Ferris wheel at dusk",
-          "edit_instruction": "replace the red balloon with a cluster of pastel-colored balloons"
-        },
-        {
-          "source_prompt": "sailboat anchored in a calm turquoise bay with palm trees on the shore",
-          "edit_instruction": "change the calm bay to stormy seas with dark clouds while keeping the sailboat"
-        },
-        {
-          "source_prompt": "rustic bakery display with fresh sourdough loaves and croissants on wooden shelves",
-          "edit_instruction": "replace sourdough loaves with decorated cupcakes and keep the rustic shelf style"
+          "hf_id": "phiyodr/coco2017",
+          "split": "train",
+          "prompt_column": "captions",
+          "image_column": "image",
+          "sample_count": 118287,
+          "weight": 0.6,
+          "note": "COCO 2017 train — real photo-caption pairs for grounding"
         }
-      ]
-    },
-    "layered_teacher": {
-      "teacher_model": "qwen-image-layered",
-      "task": "layer-aware-generation",
-      "planned_sample_count": 16,
-      "seed_schedule": [
-        121,
-        242,
-        363,
-        484,
-        545,
-        666,
-        727,
-        848
       ],
-      "generation_settings": {
-        "resolution": "512x512",
-        "steps": 30,
-        "guidance_scale": 4.0
-      },
-      "prompt_bank": [
-        "single toy robot centered on seamless paper backdrop with clean subject separation",
-        "cutout-style potted plant on a tabletop with simple studio background",
-        "fashion mannequin in a trench coat isolated from a soft gradient background",
-        "glass perfume bottle with strong silhouette and easy foreground-background separation",
-        "ceramic bowl on a plain white surface with hard studio lighting and sharp shadows",
-        "sneaker product shot on seamless white with strong overhead light and minimal reflections",
-        "single apple on a neutral gray tabletop with clean shadow beneath",
-        "vintage camera on a flat white backdrop with no distracting background elements",
-        "white coffee cup on a dark wooden desk with sharp edge contrast for easy masking",
-        "leather handbag isolated on a pale pink cyclorama with soft diffused lighting",
-        "small cactus in a terracotta pot on a clean white shelf with directional window light",
-        "chess piece king standing alone on a reflective black surface with dark background",
-        "wristwatch laid flat on folded linen with even studio lighting and no reflections",
-        "sunglasses placed on a marble slab with hard overhead light and crisp shadow",
-        "single red rose in a clear glass vase against a neutral gray studio backdrop",
-        "pair of wireless earbuds on a matte white surface with soft overhead lighting"
-      ]
+      "total_target_samples": 1893038,
+      "smoke_samples": 1024,
+      "full_samples": 1893038,
+      "task": "text-to-image"
+    },
+    "editing": {
+      "description": "Image editing instruction stabilization — instruction-following + visual fidelity",
+      "datasets": [
+        {
+          "hf_id": "timbrooks/instructpix2pix-clip-filtered",
+          "split": "train",
+          "instruction_column": "edit_prompt",
+          "input_column": "image",
+          "output_column": "edited_image",
+          "sample_count": 313010,
+          "weight": 1.0,
+          "note": "InstructPix2Pix CLIP-filtered — 313K diverse editing pairs"
+        },
+        {
+          "hf_id": "osunlp/MagicBrush",
+          "split": "train",
+          "instruction_column": "instruction",
+          "input_column": "source_img",
+          "output_column": "target_img",
+          "sample_count": 8807,
+          "weight": 1.0,
+          "note": "MagicBrush — human-curated high-quality edits"
+        },
+        {
+          "hf_id": "facebook/emu_edit_test_set",
+          "split": "test",
+          "instruction_column": "instruction",
+          "input_column": "input_image",
+          "output_column": "output_image",
+          "sample_count": 3600,
+          "weight": 1.0,
+          "note": "EMU Edit — high-quality editing benchmark pairs (also used in validation)"
+        },
+        {
+          "hf_id": "HuggingFaceM4/the_cauldron",
+          "subset": "clevr",
+          "split": "train",
+          "instruction_column": "texts",
+          "image_column": "images",
+          "sample_count": 70000,
+          "weight": 0.5,
+          "note": "The Cauldron CLEVR — spatial reasoning edit instructions",
+          "name": "clevr"
+        },
+        {
+          "hf_id": "LonelVino/EditBench",
+          "split": "train",
+          "instruction_column": "edit_instruction",
+          "input_column": "image",
+          "output_column": "edited_image",
+          "sample_count": 240000,
+          "weight": 0.9,
+          "note": "EditBench editing evaluation set"
+        }
+      ],
+      "total_target_samples": 635417,
+      "smoke_samples": 512,
+      "full_samples": 635417,
+      "task": "image-editing"
+    },
+    "layering": {
+      "description": "Layer-aware / RGBA composition — foreground-background separation + alpha channels",
+      "datasets": [
+        {
+          "hf_id": "artplus/PrismLayersReal",
+          "split": "train",
+          "prompt_column": "whole_caption",
+          "sample_count": 965,
+          "weight": 1.0,
+          "note": "PrismLayersReal — 965 multi-layer composited scenes with per-layer captions. Provides whole_caption and layer_NN_caption for rich compositional vocabulary."
+        }
+      ],
+      "total_target_samples": 10000,
+      "smoke_samples": 256,
+      "full_samples": 10000,
+      "task": "image-layering"
     }
+  },
+  "aggregate": {
+    "smoke_total": 1792,
+    "full_total": 2538455,
+    "note": "~2.5M samples total across generation (1.9M), editing (635K), layering (10K from PrismLayersReal with caption expansion). Sequential per-capability training on MI300X (192 GB). Use gradient_checkpointing=true and batch_size=1 with grad_accum=4."
+  },
+  "hardcoded_fallback_prompts": {
+    "generation": [
+      "cinematic portrait of a botanist in a glass greenhouse",
+      "studio product photo of a brushed metal camera on cream paper",
+      "rainy neon street at night with a taxi sign",
+      "storybook castle on a hill at sunrise",
+      "editorial flat lay of vintage maps and compass on worn leather",
+      "macro shot of a mechanical watch face on dark velvet",
+      "wide-angle interior of a mid-century modern living room in golden hour",
+      "street food vendor at dusk with illuminated sign and steam rising"
+    ],
+    "editing": [
+      "change the jacket to white while keeping pose and lighting",
+      "replace the mug pattern with blue stripes",
+      "update the poster palette to teal and cream",
+      "switch the raincoat to forest green"
+    ],
+    "layering": [
+      "single toy robot on seamless paper with clean subject separation",
+      "glass perfume bottle with strong silhouette for compositing",
+      "sneaker product shot on seamless white",
+      "single red rose in a clear glass vase against neutral backdrop"
+    ]
   }
 }
