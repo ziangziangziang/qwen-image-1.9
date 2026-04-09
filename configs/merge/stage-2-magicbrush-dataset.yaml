@@ -1,0 +1,51 @@
+{
+  "recipe_name": "stage-2-magicbrush-training-dataset",
+  "description": "500-pair MagicBrush edit training set mixed with generation prompts. 10-pair dev set from MagicBrush dev split.",
+  "splits": {
+    "generation": {
+      "description": "Text-to-image generation — ProGamerGov captions to preserve gen quality",
+      "datasets": [
+        {
+          "hf_id": "ProGamerGov/synthetic-dataset-1m-dalle3-high-quality-captions",
+          "split": "train",
+          "prompt_column": "json.long_caption",
+          "sample_count": 500,
+          "weight": 1.0,
+          "note": "500 DALL-E 3 captions — balanced 1:1 with edit pairs"
+        }
+      ],
+      "total_target_samples": 500,
+      "full_samples": 500,
+      "smoke_samples": 10
+    },
+    "editing": {
+      "description": "MagicBrush image-edit pairs — real source/target images with instructions",
+      "datasets": [
+        {
+          "hf_id": "osunlp/MagicBrush",
+          "split": "train",
+          "instruction_column": "instruction",
+          "source_column": "source_img",
+          "target_column": "target_img",
+          "has_images": true,
+          "sample_count": 500,
+          "weight": 1.0,
+          "note": "First 500 rows of MagicBrush train split — real edit pairs"
+        }
+      ],
+      "total_target_samples": 500,
+      "full_samples": 500,
+      "smoke_samples": 4,
+      "eval_dataset": {
+        "hf_id": "osunlp/MagicBrush",
+        "split": "dev",
+        "instruction_column": "instruction",
+        "source_column": "source_img",
+        "target_column": "target_img",
+        "has_images": true,
+        "sample_count": 10,
+        "note": "First 10 rows of MagicBrush dev split — held-out eval"
+      }
+    }
+  }
+}

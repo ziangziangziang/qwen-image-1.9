@@ -1,0 +1,30 @@
+{
+  "method": "lora",
+  "epochs": 30,
+  "batch_size": 1,
+  "learning_rate": 5e-5,
+  "warmup_steps": 100,
+  "max_steps": 15000,
+  "gradient_accumulation_steps": 4,
+  "lora_rank": 16,
+  "lora_alpha": 16,
+  "lora_target_modules": [
+    "to_q",
+    "to_k",
+    "to_v",
+    "to_out.0",
+    "ff.net.0.proj",
+    "ff.net.2"
+  ],
+  "save_steps": 1000,
+  "eval_steps": 1000,
+  "logging_steps": 50,
+  "resolution": 1024,
+  "mixed_precision": "bf16",
+  "gradient_checkpointing": true,
+  "seed": 2025,
+  "smoke": false,
+  "smoke_steps": 20,
+  "dataset_config": "configs/merge/stage-2-magicbrush-dataset.yaml",
+  "note": "30 epochs over 500 MagicBrush pairs (15000 steps total). Real flow-matching with VAE-encoded target images. Source images concatenated as extra tokens for edit conditioning. 1:1 interleaving with generation prompts to preserve gen quality."
+}

@@ -57,3 +57,24 @@ reports/stage-5/
 # Legacy
 reports/legacy/
 
+
+# Local scratch training outputs (stored on remote /scratch, not in repo)
+/scratch/
+stage-2/logs/
+stage-2/metrics/
+
+# Generated scripts not part of the package
+scripts/generate_comparison.py
+scripts/generate_merge_comparison.py
+scripts/generate_samples.py
+scripts/run_pipeline.py
+scripts/upload_samples.py
+scripts/auto_monitor.py
+scripts/download_datasets.py
+
+# Top-level duplicates moved to scripts/
+generate_comparison.py
+generate_harmful_comparison.py
+generate_samples.py
+run_pipeline.py
+upload_samples.py

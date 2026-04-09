@@ -223,6 +223,56 @@ def _extract_text_value(val: Any, col: str) -> str:
     return val.strip() if isinstance(val, str) else ""
 
 
+def _pil_to_patchified_latent(pipe, pil_image, resolution: int, device: str, patch_size: int):
+    """Encode a PIL image through the pipeline VAE and patchify for transformer input.
+
+    The Qwen-Image VAE expects 5D input [B, C, F, H, W] (video-style with a
+    frames dimension F=1 for single images).
+
+    Returns (patchified_latent [B, N, C*p*p], (h_patches, w_patches)).
+    """
+    import torch
+    import torchvision.transforms.functional as TF
+    img = pil_image.convert("RGB").resize((resolution, resolution))
+    img_t = TF.to_tensor(img).unsqueeze(0).to(device, dtype=torch.bfloat16)
+    img_t = img_t * 2.0 - 1.0  # normalize to [-1, 1]
+    # Add frames dimension: [B, C, H, W] → [B, C, F=1, H, W]
+    img_t = img_t.unsqueeze(2)
+    with torch.no_grad():
+        # Reset the VAE temporal feature cache between independent image encodes.
+        # The Qwen-Image VAE carries conv3d cache across calls for video frame
+        # consistency, but that stale cache causes miopenStatusInternalError when
+        # two images have different spatial sizes or are simply unrelated.
+        if hasattr(pipe.vae, "_enc_feat_map") and hasattr(pipe.vae, "_enc_conv_num"):
+            pipe.vae._enc_feat_map = [None] * pipe.vae._enc_conv_num
+            pipe.vae._enc_conv_idx = [0]
+        latent = pipe.vae.encode(img_t).latent_dist.sample()
+        # Qwen-Image VAE uses per-channel mean/std normalization (no scaling_factor)
+        z_dim = pipe.vae.config.z_dim  # 16
+        latents_mean = (
+            torch.tensor(pipe.vae.config.latents_mean)
+            .view(1, z_dim, 1, 1, 1).to(device, dtype=latent.dtype)
+        )
+        latents_std = (
+            torch.tensor(pipe.vae.config.latents_std)
+            .view(1, z_dim, 1, 1, 1).to(device, dtype=latent.dtype)
+        )
+        latent = (latent - latents_mean) / latents_std
+    # VAE output is [B, C, F, H, W] — squeeze frames dim back to [B, C, H, W]
+    if latent.ndim == 5:
+        latent = latent.squeeze(2)
+    B, C, H, W = (int(x) for x in latent.shape)
+    # patch_size may be int, list, tuple, or tensor depending on model config
+    p = int(patch_size[0]) if hasattr(patch_size, "__len__") else int(patch_size)
+    patchified = (
+        latent
+        .reshape(B, C, H // p, p, W // p, p)
+        .permute(0, 2, 4, 1, 3, 5)
+        .reshape(B, (H // p) * (W // p), C * p * p)
+    )
+    return patchified, (H // p, W // p)
+
+
 def _iter_generation_prompts(split_cfg: dict[str, Any], max_samples: int):
     """Yield text prompts for generation training.
 
@@ -280,17 +330,18 @@ def _iter_generation_prompts(split_cfg: dict[str, Any], max_samples: int):
 
 
 def _iter_editing_pairs(split_cfg: dict[str, Any], max_samples: int):
-    """Yield (instruction, placeholder) pairs for editing training.
+    """Yield (instruction, source_pil_or_None, target_pil_or_None) triples.
 
-    Uses columnar access to avoid decoding image columns.
-    Placeholder replaces the actual input image reference (unused in loss).
+    When a dataset spec has ``has_images: true`` with ``source_column`` /
+    ``target_column`` fields, real PIL images are loaded row-by-row.
+    Otherwise source/target are None and only the instruction text is used.
     """
     _login_hf()
     fallback = [
-        ("change the jacket to white", "street portrait of a runner in a red jacket"),
-        ("replace with blue stripes", "product shot of a ceramic mug"),
-        ("make the background a sunset", "outdoor photo of a person standing in a park"),
-        ("add snow falling", "city street at night with neon signs"),
+        ("change the jacket to white", None, None),
+        ("replace with blue stripes", None, None),
+        ("make the background a sunset", None, None),
+        ("add snow falling", None, None),
     ]
     yielded = 0
     try:
@@ -312,28 +363,46 @@ def _iter_editing_pairs(split_cfg: dict[str, Any], max_samples: int):
                     print(f"[train/data] skipping {ds_spec['hf_id']}: {e}", flush=True)
                     print(f"[train/data]   → run: python3 scripts/download_datasets.py", flush=True)
                     continue
-                # Resolve instruction column without row iteration
                 instr_col_pref = ds_spec.get("instruction_column", "edit_prompt")
                 instr_col = _resolve_text_column(ds, instr_col_pref)
                 if instr_col is None:
                     print(f"[train/data] {ds_spec['hf_id']}: no instruction column", flush=True)
                     continue
                 want = min(max_samples - yielded, len(ds))
-                # Columnar access — no image decoding
-                instrs = ds[instr_col][:want]
-                for instr in instrs:
-                    if not instr or not isinstance(instr, str):
-                        continue
-                    # Also handle list-type values (e.g. The Cauldron)
-                    if isinstance(instr, list):
-                        instr = instr[0] if instr else ""
-                    instr = instr.strip()
-                    if instr:
-                        yield (instr, instr)  # placeholder: instruction used as both
+                has_images = ds_spec.get("has_images", False)
+                src_col = ds_spec.get("source_column", "source_img")
+                tgt_col = ds_spec.get("target_column", "target_img")
+                if has_images:
+                    # Row-by-row access to load PIL images
+                    cols = getattr(ds, "column_names", [])
+                    for idx in range(want):
+                        row = ds[idx]
+                        instr = row.get(instr_col, "") or ""
+                        if isinstance(instr, list):
+                            instr = instr[0] if instr else ""
+                        instr = instr.strip() if isinstance(instr, str) else ""
+                        if not instr:
+                            continue
+                        src_pil = row.get(src_col) if src_col in cols else None
+                        tgt_pil = row.get(tgt_col) if tgt_col in cols else None
+                        yield (instr, src_pil, tgt_pil)
                         yielded += 1
-                    if yielded >= max_samples:
-                        return
-                print(f"[train/data] {ds_spec['hf_id']}: loaded {yielded} instructions", flush=True)
+                        if yielded >= max_samples:
+                            return
+                else:
+                    instrs = ds[instr_col][:want]
+                    for instr in instrs:
+                        if not instr or not isinstance(instr, str):
+                            continue
+                        if isinstance(instr, list):
+                            instr = instr[0] if instr else ""
+                        instr = instr.strip()
+                        if instr:
+                            yield (instr, None, None)
+                            yielded += 1
+                        if yielded >= max_samples:
+                            return
+                print(f"[train/data] {ds_spec['hf_id']}: loaded {yielded} edit pairs", flush=True)
             except Exception as e:
                 print(f"[train/data] skipping {ds_spec['hf_id']}: {e}", flush=True)
     except ImportError:
@@ -678,65 +747,82 @@ def execute_training(plan: dict[str, Any]) -> dict[str, Any]:
         import threading
         import random
 
-        QUEUE_SIZE = 2048  # prefetch buffer
-        prompt_queue: queue.Queue[str | None] = queue.Queue(maxsize=QUEUE_SIZE)
+        QUEUE_SIZE = 512  # prefetch buffer (smaller: images are heavy)
+        # Queue carries (prompt: str, source_pil: PIL|None, target_pil: PIL|None) | None
+        prompt_queue: queue.Queue[tuple | None] = queue.Queue(maxsize=QUEUE_SIZE)
         rng = random.Random(config["seed"])
 
         def _prompt_producer() -> None:
-            """Stream prompts from all three capability splits into the queue.
+            """Stream (prompt, source_pil, target_pil) triples into the queue.
 
-            Interleaves generation, editing, and layering prompts so the LoRA
-            sees a balanced mix of all three capabilities throughout training.
-            Items are pushed immediately — training starts as soon as the first
-            prompt is available.
+            Interleaves generation and editing splits in round-robin, cycling
+            through the dataset repeatedly (epoch loop) until max_steps items
+            have been produced.  Generation/layering items have source/target=None.
+            Editing items carry real PIL images when has_images=true.
             """
             target = max_steps + QUEUE_SIZE
             produced = 0
+            epoch_n = 0
 
-            # Collect iterators for all three splits
-            gen_iter = iter(_iter_generation_prompts(gen_split, gen_max))
-            edit_iter = iter((instr for instr, _ in _iter_editing_pairs(edit_split, edit_max)))
-            layer_iter = iter(_iter_layering_prompts(layer_split, layer_max))
+            print(f"[train/data] streaming prompts towards {target:,} target …", flush=True)
+            while produced < target:
+                epoch_n += 1
+                iters = [
+                    ("generation", iter(_iter_generation_prompts(gen_split, gen_max))),
+                    ("editing",    iter(_iter_editing_pairs(edit_split, edit_max))),
+                    ("layering",   iter(_iter_layering_prompts(layer_split, layer_max))),
+                ]
+                exhausted: set[str] = set()
+                cycle_idx = 0
+                epoch_produced = 0
 
-            # Round-robin interleave: gen, edit, layer, gen, edit, layer, …
-            # When a split is exhausted we skip it and continue the others.
-            iters = [("generation", gen_iter), ("editing", edit_iter), ("layering", layer_iter)]
-            exhausted: set[str] = set()
-            cycle_idx = 0
+                while len(exhausted) < len(iters) and produced < target:
+                    name, it = iters[cycle_idx % len(iters)]
+                    cycle_idx += 1
+                    if name in exhausted:
+                        continue
+                    val = next(it, None)
+                    if val is None:
+                        exhausted.add(name)
+                        continue
+                    # Normalize: gen/layer yield str, editing yields (instr, src, tgt)
+                    if name in ("generation", "layering"):
+                        item: tuple = (val, None, None)
+                    else:
+                        item = val  # already a (instr, src_pil, tgt_pil) triple
+                    prompt_queue.put(item)
+                    produced += 1
+                    epoch_produced += 1
 
-            print(f"[train/data] streaming prompts from {len(iters)} splits (need {target:,}) …", flush=True)
-            while produced < target and len(exhausted) < len(iters):
-                name, it = iters[cycle_idx % len(iters)]
-                cycle_idx += 1
-                if name in exhausted:
-                    continue
-                val = next(it, None)
-                if val is None:
-                    exhausted.add(name)
-                    print(f"[train/data] {name} split exhausted after {produced:,} total prompts", flush=True)
-                    continue
-                prompt_queue.put(val)
-                produced += 1
+                if epoch_produced == 0:
+                    # All splits are empty — cannot satisfy target
+                    break
+                print(f"[train/data] epoch {epoch_n}: {epoch_produced:,} items  total={produced:,}/{target:,}", flush=True)
 
             if produced == 0:
                 prompt_queue.put(None)  # signal: no data
                 return
 
-            print(f"[train/data] {produced:,} prompts queued across {len(iters) - len(exhausted)} active splits", flush=True)
+            print(f"[train/data] {produced:,} prompts produced across {epoch_n} epoch(s)", flush=True)
             prompt_queue.put(None)  # sentinel
 
         producer_thread = threading.Thread(target=_prompt_producer, daemon=True)
         producer_thread.start()
 
-        # Block until at least one prompt is available before opening the log
-        first_prompt = prompt_queue.get()
-        if first_prompt is None:
+        # Block until at least one item is available before opening the log
+        first_item = prompt_queue.get()
+        if first_item is None:
             return _skip("no training prompts collected", plan, started_at)
 
-        # Encode all text prompts into conditioning tensors
         pipe_call_step = 0
         step = 0
         optimizer.zero_grad()
+
+        vae_channels = int(pipe.transformer.config.out_channels)  # 16
+        latent_h = resolution // vae_scale_factor
+        latent_w = resolution // vae_scale_factor
+        _ps = pipe.transformer.config.patch_size
+        _patch_sz = int(_ps[0]) if hasattr(_ps, "__len__") else int(_ps)
 
         with log_path.open("w", encoding="utf-8") as log_fh:
             log_fh.write(f"[train] started={started_at}\n")
@@ -744,73 +830,82 @@ def execute_training(plan: dict[str, Any]) -> dict[str, Any]:
             log_fh.write(f"[train] lora_rank={config['lora_rank']} lr={safe_lr} (capped from {lr}) grad_accum={grad_accum}\n")
             log_fh.flush()
 
-            # Seed the queue-drain loop with the first prompt we already pulled
-            _next_prompt: str | None = first_prompt
+            _next_item: tuple | None = first_item
 
             while step < max_steps:
-                prompt = _next_prompt
-                if prompt is None:
+                item = _next_item
+                if item is None:
                     log_fh.write("[train] prompt stream exhausted early — stopping\n")
                     break
-                # Pre-fetch next prompt (non-blocking if queue has items, else wait)
                 try:
-                    _next_prompt = prompt_queue.get(timeout=600)
+                    _next_item = prompt_queue.get(timeout=600)
                 except queue.Empty:
-                    _next_prompt = None
+                    _next_item = None
 
-                # Encode prompt
+                prompt, source_pil, target_pil = item
+
+                # Encode prompt — pass source image to Qwen text encoder when available
                 with torch.no_grad():
-                    # Use the pipeline's own encode_prompt for correct shape/dtype
-                    # Returns [batch, seq_len, joint_attention_dim=3584], mask
                     prompt_embeds, prompt_embeds_mask = pipe.encode_prompt(
-                        prompt, device=device
+                        prompt, image=source_pil, device=device
                     )
 
-                # Sample random noise in VAE latent space [B, vae_ch, H_lat, W_lat]
-                # then patchify to [B, seq, in_channels] as the transformer expects
-                vae_channels = pipe.transformer.config.out_channels  # 16
-                latent_h = resolution // vae_scale_factor
-                latent_w = resolution // vae_scale_factor
-                raw_latent = torch.randn(
-                    1, vae_channels, latent_h, latent_w,
-                    dtype=torch.bfloat16, device=device,
-                )
-                # Patchify: [B, C, H, W] → [B, (H//p)*(W//p), C*p*p]
-                p = patch_size
-                B, C, H, W = raw_latent.shape
-                noisy_latents = (
-                    raw_latent
-                    .reshape(B, C, H // p, p, W // p, p)
-                    .permute(0, 2, 4, 1, 3, 5)
-                    .reshape(B, (H // p) * (W // p), C * p * p)
-                )
-                timestep = torch.randint(0, 1000, (1,), device=device).long()
+                # Build noisy latents and flow-matching velocity target
+                if target_pil is not None:
+                    # Real image pair: proper flow-matching
+                    # noisy = lerp(target_latent, noise, t)  velocity = noise - target
+                    tgt_latent_p, (h_p, w_p) = _pil_to_patchified_latent(
+                        pipe, target_pil, resolution, device, _patch_sz
+                    )
+                    noise_p = torch.randn_like(tgt_latent_p)
+                    t_int = torch.randint(0, 1000, (1,), device=device).long()
+                    t_frac = t_int.float() / 1000.0
+                    noisy_latents = (1.0 - t_frac) * tgt_latent_p + t_frac * noise_p
+                    velocity_target = (noise_p - tgt_latent_p).to(torch.float32).detach()
+                    timestep = t_int
+                else:
+                    # Text-only generation: x_0=0, velocity target = noise
+                    B, C, H, W = 1, vae_channels, latent_h, latent_w
+                    h_p, w_p = H // _patch_sz, W // _patch_sz
+                    raw_latent = torch.randn(B, C, H, W, dtype=torch.bfloat16, device=device)
+                    noisy_latents = (
+                        raw_latent
+                        .reshape(B, C, h_p, _patch_sz, w_p, _patch_sz)
+                        .permute(0, 2, 4, 1, 3, 5)
+                        .reshape(B, h_p * w_p, C * _patch_sz * _patch_sz)
+                    )
+                    velocity_target = noisy_latents.to(torch.float32).detach()
+                    timestep = torch.randint(0, 1000, (1,), device=device).long()
 
-                # img_shapes: per-batch-item list of (frame, h_patches, w_patches)
-                h_patches = H // p
-                w_patches = W // p
-                img_shapes = [[(1, h_patches, w_patches)]]
+                n_target = noisy_latents.shape[1]
+
+                # Concatenate source latents for edit conditioning
+                if source_pil is not None:
+                    src_latent_p, (h_p_s, w_p_s) = _pil_to_patchified_latent(
+                        pipe, source_pil, resolution, device, _patch_sz
+                    )
+                    hidden_states = torch.cat([noisy_latents, src_latent_p], dim=1)
+                    img_shapes = [[(1, h_p, w_p), (1, h_p_s, w_p_s)]]
+                else:
+                    hidden_states = noisy_latents
+                    img_shapes = [[(1, h_p, w_p)]]
 
                 # Forward pass through the transformer only.
                 # autocast lets bf16 promote overflow-prone ops (softmax, norm)
                 # to fp32 automatically, preventing NaN in large transformers.
                 try:
                     with torch.amp.autocast(device_type="cuda", dtype=torch.bfloat16):
-                        noise_pred = pipe.transformer(
-                            hidden_states=noisy_latents,
+                        noise_pred_full = pipe.transformer(
+                            hidden_states=hidden_states,
                             timestep=timestep,
                             encoder_hidden_states=prompt_embeds,
                             encoder_hidden_states_mask=prompt_embeds_mask,
                             img_shapes=img_shapes,
                             return_dict=False,
                         )[0]
-                    # Flow-matching target: predict the input noise itself.
-                    # With no real images available (text-only training), we treat x_0=0,
-                    # making the velocity target = (noise - x_0) = noise = noisy_latents.
-                    # This is self-consistent: the model learns to predict the actual noise
-                    # it was given rather than an uncorrelated random tensor.
-                    target = noisy_latents.to(torch.float32).detach()
-                    loss = torch.nn.functional.mse_loss(noise_pred.float(), target)
+                    # Discard source-image tokens (edit mode), keep target tokens only
+                    noise_pred = noise_pred_full[:, :n_target]
+                    loss = torch.nn.functional.mse_loss(noise_pred.float(), velocity_target)
                     loss_val = loss.item()
                 except Exception as fwd_exc:
                     log_fh.write(f"[train] forward error at step {step}: {fwd_exc}\n")
@@ -829,19 +924,19 @@ def execute_training(plan: dict[str, Any]) -> dict[str, Any]:
 
                 (loss / grad_accum).backward()
 
-                # Clean NaN/Inf grads before clipping — prevents optimizer corruption.
-                for p in transformer.parameters():
-                    if p.requires_grad and p.grad is not None and not torch.isfinite(p.grad).all():
-                        p.grad = None
+                # Clean NaN/Inf grads from this backward pass.
+                for _param in transformer.parameters():
+                    if _param.requires_grad and _param.grad is not None and not torch.isfinite(_param.grad).all():
+                        _param.grad = None
 
-                # Clip gradient norm every backward step.
-                torch.nn.utils.clip_grad_norm_(
-                    [p for p in transformer.parameters() if p.requires_grad], 1.0
-                )
                 loss_curve.append(round(loss_val, 6))
                 pipe_call_step += 1
 
                 if pipe_call_step % grad_accum == 0:
+                    # Clip once over all accumulated gradients, just before the update.
+                    torch.nn.utils.clip_grad_norm_(
+                        [_param for _param in transformer.parameters() if _param.requires_grad], 1.0
+                    )
                     optimizer.step()
                     scheduler_obj.step()
                     optimizer.zero_grad()
