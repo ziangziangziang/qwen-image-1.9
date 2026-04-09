@@ -757,22 +757,6 @@ def execute_training(plan: dict[str, Any]) -> dict[str, Any]:
         if hasattr(pipe, "text_encoder_2"):
             pipe.text_encoder_2.requires_grad_(False)
 
-        # Move frozen sub-models to CPU to free VRAM for the training loop.
-        # Text encoders (~20+ GB total on Qwen-scale models) only run during
-        # encode_prompt which happens inside torch.no_grad() and is separate
-        # from the transformer forward pass that accumulates gradients.
-        # They are moved to device temporarily per-step then returned to CPU.
-        # The VAE stays on GPU — it encodes images every step and is small (~1 GB).
-        _offload_count = 0
-        for _enc_attr in ("text_encoder", "text_encoder_2"):
-            _m = getattr(pipe, _enc_attr, None)
-            if _m is not None:
-                _m.to("cpu")
-                _offload_count += 1
-        if _offload_count:
-            torch.cuda.empty_cache()
-            print(f"[train] offloaded {_offload_count} text encoder(s) to CPU to free VRAM", flush=True)
-
         vae_scale_factor = getattr(pipe, "vae_scale_factor", 8)
         patch_size = pipe.transformer.config.patch_size  # 2
 
@@ -787,11 +771,10 @@ def execute_training(plan: dict[str, Any]) -> dict[str, Any]:
 
         # Optionally unfreeze dense layers adjacent to the LoRA adapters.
         #
-        # "norm_all"  → all LayerNorm weight+bias throughout the transformer +
-        #                final proj_out/norm_out.  LayerNorm tensors are always 1-D
-        #                so total params stay tiny (~3 M).  Modulation blocks
-        #                (img_mod/txt_mod) are excluded — they hold large Linear
-        #                projections that OOM when cast to fp32.
+        # "norm_all"  → LayerNorm weight+bias (img_norm1/2, txt_norm1/2, norm_out)
+        #                throughout the transformer + final proj_out/norm_out.
+        #                Adds ~19 M dense params. Modulation blocks (img_mod/txt_mod)
+        #                are excluded — they hold large Linear projections.
         #
         # "proj_out"  → only the final output projection + norm_out (~19 M).
         #
@@ -937,22 +920,10 @@ def execute_training(plan: dict[str, Any]) -> dict[str, Any]:
 
                 prompt, source_pil, target_pil = item
 
-                # Encode prompt — text encoders live on CPU to save VRAM;
-                # bring them to device only for this call, then return to CPU.
                 with torch.no_grad():
-                    for _enc_attr in ("text_encoder", "text_encoder_2"):
-                        _enc = getattr(pipe, _enc_attr, None)
-                        if _enc is not None:
-                            _enc.to(device)
                     prompt_embeds, prompt_embeds_mask = pipe.encode_prompt(
                         prompt, image=source_pil, device=device
                     )
-                    for _enc_attr in ("text_encoder", "text_encoder_2"):
-                        _enc = getattr(pipe, _enc_attr, None)
-                        if _enc is not None:
-                            _enc.to("cpu")
-                    del _enc_attr, _enc
-                    torch.cuda.empty_cache()
 
                 # Build noisy latents and flow-matching velocity target
                 if target_pil is not None:
