@@ -1,0 +1,3 @@
+include README.md LICENSE CHANGELOG.md
+recursive-include configs *.yaml *.env
+recursive-include src/qwen_image_19 py.typed

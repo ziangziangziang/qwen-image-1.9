@@ -1,0 +1,86 @@
+{
+  "recipe_name": "stage-2-tri-capability",
+  "description": "Three-way capability fusion: generation (foundation) + editing (delta-edit) + layering (layer-delta). Produces a single checkpoint that handles image generation, image editing, and image layering.",
+
+  "foundation_model": "qwen-image-2512",
+  "edit_donor_model": "qwen-image-edit-2511",
+  "delta_base_model": "qwen-image-base",
+  "layer_donor_model": "qwen-image-layered",
+
+  "stages": [
+    {
+      "id": "core-delta-edit",
+      "description": "Blend editing capability into the full MMDiT backbone via delta-edit.",
+      "strategy": "delta-edit",
+      "target_subsystems": ["transformer", "model.mmdit.", "mmdit.", "dit."],
+      "passthrough_subsystems": ["text_encoder", "vae", "rope", "tokenizer", "scheduler"],
+      "coefficient": 0.35,
+      "coefficient_sweep": [0.2, 0.3, 0.35, 0.4],
+      "selection_rule": "Prefer edit retention without visible generation regression on the smoke suite."
+    },
+    {
+      "id": "layer-delta",
+      "description": "Blend RGBA/layer-logic capability into transformer blocks 40-60 via a targeted delta. Uses the same delta-edit arithmetic but restricted to the bridge window. After this pass the model can process layer-structured inputs without losing generation or editing quality.",
+      "strategy": "delta-edit-windowed",
+      "target_subsystems": ["transformer"],
+      "block_window": {"start": 40, "end": 60},
+      "passthrough_subsystems": ["text_encoder", "vae", "rope", "tokenizer", "scheduler"],
+      "donor_model": "qwen-image-layered",
+      "base_model": "qwen-image-base",
+      "coefficient": 0.25,
+      "coefficient_sweep": [0.15, 0.20, 0.25, 0.30],
+      "selection_rule": "Maximize layer-output coherence while keeping RGB PSNR within 1 dB of the core-delta-edit checkpoint."
+    }
+  ],
+
+  "passthrough_policy": {
+    "text_encoder": "foundation",
+    "vae": "foundation",
+    "rope": "foundation",
+    "scheduler": "foundation",
+    "tokenizer": "foundation"
+  },
+
+  "output_capabilities": ["image-generation", "image-editing", "image-layering"],
+
+  "eval_suites": [
+    {
+      "capability": "image-generation",
+      "dataset": "ProGamerGov/synthetic-dataset-1m-dalle3-high-quality-captions",
+      "dataset_split": "train",
+      "sample_count": 64,
+      "baseline_model": "qwen-image-2512",
+      "metrics": ["fid", "clip_score", "aesthetic_score"]
+    },
+    {
+      "capability": "image-editing",
+      "dataset": "facebook/emu_edit_test_set",
+      "dataset_split": "test",
+      "sample_count": 32,
+      "baseline_model": "qwen-image-edit-2511",
+      "metrics": ["l1_distance", "clip_direction_score", "dino_score"]
+    },
+    {
+      "capability": "image-layering",
+      "dataset": "synthetic-rgba-grid",
+      "dataset_split": "eval",
+      "sample_count": 16,
+      "baseline_model": "qwen-image-layered",
+      "metrics": ["alpha_iou", "layer_psnr", "composite_lpips"]
+    }
+  ],
+
+  "smoke_limits": {
+    "sample_count_per_suite": 4,
+    "generation_steps": 20,
+    "image_side": 512,
+    "guidance_scale": 4.0
+  },
+
+  "full_limits": {
+    "sample_count_per_suite": 64,
+    "generation_steps": 30,
+    "image_side": 1024,
+    "guidance_scale": 4.0
+  }
+}

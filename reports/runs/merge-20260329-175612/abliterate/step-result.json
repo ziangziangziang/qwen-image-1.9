@@ -1,0 +1,38 @@
+{
+  "artifacts": [
+    {
+      "content_type": "application/octet-stream",
+      "kind": "checkpoint_ref",
+      "path_or_uri": "/mnt/artifacts/qwen-image-1.9/runs/merge-20260329-175612/abliterate/abliterated-model",
+      "size_bytes": null
+    }
+  ],
+  "command": [
+    "python3",
+    "-m",
+    "qwen_image_19.abliterate",
+    "--input-checkpoint",
+    "reports/stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
+    "--output-checkpoint",
+    "/mnt/artifacts/qwen-image-1.9/runs/merge-20260329-175612/abliterate/abliterated-model"
+  ],
+  "eval_summary": "reports/runs/merge-20260329-175612/abliterate/eval-summary.json",
+  "input_checkpoint": "reports/stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
+  "metrics": {
+    "refusal_direction_removed": true,
+    "safety_review_required": true,
+    "target_subspace": "refusal-behavior"
+  },
+  "output_checkpoint": "/mnt/artifacts/qwen-image-1.9/runs/merge-20260329-175612/abliterate/abliterated-model",
+  "remote_job": {
+    "artifact_dir": "/mnt/artifacts/qwen-image-1.9",
+    "name": "abliterate-refusal-direction",
+    "status": "ready",
+    "workdir": "/mnt/experiments/qwen-image-1.9"
+  },
+  "report": "reports/runs/merge-20260329-175612/abliterate/README.md",
+  "run_id": "merge-20260329-175612",
+  "status": "completed",
+  "step": "abliterate",
+  "updated_at": "2026-03-29T19:24:49+00:00"
+}

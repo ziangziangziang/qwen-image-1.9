@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/lustre_scratch/user_scratch/zziang/qwen-image-1.9/scripts/stage-2-build-layered-bridge.py", line 141, in <module>
+    batch_tensor = torch.stack(batch, dim=0)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: stack expects each tensor to be equal size, but got [3, 640, 640] at entry 0 and [3, 512, 512] at entry 1

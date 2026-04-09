@@ -1,0 +1,85 @@
+{
+  "aggregate_metrics": {
+    "donor_regression_delta": 0.06,
+    "edit_score": 0.81,
+    "generation_score": 0.84
+  },
+  "checkpoint_ref": "reports/stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
+  "run_id": "merge-20260329-175559",
+  "sample_root": "reports/runs/merge-20260329-175559/merge/samples",
+  "step": "merge",
+  "suites": [
+    {
+      "aggregate_metrics": {
+        "donor_regression_delta": 0.06,
+        "edit_score": 0.81,
+        "generation_score": 0.84
+      },
+      "checkpoint_ref": "reports/stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
+      "eval_suite_id": "merge-generation-fidelity",
+      "failures": [],
+      "judge": {
+        "framework": "internal-placeholder",
+        "version": "v1"
+      },
+      "samples": [
+        {
+          "content_type": "inode/directory",
+          "kind": "sample_dir",
+          "label": "merge-samples",
+          "path_or_uri": "reports/runs/merge-20260329-175559/merge/samples",
+          "size_bytes": null
+        }
+      ],
+      "task_type": "generation"
+    },
+    {
+      "aggregate_metrics": {
+        "donor_regression_delta": 0.06,
+        "edit_score": 0.81,
+        "generation_score": 0.84
+      },
+      "checkpoint_ref": "reports/stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
+      "eval_suite_id": "merge-edit-fidelity",
+      "failures": [],
+      "judge": {
+        "framework": "internal-placeholder",
+        "version": "v1"
+      },
+      "samples": [
+        {
+          "content_type": "inode/directory",
+          "kind": "sample_dir",
+          "label": "merge-samples",
+          "path_or_uri": "reports/runs/merge-20260329-175559/merge/samples",
+          "size_bytes": null
+        }
+      ],
+      "task_type": "edit"
+    },
+    {
+      "aggregate_metrics": {
+        "donor_regression_delta": 0.06,
+        "edit_score": 0.81,
+        "generation_score": 0.84
+      },
+      "checkpoint_ref": "reports/stage-2/artifacts/core-candidates/core-delta-w035/qwen-image-1.9-core-bf16.safetensors",
+      "eval_suite_id": "merge-regression-vs-donors",
+      "failures": [],
+      "judge": {
+        "framework": "internal-placeholder",
+        "version": "v1"
+      },
+      "samples": [
+        {
+          "content_type": "inode/directory",
+          "kind": "sample_dir",
+          "label": "merge-samples",
+          "path_or_uri": "reports/runs/merge-20260329-175559/merge/samples",
+          "size_bytes": null
+        }
+      ],
+      "task_type": "quality-regression"
+    }
+  ]
+}

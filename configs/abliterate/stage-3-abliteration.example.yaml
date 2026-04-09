@@ -1,0 +1,14 @@
+measurements: reports/abliterate/example-measurements.pt
+scale: 1.0
+projected: false
+normpreserve: true
+directional: false
+invert: false
+ablate:
+  - layer: 18
+    measurement: 18
+    scale: 1.0
+    sparsity: 0.0
+    tensor_patterns:
+      - ".layers.18.self_attn.o_proj.weight"
+      - ".layers.18.mlp.down_proj.weight"

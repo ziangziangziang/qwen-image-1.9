@@ -1,0 +1,11 @@
+{
+  "status": "ok",
+  "output_md": "reports/runs/merge-20260329-175612/merge/artifacts/training-report.md",
+  "figures_dir": "reports/runs/merge-20260329-175612/merge/artifacts/figures",
+  "workflows": [
+    "core-delta",
+    "layered-bridge",
+    "experimental"
+  ],
+  "total_elapsed_seconds": 5069.2697
+}

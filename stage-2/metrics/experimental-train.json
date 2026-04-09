@@ -1,0 +1,18 @@
+{
+  "elapsed_seconds": 331.262,
+  "eval_status": "passed",
+  "generated_images": 8,
+  "mean_luminance": 111.90488624572754,
+  "num_prompts": 24,
+  "run_ended_at": "2026-03-24T12:09:07.929929+00:00",
+  "run_started_at": "2026-03-24T12:03:36.658120+00:00",
+  "status": "succeeded",
+  "training_method": {
+    "model": "stage-2/artifacts/experimental/qwen-image-1.9-layered-bridge-bf16.safetensors",
+    "notes": "Experimental eval: visual pass/fail on the layered bridge checkpoint after MSE distillation training.",
+    "objective": "smoke quality check on layered bridge checkpoint",
+    "optimizer": "n/a",
+    "type": "experimental-smoke-eval"
+  },
+  "workflow": "experimental"
+}

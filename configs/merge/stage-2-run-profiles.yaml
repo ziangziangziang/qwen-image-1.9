@@ -27,8 +27,8 @@
       },
       "limits": {
         "core_candidate_id": "core-delta-w035",
-        "dataset_samples_per_split": 8,
-        "bridge_train_steps": 500,
+        "dataset_samples_per_split": 16,
+        "bridge_train_steps": 1000,
         "bridge_batch_size": 2,
         "eval_prompt_count": 24,
         "eval_edit_prompt_count": 8,

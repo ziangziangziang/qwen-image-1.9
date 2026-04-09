@@ -13,15 +13,47 @@ dist/
 artifacts/
 remote_runs/
 tmp/
+tmp*/
+.playwright-mcp/
+web/node_modules/
+web/dist/
 
-# Stage 2 runtime output — raw logs, eval dumps, datasets, and weight artifacts.
-# All Stage 2 output now lives under reports/stage-2/.
-# Curated figures for REAL (non-smoke) runs live in reports/stage-2/figures/ and ARE committed.
-# Smoke-run images are excluded inside that directory via reports/stage-2/figures/.gitignore.
-reports/stage-2/logs/
-reports/stage-2/datasets/
-reports/stage-2/jobs/
-reports/stage-2/metrics/
-reports/stage-2/artifacts/
-reports/stage-2/evals/
-reports/stage-2/run-status.json
+# Secrets — never commit
+.env
+*.env
+.env.*
+
+# Shell profile
+.bashrc
+.bash_profile
+.profile
+
+# Runtime working directories
+stage-2/
+
+# Vendor tools (large binaries)
+tools/
+
+# Run reports — generated at runtime, not source
+reports/runs/*/
+reports/abliterate/
+reports/benchmark-history.json
+reports/benchmark-report.md
+reports/stage-1-compatibility-matrix.json
+reports/stage-1-dna-report.md
+reports/stage-2-fusion-report.md
+reports/stage-2-merge-manifest.json
+reports/stage-2-training-report.md
+reports/stage-3-eval-report.md
+reports/stage-4-quantization-report.md
+reports/stage-5-deployment-report.md
+reports/stage-5-generated-stage-config.yaml
+reports/stage-1/
+reports/stage-2/
+reports/stage-3/
+reports/stage-4/
+reports/stage-5/
+
+# Legacy
+reports/legacy/
+

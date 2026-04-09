@@ -1,127 +1,294 @@
+"""Qwen-Image 1.9 CLI.
+
+Pipeline: merge → post-merge-train → abliterate → post-abliterate-train
+          → quantize → post-quantize-eval
+
+All models sourced from HuggingFace.
+"""
 from __future__ import annotations
 
 import argparse
 import json
-import sys
-from typing import Any, Callable
+from typing import Any
 
-from qwen_image_19.stage_1_analysis import analyze
-from qwen_image_19.stage_2_fusion import fuse
-from qwen_image_19.stage_3_eval import evaluate
-from qwen_image_19.stage_4_quant import quantize
-from qwen_image_19.stage_5_deploy import deploy
+from qwen_image_19.logging_utils import console
+from qwen_image_19.stage_1_analysis.benchmark import run_gpu_stress_test
+from qwen_image_19.workflow_v2 import (
+    run_abliterate,
+    run_merge,
+    run_post_abliterate_train,
+    run_post_merge_train,
+    run_post_quantize_eval,
+    run_preflight,
+    run_prepare_judge,
+    run_publish,
+    run_quantize,
+    run_report,
+)
 
 
-StageHandler = Callable[..., dict[str, Any]]
+# ── Shared argument groups ──────────────────────────────────────────
+
+def _common(p: argparse.ArgumentParser) -> None:
+    p.add_argument("--remote-config", help="Remote launcher config (YAML/.env).")
+    p.add_argument("--artifact-dir", help="Runs root. Defaults to reports/runs.")
+    p.add_argument("--dry-run", action="store_true", help="Print plan without writing files.")
+    p.add_argument("--execute", action="store_true", help="Execute the full GPU workload.")
+    p.add_argument("--resume", action="store_true", help="Resume from prior outputs.")
 
 
-def add_common_args(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--remote-config", help="Path to remote launcher or env config.")
-    parser.add_argument("--artifact-dir", help="Directory for generated reports and manifests.")
-    parser.add_argument("--cache-dir", help="Optional cache dir override for remote-first dry runs.")
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Resolve configs and print outputs without reading heavy resources or writing anything. Safe on any machine.",
-    )
-    parser.add_argument(
-        "--smoke-run",
-        action="store_true",
-        help=(
-            "Run a minimal quick pass to prove the pipeline is wired correctly. "
-            "Stage 1: structural analysis only, skip tensor-value comparison. "
-            "Stage 2: smoke profile (1 candidate, reduced steps/samples), auto-executes."
-        ),
-    )
-    parser.add_argument(
-        "--execute",
-        action="store_true",
-        help=(
-            "Execute the full stage workload. Required for Stage 2 full/quality profile runs. "
-            "Can be resource-intensive — allocates GPUs and runs all jobs end-to-end."
-        ),
-    )
-    parser.add_argument(
-        "--resume",
-        action="store_true",
-        help="Resume from a previous run-status instead of overwriting. Skips already-succeeded jobs.",
-    )
+def _run_args(p: argparse.ArgumentParser, *, require_id: bool) -> None:
+    p.add_argument("--run-id", required=require_id, help="Run identifier.")
+    p.add_argument("--tag", dest="tags", action="append", default=[], help="Tag for the manifest.")
+    p.add_argument("--notes", help="Free-form notes for the manifest.")
 
+
+# ── Parser ──────────────────────────────────────────────────────────
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="q19", description="Qwen-Image 1.9 remote-first scaffold CLI.")
-    subparsers = parser.add_subparsers(dest="stage", required=True)
-
-    stage1 = subparsers.add_parser("stage1", help="Stage 1 structural fusion analysis.")
-    stage1_sub = stage1.add_subparsers(dest="action", required=True)
-    stage1_analyze = stage1_sub.add_parser("analyze", help="Build Stage 1 compatibility artifacts.")
-    add_common_args(stage1_analyze)
-    stage1_analyze.add_argument("--hf-home", help="Path to HF_HOME or its hub directory on the remote machine.")
-    stage1_analyze.add_argument(
-        "--cache-map-config",
-        help="Optional JSON/YAML mapping from model aliases to HF cache directory names.",
+    root = argparse.ArgumentParser(
+        prog="q19",
+        description="Qwen-Image 1.9 checkpoint pipeline (HuggingFace-based).",
     )
-    stage1_analyze.add_argument(
-        "--json",
-        dest="json_output",
+    sub = root.add_subparsers(dest="command", required=True)
+
+    # preflight
+    pf = sub.add_parser("preflight", help="Inspect checkpoints and benchmark the device.")
+    _common(pf); _run_args(pf, require_id=False)
+    pf.add_argument("--skip-benchmark", action="store_true",
+                    help="Skip the ~5-min GPU performance benchmark.")
+    pf.add_argument("--benchmark-seconds", type=int, default=300,
+                    help="Target benchmark duration in seconds (default 300).")
+    pf.add_argument("--stress-test", action="store_true",
+                    help="Run continuous GPU stress test at 100%% utilization for benchmark-seconds.")
+    pf.add_argument("--stress-test-seconds", type=int, default=300,
+                    help="Duration for stress test in seconds (default 300).")
+
+    # merge
+    m = sub.add_parser("merge", help="Merge HuggingFace source models.")
+    _common(m); _run_args(m, require_id=False)
+    m.add_argument("--method", default="slerp", help="Merge method (slerp, ties, dare).")
+    m.add_argument("--recipe", default="tri-capability",
+                   choices=["tri-capability", "delta-edit", "slerp-selective"],
+                   help="Merge recipe. 'tri-capability' (default): generation + editing + layering. "
+                        "'delta-edit': generation + editing only (legacy). "
+                        "'slerp-selective': direct per-block SLERP between gen and edit models (recommended).")
+    m.add_argument("--model-id", dest="model_ids", action="append", default=[],
+                   help="HuggingFace model IDs to merge. Repeatable.")
+    m.add_argument("--edit-coefficient", type=float, default=0.35,
+                   help="Delta coefficient for edit capability blend (default: 0.35).")
+    m.add_argument("--layer-coefficient", type=float, default=0.25,
+                   help="Delta coefficient for layering capability blend (default: 0.25).")
+
+    # post-merge-train
+    pmt = sub.add_parser("post-merge-train", help="Fine-tune after merge to verify quality.")
+    _common(pmt); _run_args(pmt, require_id=True)
+    pmt.add_argument("--input-checkpoint", help="Override input checkpoint.")
+    pmt.add_argument("--training-config", help="Training config YAML.")
+
+    # prepare-judge
+    pj = sub.add_parser(
+        "prepare-judge",
+        help="Abliterate the quality judge (Qwen3.5-35B-A3B) before eval.",
+    )
+    _common(pj)
+    pj.add_argument(
+        "--judge-model",
+        default=None,
+        help="HuggingFace model ID or local path for the judge (default: Qwen/Qwen3.5-35B-A3B).",
+    )
+    pj.add_argument(
+        "--recipe-config",
+        default=None,
+        help="Abliteration recipe YAML. Defaults to configs/abliterate/judge-abliteration.yaml.",
+    )
+    pj.add_argument(
+        "--output-path",
+        default="/scratch/qwen-judge-abliterated",
+        help="Directory to write the abliterated judge checkpoint (default: /scratch/qwen-judge-abliterated).",
+    )
+    pj.add_argument(
+        "--measurements",
+        default=None,
+        help="Override path to pre-computed measurements .pt file.",
+    )
+    pj.add_argument(
+        "--skip-comparison",
         action="store_true",
-        help="Print the full machine-readable Stage 1 payload to stdout.",
+        help="Skip the before/after comparison report after execution.",
+    )
+    pj.add_argument(
+        "--measure-pairs",
+        type=int,
+        default=64,
+        help="Number of harmful/harmless prompt pairs used to compute judge directions (default: 64).",
     )
 
-    stage2 = subparsers.add_parser("stage2", help="Stage 2 fusion planning.")
-    stage2_sub = stage2.add_subparsers(dest="action", required=True)
-    stage2_fuse = stage2_sub.add_parser("fuse", help="Build Stage 2 merge artifacts.")
-    add_common_args(stage2_fuse)
-    stage2_fuse.add_argument(
-        "--run-profile",
-        choices=("smoke", "full", "quality"),
-        help="Stage 2 execution profile. Defaults to smoke when --smoke-run is set, otherwise full.",
-    )
+    # abliterate
+    a = sub.add_parser("abliterate", help="Remove refusal directions.")
+    _common(a); _run_args(a, require_id=True)
+    a.add_argument("--input-checkpoint", help="Override input checkpoint.")
+    a.add_argument("--recipe-config", help="Abliteration recipe YAML (required for --execute).")
 
-    stage3 = subparsers.add_parser("stage3", help="Stage 3 evaluation.")
-    stage3_sub = stage3.add_subparsers(dest="action", required=True)
-    stage3_eval = stage3_sub.add_parser("eval", help="Build Stage 3 evaluation artifacts.")
-    add_common_args(stage3_eval)
+    # post-abliterate-train
+    pat = sub.add_parser("post-abliterate-train", help="Fine-tune after abliteration.")
+    _common(pat); _run_args(pat, require_id=True)
+    pat.add_argument("--input-checkpoint", help="Override input checkpoint.")
+    pat.add_argument("--training-config", help="Training config YAML.")
 
-    stage4 = subparsers.add_parser("stage4", help="Stage 4 quantization planning.")
-    stage4_sub = stage4.add_subparsers(dest="action", required=True)
-    stage4_quantize = stage4_sub.add_parser("quantize", help="Build Stage 4 quantization artifacts.")
-    add_common_args(stage4_quantize)
+    # quantize
+    q = sub.add_parser("quantize", help="Quantize the checkpoint.")
+    _common(q); _run_args(q, require_id=True)
+    q.add_argument("--input-checkpoint", help="Override input checkpoint.")
+    q.add_argument("--method", default="all",
+                   choices=["all", "gguf", "gptq", "exl2"],
+                   help="Quantization format(s) to produce. "
+                        "'all' (default): GGUF + GPTQ (vllm-omni) + EXL2. "
+                        "'gptq': GPTQ marlin only — primary vllm-omni format. "
+                        "'gguf': GGUF only (llama.cpp/ollama). "
+                        "'exl2': EXL2 only (exllamav2/TabbyAPI).")
+    q.add_argument("--bits", type=int, default=4, help="Quantization bits.")
 
-    stage5 = subparsers.add_parser("stage5", help="Stage 5 deployment planning.")
-    stage5_sub = stage5.add_subparsers(dest="action", required=True)
-    stage5_deploy = stage5_sub.add_parser("deploy", help="Build Stage 5 deployment artifacts.")
-    add_common_args(stage5_deploy)
+    # eval
+    e = sub.add_parser("eval", help="Run post-quantize evaluation.")
+    _common(e); _run_args(e, require_id=True)
+    e.add_argument("--input-checkpoint", help="Override input checkpoint.")
+    e.add_argument("--prompts", type=int, default=8, help="Number of eval prompts.")
 
-    return parser
+    # report
+    r = sub.add_parser("report", help="Generate dashboard and optionally serve it.")
+    r.add_argument("--artifact-dir", help="Runs root.")
+    r.add_argument("--run-id", help="Validate a specific run.")
+    r.add_argument("--serve", action="store_true", help="Start the dashboard server.")
+    r.add_argument("--host", default="127.0.0.1", help="Server host.")
+    r.add_argument("--port", type=int, default=8000, help="Server port.")
 
+    # publish
+    pub = sub.add_parser("publish", help="Upload artifacts and model card to HuggingFace.")
+    _common(pub); _run_args(pub, require_id=True)
+    pub.add_argument("--repo-id", default="ThirdMiddle/Qwen-Image-1.9",
+                     help="HuggingFace repo ID (user/name).")
+    pub.add_argument("--private", action="store_true", help="Create repo as private.")
+    pub.add_argument("--hf-token", help="HuggingFace token override (defaults to .env).")
+
+    return root
+
+
+# ── Dispatch ────────────────────────────────────────────────────────
 
 def dispatch(args: argparse.Namespace) -> dict[str, Any]:
-    handlers: dict[tuple[str, str], StageHandler] = {
-        ("stage1", "analyze"): analyze,
-        ("stage2", "fuse"): fuse,
-        ("stage3", "eval"): evaluate,
-        ("stage4", "quantize"): quantize,
-        ("stage5", "deploy"): deploy,
-    }
-    handler = handlers[(args.stage, args.action)]
-    kwargs = {
-        "artifact_dir": args.artifact_dir,
-        "remote_config": args.remote_config,
-        "dry_run": args.dry_run,
-        "smoke_run": args.smoke_run,
-        "execute": args.execute,
-        "resume": args.resume,
-    }
-    if hasattr(args, "cache_dir"):
-        kwargs["cache_dir"] = args.cache_dir
-    if hasattr(args, "hf_home"):
-        kwargs["hf_home"] = args.hf_home
-    if hasattr(args, "cache_map_config"):
-        kwargs["cache_map_config"] = args.cache_map_config
-    if hasattr(args, "run_profile"):
-        kwargs["run_profile"] = args.run_profile
-    return handler(**kwargs)
+    cmd = args.command
+
+    if cmd == "preflight":
+        if args.stress_test:
+            from pathlib import Path
+            from qwen_image_19.workflow_v2 import default_run_id, runs_root
+            rid = args.run_id or default_run_id("preflight")
+            root = Path(args.artifact_dir) if args.artifact_dir else None
+            if root:
+                run_dir = root / rid / "preflight"
+            else:
+                run_dir = runs_root() / rid / "preflight"
+            return run_gpu_stress_test(
+                run_id=rid,
+                output_dir=run_dir,
+                target_seconds=args.stress_test_seconds,
+            )
+        return run_preflight(
+            run_id=args.run_id, artifact_dir=args.artifact_dir,
+            dry_run=args.dry_run, execute=args.execute,
+            skip_benchmark=args.skip_benchmark,
+            benchmark_seconds=args.benchmark_seconds,
+            tags=args.tags, notes=args.notes,
+        )
+
+    if cmd == "merge":
+        return run_merge(
+            run_id=args.run_id, artifact_dir=args.artifact_dir,
+            remote_config=args.remote_config,
+            model_ids=args.model_ids or None,
+            merge_method=args.method,
+            recipe=args.recipe,
+            edit_coefficient=args.edit_coefficient,
+            layer_coefficient=args.layer_coefficient,
+            dry_run=args.dry_run, execute=args.execute, resume=args.resume,
+            tags=args.tags, notes=args.notes,
+        )
+
+    if cmd == "post-merge-train":
+        return run_post_merge_train(
+            run_id=args.run_id, artifact_dir=args.artifact_dir,
+            remote_config=args.remote_config,
+            input_checkpoint=args.input_checkpoint,
+            training_config_path=args.training_config,
+            dry_run=args.dry_run, execute=args.execute, resume=args.resume,
+        )
+
+    if cmd == "prepare-judge":
+        return run_prepare_judge(
+            judge_model=args.judge_model,
+            output_path=args.output_path,
+            recipe_config=args.recipe_config,
+            measurements=args.measurements,
+            measure_pairs=args.measure_pairs,
+            dry_run=args.dry_run,
+            execute=args.execute,
+            remote_config=args.remote_config,
+            skip_comparison=args.skip_comparison,
+        )
+
+    if cmd == "abliterate":
+        return run_abliterate(
+            run_id=args.run_id, artifact_dir=args.artifact_dir,
+            remote_config=args.remote_config,
+            input_checkpoint=args.input_checkpoint,
+            recipe_config=args.recipe_config,
+            dry_run=args.dry_run, execute=args.execute,
+        )
+
+    if cmd == "post-abliterate-train":
+        return run_post_abliterate_train(
+            run_id=args.run_id, artifact_dir=args.artifact_dir,
+            remote_config=args.remote_config,
+            input_checkpoint=args.input_checkpoint,
+            training_config_path=args.training_config,
+            dry_run=args.dry_run, execute=args.execute, resume=args.resume,
+        )
+
+    if cmd == "quantize":
+        return run_quantize(
+            run_id=args.run_id, artifact_dir=args.artifact_dir,
+            remote_config=args.remote_config,
+            input_checkpoint=args.input_checkpoint,
+            quant_method=args.method, quant_bits=args.bits,
+            dry_run=args.dry_run, execute=args.execute, resume=args.resume,
+        )
+
+    if cmd == "eval":
+        return run_post_quantize_eval(
+            run_id=args.run_id, artifact_dir=args.artifact_dir,
+            remote_config=args.remote_config,
+            input_checkpoint=args.input_checkpoint,
+            num_prompts=args.prompts,
+            dry_run=args.dry_run, execute=args.execute,
+        )
+
+    if cmd == "report":
+        return run_report(
+            artifact_dir=args.artifact_dir, run_id=args.run_id,
+            serve=args.serve, host=args.host, port=args.port,
+        )
+
+    if cmd == "publish":
+        return run_publish(
+            run_id=args.run_id, artifact_dir=args.artifact_dir,
+            repo_id=args.repo_id,
+            private=args.private,
+            hf_token=args.hf_token,
+            dry_run=args.dry_run, execute=args.execute,
+        )
+
+    raise ValueError(f"Unknown command: {cmd}")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -130,17 +297,16 @@ def main(argv: list[str] | None = None) -> int:
     try:
         result = dispatch(args)
     except (RuntimeError, ValueError) as exc:
-        print(json.dumps({"stage": getattr(args, "stage", None), "error": str(exc)}, indent=2), file=sys.stderr)
+        console.print_json(
+            data=json.dumps({"command": getattr(args, "command", None), "error": str(exc)}, indent=2)
+        )
         return 1
-    if (
-        getattr(args, "stage", None) == "stage1"
-        and getattr(args, "action", None) == "analyze"
-        and not getattr(args, "json_output", False)
-    ):
-        print(result["terminal_summary"])
-        return 0
-    print(json.dumps(result, indent=2))
+    print(json.dumps(result, indent=2, default=str))
     return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
 
 
 if __name__ == "__main__":
