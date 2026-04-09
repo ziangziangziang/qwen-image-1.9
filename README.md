@@ -12,8 +12,9 @@
 | Block-selective SLERP merge | ✅ Complete |
 | Merge eval (gen + edit) | ✅ Complete |
 | Phase 1 LoRA (text-only, 5k steps) | ✅ Complete — did not recover quality |
-| Phase 2 LoRA (MagicBrush real-image, 15k steps) | 🔄 In progress — ~11 200 / 15 000 steps |
+| Phase 2 LoRA (MagicBrush real-image, pure LoRA) | ✅ Complete — best ckpt at step 8000, overfit after |
 | Mid-training eval (checkpoint-8000) | ✅ Complete — panels in `lora_quick_eval/` |
+| Phase 3 LoRA+Dense (hybrid fine-tune, 8k steps) | 🔄 In progress |
 | Abliterate → quantize → publish | ⏳ Pending training completion |
 
 **Hardware:** AMD MI300X VF · 192 GB VRAM · ROCm 7.2
@@ -116,7 +117,7 @@ Two root causes:
 
 Loss plateaued at ~0.95 with high variance; no clear descent.
 
-### 4.2 Phase 2 LoRA — MagicBrush Real Images (15 000 steps) — In Progress
+### 4.2 Phase 2 LoRA — MagicBrush Real Images (stopped at step 11 600) — Complete
 
 **Changes from Phase 1:**
 
@@ -149,7 +150,27 @@ where $x_0$ is the VAE-encoded target image, $\epsilon \sim \mathcal{N}(0, I)$, 
 | Precision | bf16 autocast, fp32 LoRA params |
 | Checkpoint interval | every 1 000 steps |
 
-### 4.3 Loss Curve (Phase 2)
+### 4.3 Phase 3 LoRA + Unfrozen Dense (Hybrid Fine-Tune, 8 000 steps) — In Progress
+
+Pure LoRA hit its limit: the low-rank subspace covers only 0.12% of parameters. The merged checkpoint sits off both training manifolds, so the LoRA deltas can nudge activations but cannot re-calibrate the **scale and shift** parameters that control how features flow through the residual stream.
+
+**Hypothesis:** Unfreezing the LayerNorm weights, adaLN modulation (img_mod / txt_mod), and the final output projection gives the optimizer explicit control over representation scaling — the cheapest way to re-anchor a merged checkpoint.
+
+**Parameter budget:**
+
+| Type | Params | % of total |
+|---|---|---|
+| LoRA (rank 32) | ~46 M | 0.22% |
+| LayerNorm + mod (all blocks) | ~19 M | 0.09% |
+| `proj_out` + `norm_out` | ~19 M | 0.09% |
+| **Hybrid total** | **~84 M** | **0.41%** |
+
+The dense layers use a lower LR (1e-5) than would be used for LoRA alone (2e-5), since large steps on norm weights destabilise the residual stream.
+
+**Config:** `configs/merge/stage-2-training-hybrid.yaml`  
+**Resumed from:** `checkpoint-8000` (best checkpoint from Phase 2)
+
+### 4.4 Loss Curve (Phase 2)
 
 The bimodal pattern is expected: generation steps hit 0.05–0.18, edit steps hit 1.0–1.3. The plateau in edit-step loss indicates convergence, not stagnation.
 
@@ -172,6 +193,28 @@ Step   Loss          Notes
 ```
 
 Isolated spikes at steps 3600 (6.2), 9400 (5.5), 10500 (7.0) are hard-timestep edit samples caught by the NaN/Inf skip guard.
+
+**Overfitting analysis — why this run was stopped at step ~11 600:**
+
+| Step range | Avg edit loss | Signal |
+|---|---|---|
+| 0–1 456 | 2.715 | Initial descent — model learning |
+| 1 456–5 824 | ~1.60–1.79 | Continued improvement |
+| 5 824–7 280 | 1.207 | Best generalisation region |
+| **7 280–8 736** | **1.160** | **Global minimum — best checkpoint** |
+| 8 736–11 648 | 1.38–1.43 | ↑ Loss rising — overfitting on 500 unique pairs |
+
+At 30 epochs over 500 pairs the model had seen each image ~24× by step 9 000. Pure LoRA (23 M params, 0.12%) lacks the capacity to both memorise MagicBrush *and* generalise — the low-rank subspace fills up and begins encoding pair-specific patterns rather than a general edit prior.
+
+**Best checkpoint:** `checkpoint-8000` (avg edit loss 1.16). All subsequent checkpoints regress.
+
+---
+
+**Loss plot:** `scripts/plot_loss.py` — generates a PNG with raw scatter (gen=blue, edit=red), rolling mean, and annotated best-checkpoint marker.
+
+```bash
+python3 scripts/plot_loss.py --log /scratch/training/.../post_merge_train/train.log
+```
 
 ---
 

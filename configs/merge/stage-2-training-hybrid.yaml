@@ -1,0 +1,26 @@
+{
+  "method": "lora",
+  "epochs": 15,
+  "batch_size": 1,
+  "learning_rate": 5e-6,
+  "warmup_steps": 100,
+  "max_steps": 8000,
+  "gradient_accumulation_steps": 4,
+  "lora_rank": 32,
+  "lora_alpha": 32,
+  "lora_target_modules": [
+    "to_q",
+    "to_k",
+    "to_v",
+    "to_out.0",
+    "ff.net.0.proj",
+    "ff.net.2"
+  ],
+  "unfrozen_dense": "norm_all",
+  "save_steps": 500,
+  "eval_steps": 500,
+  "logging_steps": 50,
+  "gradient_checkpointing": true,
+  "seed": 42,
+  "dataset_config": "configs/merge/stage-2-magicbrush-dataset.yaml"
+}

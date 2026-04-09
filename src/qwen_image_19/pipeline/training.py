@@ -525,7 +525,45 @@ def _inject_lora(transformer, config: dict[str, Any]):
     return get_peft_model(transformer, lora_cfg)
 
 
-def _save_lora(transformer, output_dir: Path, config: dict[str, Any]) -> None:
+def _unfreeze_dense(transformer, mode: str) -> None:
+    """Unfreeze dense (non-LoRA) layers adjacent to the LoRA adapters.
+
+    After PEFT wraps the transformer, all base-model parameters are frozen
+    and only the LoRA delta matrices are trainable.  For a merged checkpoint
+    that sits off both training manifolds, the LoRA subspace alone may not
+    have enough capacity to re-calibrate activations.  Selectively unfreezing
+    norm/modulation layers (which scale and shift residual-stream features)
+    alongside the final output projection gives the optimizer a low-cost way
+    to adjust the representation without touching the heavy attention weights.
+
+    Modes
+    -----
+    "norm_all"  Unfreeze every LayerNorm (weight + bias) and every modulation
+                Sequential (img_mod, txt_mod) parameter throughout the full
+                transformer, plus proj_out and norm_out.
+                Adds ~38 M dense trainable params on top of LoRA (~23 M).
+
+    "proj_out"  Unfreeze only the final output projection and norm_out.
+                Adds ~19 M params. Minimal but targets the bottleneck layer
+                most affected by the merge.
+    """
+    unfrozen = 0
+    for name, param in transformer.named_parameters():
+        should_unfreeze = False
+        if mode == "proj_out":
+            should_unfreeze = any(k in name for k in ("proj_out", "norm_out"))
+        elif mode == "norm_all":
+            should_unfreeze = any(k in name for k in (
+                "norm",           # LayerNorm weight/bias, norm_out
+                "img_mod",        # adaLN modulation for image tokens
+                "txt_mod",        # adaLN modulation for text tokens
+                "proj_out",       # final output projection
+            ))
+        if should_unfreeze and not param.requires_grad:
+            param.requires_grad_(True)
+            unfrozen += param.numel()
+
+    print(f"[train] unfrozen_dense={mode}: {unfrozen/1e6:.1f}M additional dense params enabled", flush=True)
     """Save LoRA adapter weights."""
     output_dir.mkdir(parents=True, exist_ok=True)
     try:
@@ -715,19 +753,43 @@ def execute_training(plan: dict[str, Any]) -> dict[str, Any]:
             except Exception:
                 pass
 
-        # Cast LoRA params to fp32 — only ~92 MB extra but ensures optimizer
-        # (AdamW) runs in fp32, preventing NaN from bf16 weight updates.
+        # Optionally unfreeze dense layers adjacent to the LoRA adapters.
+        #
+        # "norm_all"  → all LayerNorm weight+bias + modulation (img_mod/txt_mod)
+        #                layers throughout the transformer + final proj_out/norm_out.
+        #                Adds ~38 M dense params on top of LoRA (~23 M).
+        #                These scale/shift parameters calibrate how LoRA outputs
+        #                integrate into the residual stream — critical for a merged
+        #                checkpoint that sits off both training manifolds.
+        #
+        # "proj_out"  → only the final output projection + norm_out (~19 M).
+        #
+        # "none" / absent → pure LoRA (default, backward-compatible).
+        unfrozen_dense = config.get("unfrozen_dense", "none")
+        if unfrozen_dense and unfrozen_dense != "none":
+            _unfreeze_dense(transformer, unfrozen_dense)
+
+        # Cast ALL trainable params (LoRA + any unfrozen dense) to fp32 so
+        # AdamW runs in fp32, preventing NaN from bf16 weight updates.
         for param in transformer.parameters():
             if param.requires_grad:
                 param.data = param.data.to(torch.float32)
 
         trainable = sum(p.numel() for p in transformer.parameters() if p.requires_grad)
         total = sum(p.numel() for p in transformer.parameters())
-        print(f"[train] LoRA trainable: {trainable:,} / {total:,} params ({100*trainable/total:.2f}%)", flush=True)
+        dense_trainable = sum(
+            p.numel() for n, p in transformer.named_parameters()
+            if p.requires_grad and "lora_" not in n
+        )
+        print(f"[train] trainable: {trainable:,} / {total:,} params ({100*trainable/total:.2f}%)  "
+              f"[LoRA: {trainable-dense_trainable:,}  dense: {dense_trainable:,}]", flush=True)
 
-        # Use a conservative LR — 1e-4 causes bf16 overflow on large transformers.
-        # Cap at 2e-5 regardless of config to stay numerically stable.
-        safe_lr = min(lr, 2e-5)
+        # Use a conservative LR cap. Dense unfrozen layers need slower updates
+        # than LoRA — if unfrozen_dense is set, allow up to 1e-5; otherwise 2e-5.
+        if unfrozen_dense and unfrozen_dense != "none":
+            safe_lr = min(lr, 1e-5)
+        else:
+            safe_lr = min(lr, 2e-5)
         optimizer = torch.optim.AdamW(
             [p for p in transformer.parameters() if p.requires_grad],
             lr=safe_lr,
