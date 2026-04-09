@@ -1,12 +1,20 @@
 # Qwen-Image 1.9
 
-> **Merging a text-to-image generator and an instruction-based image editor into a single checkpoint via per-block SLERP, with quantitative evaluation of capability retention.**
+> **Merging a text-to-image generator and an instruction-based image editor into a single checkpoint via per-block SLERP — and an honest post-mortem on why the result did not meet expectations.**
+
+---
+
+## Status: Unsuccessful
+
+The merged checkpoint technically works — both pipelines load and produce images — but the visual quality is **not competitive** with the original individual models. We are documenting findings and failure modes here rather than publishing a misleading result.
 
 ---
 
 ## Abstract
 
 Two publicly available Qwen-Image model variants — a text-to-image generator (`Qwen-Image-2512`) and an instruction-following image editor (`Qwen-Image-Edit-2511`) — share an identical MMDiT transformer architecture but serve fundamentally different tasks. We investigate whether a single merged checkpoint can serve both tasks without fine-tuning by analysing per-block weight divergence between the two models and designing a block-selective SLERP strategy that concentrates edit-model influence in the regions where the editing deltas are most expressed. We evaluate generation and editing quality before and after merging, identify the image-conditioning mechanism used by the edit pipeline, and document the full merge → evaluate pipeline.
+
+**Summary of outcome:** The merge is geometrically sound (cosine similarity 0.987 between models) but produces perceptibly degraded outputs on both tasks. The post-merge LoRA training did not recover quality to baseline. This is most likely a fundamental limitation of weight-space merging for task-conditioned diffusion models rather than a fixable implementation error.
 
 ---
 
@@ -104,13 +112,31 @@ The `--edit-coefficient` CLI flag controls the global fallback $t$ for legacy me
 
 ## 4. Training (Post-Merge LoRA)
 
-After merging, a LoRA adapter is trained on top of the merged checkpoint to restore any capability drift. 
+After merging, a LoRA adapter was trained on top of the merged checkpoint to attempt to recover capability drift.
 
-**Flow-matching training objective.** With $x_0 = 0$ (text-only conditioning), the velocity target is:
+### 4.1 Loss Curve
+
+The training loss did not exhibit a clean monotonic descent. Instead it oscillated with high variance throughout, suggesting the adapter was unable to converge on a stable optimum. Large spikes (e.g. loss=28.7 at step 2450, loss=9.7 at step 1500) indicate that the gradient landscape of the merged checkpoint is poorly conditioned — consistent with a weight-space interpolation that sits off the learned manifold for both tasks.
+
+```mermaid
+xychart-beta
+    title "Post-Merge LoRA Training Loss (10-step smoothed)"
+    x-axis ["s450", "s950", "s1450", "s1950", "s2450", "s2950", "s3450", "s3950", "s4450", "s4950"]
+    y-axis "Loss" 0 --> 5
+    line [2.428, 1.429, 1.856, 2.171, 3.904, 1.176, 1.941, 1.233, 1.105, 0.949]
+```
+
+> Note: The y-axis is capped at 5 for readability. Raw loss at step 2450 was 28.7 (gradient spike during unstable optimisation).
+
+**Key observation:** The final smoothed loss of ~0.95 after 5000 steps is not significantly lower than mid-training values, indicating the model did not converge. For comparison, a well-conditioned LoRA on a clean base model typically shows a clean 3–5× loss reduction from initialisation.
+
+### 4.2 Why It Didn't Help
+
+Flow-matching training objective. With $x_0 = 0$ (text-only conditioning), the velocity target is:
 
 $$v^* = x_1 - x_0 = \text{noisy\_latents}$$
 
-An earlier bug (`target = torch.randn_like(noise_pred)`) caused each training step to pull the adapter toward a different random direction, producing noisy outputs. The fix: `target = noisy_latents.detach()`.
+An earlier bug (`target = torch.randn_like(noise_pred)`) caused each training step to pull the adapter toward a different random direction, producing noisy outputs. This was fixed: `target = noisy_latents.detach()`. However, even after the fix, the adapter was learning on top of a fundamentally compromised base — the merged checkpoint's activation distributions sit between two training distributions, making it hard for a small LoRA (0.12% params) to recover either.
 
 | Parameter | Value |
 |---|---|
@@ -190,7 +216,7 @@ Each image is a three-panel strip: **Original | Merged | Merged+LoRA**
 | "an architectural visualization of a minimalist Japanese tea house surrounded by bamboo" | ![gen_02](docs/eval/gen_02_japanese_teahouse.png) |
 | "a cinematic portrait of an astronaut looking out a spacecraft window at Earth" | ![gen_03](docs/eval/gen_03_astronaut.png) |
 
-**Key observation:** The merged model retains scene coherence and composition quality. Detail density in the merged model is slightly lower than the original generator, which is expected given the 10% early-block edit injection blending two different weight manifolds.
+**Key observation:** The merged model retains scene coherence and composition quality. However, detail density and sharpness are visibly lower than the original generator across all prompts. The LoRA-adapted version shows marginal improvement over the raw merge but does not recover baseline quality.
 
 ### 6.2 Editing: Original Edit Model vs Merged Model
 
@@ -202,11 +228,29 @@ Each image is a three-panel strip: **Source | Original Edit Model | Merged Model
 | Japanese garden → "add falling cherry blossom petals" | ![edit_02](docs/eval/edit_02_cherry_blossoms.png) |
 | Portrait → "turn into a detailed pencil sketch" | ![edit_03](docs/eval/edit_03_pencil_sketch.png) |
 
-**Key observation:** The merged model preserves instruction-following fidelity on structural edits (sky replacement, style transfer). The edit capability is carried primarily by blocks 40–58 where the 0.25 SLERP weight concentrates the edit-specific weights.
+**Key observation:** The merged model partially follows edit instructions but with noticeably reduced fidelity compared to the original edit model. Background replacement and sky edits retain rough correctness but lack the sharpness and coherence of the dedicated editor.
 
 ---
 
-## 7. Pipeline Comparison
+## 7. Failure Analysis
+
+### Why this approach did not work well
+
+| Factor | Finding |
+|---|---|
+| **Weight-space interpolation off-manifold** | Both models were trained independently from different data distributions. SLERP produces a checkpoint that lies between two learned manifolds rather than on either one. Even at $t=0.1$ in early blocks, the merged checkpoint's activations are foreign to both models' decoders. |
+| **Edit conditioning is non-trivial to merge** | The edit model appends source-image tokens at inference time, changing the effective sequence length the transformer was trained on. The generator was never trained with this token layout, making the merged model inconsistent depending on which pipeline calls it. |
+| **LoRA capacity insufficient** | 0.12% of parameters (23M / 20B) is far too small to re-specialise either capability from an off-manifold starting point. A full fine-tune would be needed, which defeats the purpose of merging. |
+| **Training instability** | The merged checkpoint's loss landscape is poorly conditioned (spikes to 28.7 during LoRA training). This indicates gradient flow through the merged transformer produces degenerate updates that a small adapter cannot absorb. |
+| **No shared task conditioning** | Unlike LLM merges (where both models share the token vocabulary), these two diffusion models have genuinely different conditioning interfaces. Generation uses text only; editing injects image latents as extra tokens. A merged checkpoint must handle both interfaces simultaneously, which a simple weight average cannot guarantee. |
+
+### What would actually work
+
+- **Joint training from scratch** on a dataset covering both generation and editing tasks
+- **Adapter injection** (ControlNet-style) where the edit pathway is an add-on module, not baked into the base weights
+- **Multi-LoRA serving** — keep the models separate but serve via a router that swaps adapters at request time
+
+---
 
 | | Generation Pipeline | Edit Pipeline |
 |---|---|---|

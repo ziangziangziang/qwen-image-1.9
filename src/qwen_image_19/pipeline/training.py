@@ -185,8 +185,17 @@ def _login_hf() -> None:
 
 
 def _resolve_text_column(ds, preferred: str) -> str | None:
-    """Find the best text column in *ds* without decoding any rows."""
+    """Find the best text column in *ds* without decoding any rows.
+
+    Supports dot-notation for nested dict columns, e.g. ``"json.long_caption"``
+    where ``json`` is the column name and ``long_caption`` is a dict key.
+    """
     cols = getattr(ds, "column_names", []) or []
+    # Dot-notation: "parent_col.nested_key" — check parent col exists
+    if "." in preferred:
+        parent_col = preferred.split(".", 1)[0]
+        if parent_col in cols:
+            return preferred
     for candidate in (preferred, "caption", "text", "prompt", "Prompt", "TEXT",
                       "description", "title", "improved_text", "captions"):
         if candidate in cols:
@@ -201,6 +210,17 @@ def _resolve_text_column(ds, preferred: str) -> str | None:
     except Exception:
         pass
     return None
+
+
+def _extract_text_value(val: Any, col: str) -> str:
+    """Extract a text string from a column value, handling nested dict keys."""
+    if "." in col:
+        nested_key = col.split(".", 1)[1]
+        if isinstance(val, dict):
+            val = val.get(nested_key, "")
+    if isinstance(val, list):
+        val = val[0] if val else ""
+    return val.strip() if isinstance(val, str) else ""
 
 
 def _iter_generation_prompts(split_cfg: dict[str, Any], max_samples: int):
@@ -239,13 +259,13 @@ def _iter_generation_prompts(split_cfg: dict[str, Any], max_samples: int):
                     print(f"[train/data] {ds_spec['hf_id']}: no text column found", flush=True)
                     continue
                 want = min(max_samples - yielded, len(ds))
-                # Columnar access — no image decoding
-                values = ds[col][:want]
+                # Columnar access — no image decoding; handle dot-notation nested cols
+                parent_col = col.split(".", 1)[0] if "." in col else col
+                values = ds[parent_col][:want]
                 for val in values:
-                    if isinstance(val, list):
-                        val = val[0] if val else ""
-                    if val and isinstance(val, str) and val.strip():
-                        yield val.strip()
+                    text = _extract_text_value(val, col)
+                    if text:
+                        yield text
                         yielded += 1
                     if yielded >= max_samples:
                         return
@@ -386,12 +406,12 @@ def _iter_layering_prompts(split_cfg: dict[str, Any], max_samples: int):
                         print(f"[train/data] {ds_spec['hf_id']}: no text column found", flush=True)
                         continue
                     want = min(max_samples - yielded, len(ds))
-                    values = ds[col][:want]
+                    parent_col = col.split(".", 1)[0] if "." in col else col
+                    values = ds[parent_col][:want]
                     for val in values:
-                        if isinstance(val, list):
-                            val = val[0] if val else ""
-                        if val and isinstance(val, str) and val.strip():
-                            yield val.strip()
+                        text = _extract_text_value(val, col)
+                        if text:
+                            yield text
                             yielded += 1
                         if yielded >= max_samples:
                             return
@@ -541,6 +561,71 @@ def execute_training(plan: dict[str, Any]) -> dict[str, Any]:
 
         device = "cuda" if torch.cuda.is_available() else "cpu"
         pipe = pipe.to(device)
+
+        # Patch _get_qwen_prompt_embeds to handle image=None gracefully.
+        # The diffusers EditPlus pipeline unconditionally accesses
+        # model_inputs.pixel_values which doesn't exist when no image is passed.
+        if hasattr(pipe, "_get_qwen_prompt_embeds"):
+            _orig_get_qwen = pipe.__class__._get_qwen_prompt_embeds
+
+            def _safe_get_qwen_prompt_embeds(self, prompt=None, image=None, device=None, dtype=None):
+                device = device or self._execution_device
+                dtype = dtype or self.text_encoder.dtype
+
+                prompt = [prompt] if isinstance(prompt, str) else prompt
+                img_prompt_template = "Picture {}: <|vision_start|><|image_pad|><|vision_end|>"
+                if isinstance(image, list):
+                    base_img_prompt = "".join(img_prompt_template.format(i + 1) for i, _ in enumerate(image))
+                elif image is not None:
+                    base_img_prompt = img_prompt_template.format(1)
+                else:
+                    base_img_prompt = ""
+
+                template = self.prompt_template_encode
+                drop_idx = self.prompt_template_encode_start_idx
+                txt = [template.format(base_img_prompt + e) for e in prompt]
+
+                model_inputs = self.processor(
+                    text=txt,
+                    images=image,
+                    padding=True,
+                    return_tensors="pt",
+                ).to(device)
+
+                encoder_kwargs: dict = dict(
+                    input_ids=model_inputs.input_ids,
+                    attention_mask=model_inputs.attention_mask,
+                    output_hidden_states=True,
+                )
+                # pixel_values only present when image is not None
+                pv = getattr(model_inputs, "pixel_values", None)
+                igt = getattr(model_inputs, "image_grid_thw", None)
+                if pv is not None:
+                    encoder_kwargs["pixel_values"] = pv
+                if igt is not None:
+                    encoder_kwargs["image_grid_thw"] = igt
+
+                outputs = self.text_encoder(**encoder_kwargs)
+                hidden_states = outputs.hidden_states[-1]
+                split_hidden_states = self._extract_masked_hidden(hidden_states, model_inputs.attention_mask)
+                split_hidden_states = [e[drop_idx:] for e in split_hidden_states]
+                attn_mask_list = [
+                    torch.ones(e.size(0), dtype=torch.long, device=e.device)
+                    for e in split_hidden_states
+                ]
+                max_seq_len = max(e.size(0) for e in split_hidden_states)
+                prompt_embeds = torch.stack([
+                    torch.cat([u, u.new_zeros(max_seq_len - u.size(0), u.size(1))])
+                    for u in split_hidden_states
+                ])
+                encoder_attention_mask = torch.stack([
+                    torch.cat([u, u.new_zeros(max_seq_len - u.size(0))])
+                    for u in attn_mask_list
+                ])
+                return prompt_embeds.to(dtype=dtype, device=device), encoder_attention_mask
+
+            import types
+            pipe._get_qwen_prompt_embeds = types.MethodType(_safe_get_qwen_prompt_embeds, pipe)
 
         # Freeze everything except the transformer
         pipe.vae.requires_grad_(False)
