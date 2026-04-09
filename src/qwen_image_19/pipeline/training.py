@@ -553,17 +553,36 @@ def _unfreeze_dense(transformer, mode: str) -> None:
         if mode == "proj_out":
             should_unfreeze = any(k in name for k in ("proj_out", "norm_out"))
         elif mode == "norm_all":
-            should_unfreeze = any(k in name for k in (
-                "norm",           # LayerNorm weight/bias, norm_out
-                "img_mod",        # adaLN modulation for image tokens
-                "txt_mod",        # adaLN modulation for text tokens
-                "proj_out",       # final output projection
-            ))
+            # Match exact component names — avoid substring matching on "norm"
+            # which would hit nearly every weight in the transformer.
+            # Target: LayerNorm params (.weight/.bias on norm layers),
+            # adaLN modulation Sequential params, and final output layers.
+            parts = name.split(".")
+            # LayerNorm: e.g. transformer_blocks.N.img_norm1.weight
+            is_layernorm_param = (
+                len(parts) >= 3
+                and any(parts[-2] in (
+                    "img_norm1", "img_norm2",
+                    "txt_norm1", "txt_norm2",
+                    "norm_out", "norm1", "norm2",
+                ) for _ in [None])
+                and parts[-1] in ("weight", "bias")
+            )
+            # adaLN modulation: e.g. transformer_blocks.N.img_mod.1.linear.weight
+            is_mod_param = any(
+                p in ("img_mod", "txt_mod") for p in parts
+            )
+            # Final output: proj_out, norm_out
+            is_output_param = any(p in ("proj_out", "norm_out") for p in parts)
+            should_unfreeze = is_layernorm_param or is_mod_param or is_output_param
         if should_unfreeze and not param.requires_grad:
             param.requires_grad_(True)
             unfrozen += param.numel()
 
     print(f"[train] unfrozen_dense={mode}: {unfrozen/1e6:.1f}M additional dense params enabled", flush=True)
+
+
+def _save_lora(transformer, output_dir: Path, config: dict[str, Any]) -> None:
     """Save LoRA adapter weights."""
     output_dir.mkdir(parents=True, exist_ok=True)
     try:
